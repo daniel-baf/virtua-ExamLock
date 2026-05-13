@@ -1,3 +1,11 @@
+# ── Import existing resources (Terraform 1.5+) ───────────────────────────────
+# Si Firestore ya existe en el proyecto, este bloque lo adopta sin recrearlo.
+
+import {
+  id = "projects/copper-axiom-496204-b2/databases/(default)"
+  to = google_firestore_database.default
+}
+
 # ── APIs ─────────────────────────────────────────────────────────────────────
 
 resource "google_project_service" "apis" {
@@ -53,13 +61,13 @@ resource "google_storage_bucket" "screenshots" {
 
 # Permite lectura pública (URLs de screenshots sirven directo al dashboard)
 resource "google_storage_bucket_iam_member" "screenshots_public" {
+  count  = var.public_access ? 1 : 0
   bucket = google_storage_bucket.screenshots.name
   role   = "roles/storage.objectViewer"
   member = "allUsers"
 }
 
-# ── Firestore (base de datos default — ya existe en el proyecto) ──────────────
-# Importar con: terraform import google_firestore_database.default projects/PROJECT/databases/(default)
+# ── Firestore (se importa si ya existe, se crea si no) ───────────────────────
 
 resource "google_firestore_database" "default" {
   name        = "(default)"
@@ -69,7 +77,9 @@ resource "google_firestore_database" "default" {
   depends_on = [google_project_service.apis]
 
   lifecycle {
-    prevent_destroy = true  # nunca destruir la DB con terraform destroy
+    prevent_destroy = true
+    # Ignora location_id en imports — Firestore existente puede tener region distinta
+    ignore_changes = [location_id]
   }
 }
 
@@ -98,6 +108,11 @@ resource "google_cloud_run_v2_service" "server" {
   name     = "exam-server"
   location = var.region
   ingress  = "INGRESS_TRAFFIC_ALL"
+
+  # Bypass org policy that blocks allUsers IAM — same pattern used in lasamericas-vantum
+  annotations = {
+    "run.googleapis.com/invoker-iam-disabled" = "true"
+  }
 
   template {
     service_account = google_service_account.server.email
@@ -150,8 +165,9 @@ resource "google_cloud_run_v2_service" "server" {
   }
 }
 
-# Cloud Run público (el dashboard y el container se conectan desde internet)
+# Cloud Run público — se omite si org policy bloquea allUsers
 resource "google_cloud_run_v2_service_iam_member" "server_public" {
+  count    = var.public_access ? 1 : 0
   name     = google_cloud_run_v2_service.server.name
   location = var.region
   role     = "roles/run.invoker"

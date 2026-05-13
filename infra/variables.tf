@@ -33,3 +33,9 @@ variable "github_repo" {
   type        = string
   default     = "your-org/examlock"
 }
+
+variable "public_access" {
+  description = "Allow allUsers on Cloud Run + GCS. Set false if org policy blocks it (university/corporate GCP orgs)."
+  type        = bool
+  default     = true
+}
