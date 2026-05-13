@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ExamLock — Ingreso</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: system-ui, sans-serif;
+    background: #0a0a0f;
+    color: #e5e7eb;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    user-select: none;
+  }
+  .card {
+    background: #111118;
+    border: 1px solid #1f2030;
+    border-radius: 16px;
+    padding: 2rem;
+    width: 100%;
+    max-width: 380px;
+  }
+  .logo {
+    width: 48px; height: 48px;
+    background: #7c3aed;
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 1rem;
+    font-size: 1.5rem;
+  }
+  h1 { text-align: center; font-size: 1.25rem; margin-bottom: .25rem; }
+  .sub { text-align: center; color: #6b7280; font-size: .875rem; margin-bottom: 1.5rem; }
+  label { display: block; font-size: .8rem; color: #9ca3af; margin-bottom: .4rem; }
+  input {
+    width: 100%;
+    background: #1a1a24;
+    border: 1px solid #2d2d3d;
+    border-radius: 8px;
+    padding: .65rem .75rem;
+    color: #e5e7eb;
+    font-size: .9rem;
+    outline: none;
+    margin-bottom: 1rem;
+    transition: border-color .15s;
+  }
+  input:focus { border-color: #7c3aed; }
+  button {
+    width: 100%;
+    background: #7c3aed;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: .75rem;
+    font-size: .9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background .15s;
+  }
+  button:hover:not(:disabled) { background: #6d28d9; }
+  button:disabled { opacity: .5; cursor: not-allowed; }
+  .error {
+    background: #2d0a0a;
+    border: 1px solid #7f1d1d;
+    color: #fca5a5;
+    border-radius: 8px;
+    padding: .65rem .75rem;
+    font-size: .85rem;
+    margin-bottom: 1rem;
+    display: none;
+  }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">🔒</div>
+  <h1>ExamLock</h1>
+  <p class="sub">Ingresa tus datos para comenzar</p>
+
+  <div class="error" id="error"></div>
+
+  <label for="name">Nombre completo</label>
+  <input id="name" type="text" placeholder="Juan Pérez" autocomplete="off" autofocus>
+
+  <label for="code">Código de sesión</label>
+  <input id="code" type="text" placeholder="CALC-B7X2" autocomplete="off"
+    style="text-transform:uppercase; letter-spacing:.1em;">
+
+  <button id="btn" onclick="login()">Ingresar al examen</button>
+</div>
+
+<script>
+async function login() {
+  const name = document.getElementById('name').value.trim();
+  const code = document.getElementById('code').value.trim().toUpperCase();
+  const btn  = document.getElementById('btn');
+  const err  = document.getElementById('error');
+
+  err.style.display = 'none';
+  if (!name || !code) { showError('Completa todos los campos.'); return; }
+
+  btn.disabled = true;
+  btn.textContent = 'Conectando…';
+
+  try {
+    const res = await fetch('/api/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ studentName: name, sessionCode: code }),
+    });
+    const data = await res.json();
+    if (!res.ok) { showError(friendlyError(data.error)); return; }
+    window.location.href = '/exam';
+  } catch {
+    showError('No se pudo conectar con el servidor.');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Ingresar al examen';
+  }
+}
+
+function showError(msg) {
+  const el = document.getElementById('error');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+function friendlyError(code) {
+  const map = {
+    session_not_found: 'Código de sesión incorrecto.',
+    session_expired: 'La sesión ha terminado.',
+    server_unreachable: 'No se puede conectar al servidor.',
+  };
+  return map[code] ?? 'Error al ingresar.';
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter') login();
+});
+</script>
+</body>
+</html>

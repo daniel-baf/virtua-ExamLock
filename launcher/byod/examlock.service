@@ -1,0 +1,17 @@
+[Unit]
+Description=ExamLock student kiosk
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# Path set by setup-vm.sh
+ExecStart=%h/.local/bin/examlock-launch.sh
+Restart=on-failure
+RestartSec=5
+# Wayland/Cage needs these
+Environment=XDG_RUNTIME_DIR=/run/user/%U
+Environment=WAYLAND_DISPLAY=wayland-1
+
+[Install]
+WantedBy=default.target

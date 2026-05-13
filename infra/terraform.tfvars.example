@@ -1,0 +1,7 @@
+project_id   = "copper-axiom-496204-b2"
+region       = "us-central1"
+github_repo  = "your-org/examlock"
+cors_origins = "https://copper-axiom-496204-b2.web.app,https://copper-axiom-496204-b2.firebaseapp.com"
+
+# jwt_secret se pasa en CI via -var="jwt_secret=${{ secrets.JWT_SECRET }}"
+# No lo pongas en este archivo

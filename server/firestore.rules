@@ -1,0 +1,32 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Teachers can read/write sessions they own
+    match /sessions/{sessionId} {
+      allow read: if request.auth != null && resource.data.teacherId == request.auth.uid;
+      allow create: if request.auth != null;
+      allow update, delete: if request.auth != null && resource.data.teacherId == request.auth.uid;
+    }
+
+    // Questions readable by anyone with auth (container uses server-side SDK, not client SDK)
+    // Teachers write; server SDK bypasses these rules anyway
+    match /questions/{questionId} {
+      allow read, write: if request.auth != null;
+    }
+
+    // Students and answers: server SDK only (no client-side access)
+    match /students/{studentId} {
+      allow read, write: if false;
+    }
+
+    match /answers/{answerId} {
+      allow read, write: if false;
+    }
+
+    match /screenshots/{screenshotId} {
+      allow read, write: if false;
+    }
+  }
+}
