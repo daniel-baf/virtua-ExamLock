@@ -10,3 +10,4 @@ iso/build/
 iso/build.log
 iso/examlock-live.iso
 .env.examlock
+scripts/dev-key
