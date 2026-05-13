@@ -148,6 +148,12 @@ function friendlyError(code) {
 }
 
 document.addEventListener('keydown', e => { if (e.key === 'Enter') login(); });
+
+fetch('/api/state').then(r => r.json()).then(({ status }) => {
+  if (status === 'admitted') window.location.href = '/exam';
+  else if (status === 'waiting') window.location.href = '/waiting';
+  else if (status === 'ended' || status === 'kicked') window.location.href = '/ended';
+}).catch(() => {});
 </script>
 </body>
 </html>

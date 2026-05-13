@@ -105,6 +105,16 @@ app.post('/api/login', async (req, res) => {
   }
 });
 
+// ── Finish exam ───────────────────────────────────────────────────────────────
+
+app.post('/api/finish', (req, res) => {
+  if (state.status !== 'admitted') return res.status(409).json({ error: 'not_active' });
+  if (state.socket?.connected) state.socket.emit('student:closed', { reason: 'submitted' });
+  state.status = 'ended';
+  broadcast('exam-ended', {});
+  res.json({ ok: true });
+});
+
 // ── SSE ───────────────────────────────────────────────────────────────────────
 
 const sseClients = new Set();
