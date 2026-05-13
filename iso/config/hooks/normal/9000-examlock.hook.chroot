@@ -1,11 +1,7 @@
 #!/bin/bash
-# Configure autologin + Chromium kiosk for examuser
+# Configure Chromium kiosk for the live default user
 
 set -e
-
-# Create examuser (LightDM autologin target + firewall/screenshot subject)
-id -u examuser &>/dev/null || adduser --disabled-password --gecos "" examuser
-usermod -s /bin/bash examuser
 
 # Install Node.js LTS
 curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
@@ -15,20 +11,10 @@ apt-get install -y nodejs
 systemctl enable examlock-daemon.service
 systemctl enable nftables.service
 
-# Configure LightDM autologin as examuser
-mkdir -p /etc/lightdm/lightdm.conf.d
-cat > /etc/lightdm/lightdm.conf.d/50-examlock.conf <<'EOF'
-[Seat:*]
-autologin-user=examuser
-autologin-user-timeout=0
-user-session=xfce
-EOF
-# Debian live default lightdm.conf may set autologin-user=user — override it
-sed -i 's/^autologin-user=user$/autologin-user=examuser/' /etc/lightdm/lightdm.conf || true
-
 # XFCE autostart: launch Chromium kiosk pointing to daemon
-mkdir -p /home/examuser/.config/autostart
-cat > /home/examuser/.config/autostart/examlock.desktop <<'EOF'
+# /etc/xdg/autostart applies to all users — no dependency on home dir
+mkdir -p /etc/xdg/autostart
+cat > /etc/xdg/autostart/examlock.desktop <<'EOF'
 [Desktop Entry]
 Type=Application
 Name=ExamLock
@@ -38,24 +24,23 @@ NoDisplay=false
 X-GNOME-Autostart-enabled=true
 EOF
 
-# Disable XFCE panel and desktop so student can't escape kiosk via taskbar/desktop
-mkdir -p /home/examuser/.config/xfce4/xfconf/xfce-perchannel-xml
-cat > /home/examuser/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-panel.xml <<'EOF'
+# XFCE config via /etc/skel — live-config copies skel to /home/user on boot
+# Disable panel, keyboard shortcuts, and desktop context menu
+mkdir -p /etc/skel/.config/xfce4/xfconf/xfce-perchannel-xml
+cat > /etc/skel/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-panel.xml <<'EOF'
 <?xml version="1.0" encoding="UTF-8"?>
 <channel name="xfce4-panel" version="1.0">
   <property name="panels" type="array"/>
 </channel>
 EOF
 
-# Remove all XFCE keyboard shortcuts so student can't Ctrl+Alt+T or Super to escape
-cat > /home/examuser/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-keyboard-shortcuts.xml <<'EOF'
+cat > /etc/skel/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-keyboard-shortcuts.xml <<'EOF'
 <?xml version="1.0" encoding="UTF-8"?>
 <channel name="xfce4-keyboard-shortcuts" version="1.0">
 </channel>
 EOF
 
-# Disable right-click context menu on desktop
-cat > /home/examuser/.config/xfce4/xfconf/xfce-perchannel-xml/xfdesktop.xml <<'EOF'
+cat > /etc/skel/.config/xfce4/xfconf/xfce-perchannel-xml/xfdesktop.xml <<'EOF'
 <?xml version="1.0" encoding="UTF-8"?>
 <channel name="xfdesktop" version="1.0">
   <property name="desktop-menu" type="empty">
@@ -114,6 +99,3 @@ systemctl enable ssh
 # Disable unnecessary services
 systemctl disable bluetooth 2>/dev/null || true
 systemctl disable cups 2>/dev/null || true
-
-# Set examuser home permissions
-chown -R examuser:examuser /home/examuser/.config || true

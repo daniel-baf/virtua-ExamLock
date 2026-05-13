@@ -2,20 +2,23 @@
 # build-iso.sh — construye el ISO de ExamLock con las vars de .env.examlock
 #
 # Uso:
-#   ./scripts/build-iso.sh           # build normal
-#   ./scripts/build-iso.sh --watch   # build + arranca VM al terminar
-#   ./scripts/build-iso.sh --clean   # elimina caché de build antes
+#   ./scripts/build-iso.sh                 # build full
+#   ./scripts/build-iso.sh --dev           # build dev
+#   ./scripts/build-iso.sh --watch         # build + arranca VM al terminar
+#   ./scripts/build-iso.sh --clean         # elimina caché de build antes
 #
-# El ISO queda en iso/examlock-live.iso
+# Los ISOs quedan en iso/examlock-live.iso o iso/examlock-dev.iso
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 ENV_FILE="${ENV_FILE:-$REPO_ROOT/.env.examlock}"
-ISO_OUT="$REPO_ROOT/iso/examlock-live.iso"
 LOG="$REPO_ROOT/iso/build.log"
-MODE="${1:-}"
+ISO_PROFILE="full"
+ISO_OUT="$REPO_ROOT/iso/examlock-live.iso"
+WATCH=0
+CLEAN=0
 
 G='\033[0;32m'; Y='\033[0;33m'; R='\033[0;31m'; B='\033[0;34m'; N='\033[0m'
 log()  { echo -e "${B}[build]${N} $*"; }
@@ -45,20 +48,46 @@ set +a
 : "${FIREBASE_AUTH_DOMAIN:?FIREBASE_AUTH_DOMAIN must be set}"
 : "${FIREBASE_PROJECT_ID:?FIREBASE_PROJECT_ID must be set}"
 
+# ── Flags ─────────────────────────────────────────────────────────────────────
+
+for arg in "$@"; do
+  case "$arg" in
+    --clean)
+      CLEAN=1
+      ;;
+    --watch)
+      WATCH=1
+      ;;
+    --dev)
+      ISO_PROFILE="dev"
+      ISO_OUT="$REPO_ROOT/iso/examlock-dev.iso"
+      ;;
+    --full)
+      ISO_PROFILE="full"
+      ISO_OUT="$REPO_ROOT/iso/examlock-live.iso"
+      ;;
+    *)
+      err "Flag no soportada: $arg"
+      exit 1
+      ;;
+  esac
+done
+
 # ── Limpieza opcional ─────────────────────────────────────────────────────────
 
-if [[ "$MODE" == "--clean" ]]; then
+if [[ "$CLEAN" == "1" ]]; then
   warn "Limpiando caché de build anterior..."
   rm -rf "$REPO_ROOT/iso/build"
   ok "Limpio"
-  MODE=""
 fi
 
 # ── Build ─────────────────────────────────────────────────────────────────────
 
 log "Iniciando build del ISO"
+log "  Perfil:        $ISO_PROFILE"
 log "  SERVER_URL:    $SERVER_URL"
 log "  PROJECT_ID:    $FIREBASE_PROJECT_ID"
+log "  ISO salida:    $ISO_OUT"
 log "  Log en:        $LOG"
 echo ""
 
@@ -69,6 +98,7 @@ SERVER_URL="$SERVER_URL" \
 FIREBASE_API_KEY="$FIREBASE_API_KEY" \
 FIREBASE_AUTH_DOMAIN="$FIREBASE_AUTH_DOMAIN" \
 FIREBASE_PROJECT_ID="$FIREBASE_PROJECT_ID" \
+ISO_PROFILE="$ISO_PROFILE" \
   bash build.sh
 
 # build.sh corre en background — esperar hasta que el log diga "Listo" o "ERROR"
@@ -90,22 +120,28 @@ while true; do
     ls -lh "$ISO_OUT" 2>/dev/null || true
     echo ""
     echo "  Flashear USB:  sudo dd if=$ISO_OUT of=/dev/sdX bs=4M status=progress oflag=sync"
-    echo "  Probar en VM:  ./scripts/dev-vm.sh"
+    if [[ "$ISO_PROFILE" == "dev" ]]; then
+      echo "  Probar en VM:  ./scripts/dev-vm.sh --dev"
+    else
+      echo "  Probar en VM:  ./scripts/dev-vm.sh"
+    fi
     echo ""
+    notify-send -u normal -i media-optical "ExamLock build OK" "ISO lista en ${ELAPSED}s — $ISO_OUT" 2>/dev/null || true
     break
   fi
   if grep -q "ERROR" "$LOG" 2>/dev/null; then
     kill $TAIL_PID 2>/dev/null; trap - EXIT
     echo ""
     err "Build falló. Revisa: $LOG"
+    notify-send -u critical -i dialog-error "ExamLock build FALLÓ" "Revisa: $LOG" 2>/dev/null || true
     exit 1
   fi
 done
 
 # ── Arrancar VM si --watch ─────────────────────────────────────────────────────
 
-if [[ "$MODE" == "--watch" ]]; then
+if [[ "$WATCH" == "1" ]]; then
   echo ""
   log "Arrancando VM con hot-reload..."
-  exec "$SCRIPT_DIR/dev-vm.sh"
+  exec env ISO_PATH="$ISO_OUT" "$SCRIPT_DIR/dev-vm.sh"
 fi

@@ -224,18 +224,16 @@ Crear el archivo local de variables una sola vez:
 cp .env.examlock.example .env.examlock
 ```
 
-Luego usar uno de estos wrappers:
+Luego usar estos wrappers:
 
 ```bash
-./scripts/dev-agent.sh          # prueba agent/ui sin reconstruir ISO
-./scripts/dev-lab.sh TEST123    # build local + launcher Docker kiosk
-./scripts/dev-iso.sh            # build completa de la ISO
+./scripts/build-iso.sh --dev    # build dev de la ISO
+./scripts/dev-vm.sh --dev       # arranca la VM con la ISO dev
 ```
 
 Notas:
-- `dev-agent.sh` actualiza `/etc/examlock.conf` con `sudo` si hace falta.
-- `dev-lab.sh` toma `SESSION_CODE` del argumento o de `.env.examlock`.
-- `dev-iso.sh` solo evita reescribir variables largas; el build sigue siendo completo.
+- `build-iso.sh` soporta `--dev`, `--full`, `--clean` y `--watch`.
+- `dev-vm.sh` soporta `--dev`, `--logs`, `--shell` y `--push`.
 
 ---
 
