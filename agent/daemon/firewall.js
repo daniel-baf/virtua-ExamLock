@@ -170,6 +170,8 @@ async function buildAndApply(domains, blockInternet, admitted) {
     } else if (!blockInternet) {
       rules.push(`    meta skuid ${EXAM_UID} accept`);
     } else {
+      // DNS permitido para que el browser pueda resolver dominios de la whitelist
+      buildDnsRules([EXAM_UID]).forEach(rule => rules.push(rule));
       [
         buildIpRule(EXAM_UID, 'ip', studentIps.ipv4),
         buildIpRule(EXAM_UID, 'ip6', studentIps.ipv6),

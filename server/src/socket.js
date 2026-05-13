@@ -144,9 +144,10 @@ async function uploadImage(jpegB64, filePath) {
     const buf = Buffer.from(jpegB64, 'base64');
     const file = storage().file(filePath);
     await file.save(buf, { contentType: 'image/jpeg', resumable: false });
+    await file.makePublic();
     return `https://storage.googleapis.com/${process.env.GCS_BUCKET}/${filePath}`;
   } catch (err) {
-    console.error('upload failed:', err.message);
+    console.error('[upload] failed:', err.message);
     return null;
   }
 }

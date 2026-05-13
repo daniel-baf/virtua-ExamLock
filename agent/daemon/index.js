@@ -51,7 +51,11 @@ app.get('/config', (_req, res) => {
 app.get('/api/state', (_req, res) => res.json({ status: state.status }));
 
 app.get('/api/debug', (_req, res) => {
-  res.json({ state, firewall: getDebugState() });
+  const { socket, ...safeState } = state;
+  res.json({
+    state: { ...safeState, socketConnected: socket?.connected ?? false },
+    firewall: getDebugState(),
+  });
 });
 
 // ── Login ─────────────────────────────────────────────────────────────────────
@@ -155,6 +159,12 @@ app.get('/ended', (_req, res) => res.sendFile(path.join(__dirname, '..', 'ui', '
 
 initFirewall().catch(err => log('firewall', 'init ERROR:', err.message));
 
+try {
+  execSync('id -u examuser', { stdio: 'pipe' });
+} catch {
+  log('startup', 'CRITICAL: examuser does not exist — firewall and screenshots will not work');
+}
+
 // ── Socket connection ─────────────────────────────────────────────────────────
 
 function connectSocket(sessionCode) {
@@ -211,11 +221,14 @@ function connectSocket(sessionCode) {
 
   // On-demand screenshot
   socket.on('server:capture-now', async ({ requestId }) => {
+    log('screenshot', 'capture requested', requestId);
     try {
       const jpegB64 = capture();
+      log('screenshot', 'capture ok, sending to server');
       socket.emit('student:screenshot', { jpegB64, requestId });
     } catch (err) {
-      console.error('[screenshot]', err.message);
+      log('screenshot', 'ERROR:', err.message);
+      socket.emit('student:screenshot-error', { requestId, error: err.message });
     }
   });
 

@@ -3,6 +3,10 @@
 
 set -e
 
+# Create examuser (LightDM autologin target + firewall/screenshot subject)
+id -u examuser &>/dev/null || adduser --disabled-password --gecos "" examuser
+usermod -s /bin/bash examuser
+
 # Install Node.js LTS
 curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
 apt-get install -y nodejs
@@ -19,6 +23,8 @@ autologin-user=examuser
 autologin-user-timeout=0
 user-session=xfce
 EOF
+# Debian live default lightdm.conf may set autologin-user=user — override it
+sed -i 's/^autologin-user=user$/autologin-user=examuser/' /etc/lightdm/lightdm.conf || true
 
 # XFCE autostart: launch Chromium kiosk pointing to daemon
 mkdir -p /home/examuser/.config/autostart
@@ -26,11 +32,56 @@ cat > /home/examuser/.config/autostart/examlock.desktop <<'EOF'
 [Desktop Entry]
 Type=Application
 Name=ExamLock
-Exec=bash -c "until curl -sf http://127.0.0.1:7878/api/state >/dev/null 2>&1; do sleep 0.5; done; chromium --kiosk --noerrdialogs --disable-pinch --no-first-run --disable-features=TranslateUI --incognito http://127.0.0.1:7878"
+Exec=bash -c "until curl -sf http://127.0.0.1:7878/api/state >/dev/null 2>&1; do sleep 0.5; done; chromium --kiosk --noerrdialogs --disable-pinch --no-first-run --disable-features=TranslateUI --incognito --disable-background-networking --disable-sync --no-default-browser-check http://127.0.0.1:7878"
 Hidden=false
 NoDisplay=false
 X-GNOME-Autostart-enabled=true
 EOF
+
+# Disable XFCE panel and desktop so student can't escape kiosk via taskbar/desktop
+mkdir -p /home/examuser/.config/xfce4/xfconf/xfce-perchannel-xml
+cat > /home/examuser/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-panel.xml <<'EOF'
+<?xml version="1.0" encoding="UTF-8"?>
+<channel name="xfce4-panel" version="1.0">
+  <property name="panels" type="array"/>
+</channel>
+EOF
+
+# Remove all XFCE keyboard shortcuts so student can't Ctrl+Alt+T or Super to escape
+cat > /home/examuser/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-keyboard-shortcuts.xml <<'EOF'
+<?xml version="1.0" encoding="UTF-8"?>
+<channel name="xfce4-keyboard-shortcuts" version="1.0">
+</channel>
+EOF
+
+# Disable right-click context menu on desktop
+cat > /home/examuser/.config/xfce4/xfconf/xfce-perchannel-xml/xfdesktop.xml <<'EOF'
+<?xml version="1.0" encoding="UTF-8"?>
+<channel name="xfdesktop" version="1.0">
+  <property name="desktop-menu" type="empty">
+    <property name="show" type="bool" value="false"/>
+  </property>
+  <property name="windowlist-menu" type="empty">
+    <property name="show" type="bool" value="false"/>
+  </property>
+</channel>
+EOF
+
+# Block TTY switching — student can't Ctrl+Alt+F2 to drop to console
+cat > /etc/systemd/system/disable-tty-switching.service <<'EOF'
+[Unit]
+Description=Disable TTY switching for kiosk
+After=getty.target
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash -c "for i in 2 3 4 5 6; do systemctl stop getty@tty$i.service; done"
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
+EOF
+systemctl enable disable-tty-switching.service
 
 # Base nftables ruleset — only loopback until daemon applies whitelist
 cat > /etc/nftables.conf <<'EOF'
@@ -43,6 +94,22 @@ table inet examlock_boot {
   }
 }
 EOF
+
+# SSH for dev access — key-based root login
+# WARNING: solo para desarrollo/testing, no para producción
+mkdir -p /etc/ssh/sshd_config.d
+cat > /etc/ssh/sshd_config.d/50-examlock-dev.conf <<'EOF'
+PermitRootLogin yes
+PasswordAuthentication no
+PubkeyAuthentication yes
+EOF
+mkdir -p /root/.ssh
+chmod 700 /root/.ssh
+cat > /root/.ssh/authorized_keys <<'EOF'
+ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOHgDqzFwD8Vng8oYprpsU0I3lqDz/SZcJU9NSUcQn+N examlock-dev
+EOF
+chmod 600 /root/.ssh/authorized_keys
+systemctl enable ssh
 
 # Disable unnecessary services
 systemctl disable bluetooth 2>/dev/null || true

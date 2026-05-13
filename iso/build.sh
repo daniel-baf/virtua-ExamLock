@@ -59,7 +59,7 @@ EOF
     --distribution bookworm \
     --archive-areas "main contrib non-free non-free-firmware" \
     --binary-images iso-hybrid \
-    --bootappend-live "boot=live components quiet splash hostname=examlock username=examuser" \
+    --bootappend-live "boot=live components quiet splash hostname=examlock noautologin" \
     --debian-installer none \
     --memtest none
 
