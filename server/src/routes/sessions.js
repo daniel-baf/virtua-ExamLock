@@ -48,6 +48,8 @@ router.get('/', requireRole('teacher'), async (req, res) => {
       active: data.active,
       createdAt: data.startedAt,
       endsAt: data.endsAt,
+      whitelist: data.whitelist ?? [],
+      blockInternet: data.blockInternet ?? true,
     };
   });
 

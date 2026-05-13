@@ -122,13 +122,18 @@ export default function Dashboard() {
           <div className="space-y-3">
             {sessions.map(s => (
               <div key={s.sessionId}
-                className="bg-gray-900 border border-gray-800 rounded-xl p-4 flex items-center justify-between">
-                <div>
-                  <div className="flex items-center gap-2">
+                className="bg-gray-900 border border-gray-800 rounded-xl p-4 space-y-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
                     <p className="font-medium">{s.name}</p>
                     <span className={`text-xs px-2 py-0.5 rounded-full font-medium
                       ${s.active ? 'bg-green-900 text-green-300' : 'bg-gray-800 text-gray-400'}`}>
                       {s.active ? 'activa' : 'terminada'}
+                    </span>
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium
+                      ${s.blockInternet ? 'bg-violet-900 text-violet-300' : 'bg-gray-800 text-gray-300'}`}>
+                      {s.blockInternet ? 'internet restringido' : 'internet libre'}
                     </span>
                   </div>
                   <p className="text-sm text-gray-400 mt-0.5">
@@ -137,7 +142,7 @@ export default function Dashboard() {
                     {new Date(s.createdAt).toLocaleDateString('es', { dateStyle: 'medium' })}
                   </p>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-2 shrink-0">
                   <Link to={`/session/${s.sessionId}/monitor`}
                     className="text-sm bg-gray-800 hover:bg-gray-700 px-3 py-1.5 rounded-lg transition-colors">
                     Monitor
@@ -147,11 +152,58 @@ export default function Dashboard() {
                     Auditoría
                   </Link>
                 </div>
+                </div>
+
+                <SessionWhitelistTable session={s} />
               </div>
             ))}
           </div>
         )}
       </main>
+    </div>
+  );
+}
+
+function SessionWhitelistTable({ session }) {
+  const domains = session.whitelist ?? [];
+
+  if (!session.blockInternet) {
+    return (
+      <div className="rounded-lg border border-gray-800 bg-gray-950/50 px-4 py-3 text-sm text-gray-400">
+        Esta sesi\u00f3n tiene acceso libre a internet.
+      </div>
+    );
+  }
+
+  return (
+    <div className="overflow-hidden rounded-lg border border-gray-800 bg-gray-950/50">
+      <div className="border-b border-gray-800 px-4 py-3">
+        <p className="text-sm font-medium text-gray-200">Dominios permitidos</p>
+        <p className="text-xs text-gray-500 mt-1">
+          {domains.length > 0 ? `${domains.length} dominio(s) configurado(s)` : 'Sin dominios configurados; el bloqueo es total.'}
+        </p>
+      </div>
+
+      {domains.length === 0 ? (
+        <div className="px-4 py-4 text-sm text-gray-500">No hay dominios permitidos para esta sesi\u00f3n.</div>
+      ) : (
+        <table className="w-full text-sm">
+          <thead className="bg-gray-900/80 text-gray-400">
+            <tr>
+              <th className="px-4 py-2 text-left font-medium">#</th>
+              <th className="px-4 py-2 text-left font-medium">Dominio</th>
+            </tr>
+          </thead>
+          <tbody>
+            {domains.map((domain, index) => (
+              <tr key={`${session.sessionId}-${domain}`} className="border-t border-gray-800 text-gray-200">
+                <td className="px-4 py-2 text-gray-500">{index + 1}</td>
+                <td className="px-4 py-2 font-mono break-all">{domain}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
     </div>
   );
 }
