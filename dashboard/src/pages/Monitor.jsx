@@ -90,6 +90,17 @@ export default function Monitor() {
     setMsgTarget(null);
   }
 
+  async function reloadStudents() {
+    try {
+      const { students: fresh } = await api.listStudents(sessionId);
+      console.log('[monitor] reload:', fresh.length, 'students');
+      setStudents({});
+      fresh.forEach(s => patchStudent(s.studentId, s));
+    } catch (err) {
+      console.error('[monitor] reload failed:', err);
+    }
+  }
+
   const studentList = Object.values(students);
   const active = studentList.filter(s => s.status === 'active').length;
 
@@ -112,6 +123,11 @@ export default function Monitor() {
             {' / '}
             <span className="font-medium">{studentList.length}</span> total
           </span>
+          <button onClick={reloadStudents}
+            className="text-sm text-gray-400 hover:text-white border border-gray-700 hover:border-gray-500
+              px-3 py-1.5 rounded-lg transition-colors">
+            ↺ Recargar
+          </button>
           <button onClick={handleEndExam} disabled={examEnded}
             className="text-sm bg-red-900 hover:bg-red-800 border border-red-700 px-3 py-1.5 rounded-lg
               transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
