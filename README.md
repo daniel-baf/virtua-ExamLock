@@ -20,11 +20,11 @@ Si el alumno corre el software en su propio SO, tiene root y puede matar cualqui
 │  nftables (default-drop)        │     │  server/   Node + Socket.IO  │
 │  examlock-firewall.service      │────▶│  Firestore  sesiones/alumnos │
 │                                 │     │  GCS        screenshots      │
-│  examlock-agent.service         │     │                              │
-│  Node.js en :3000               │     └──────────────────────────────┘
+│  examlock-daemon.service        │     │                              │
+│  Node.js en :7878               │     └──────────────────────────────┘
 │                                 │              ▲
 │  cage + Chromium kiosk          │              │
-│  localhost:3000                 │     ┌────────┴─────────────────────┐
+│  localhost:7878                 │     ┌────────┴─────────────────────┐
 └─────────────────────────────────┘     │  Dashboard (Firebase Hosting) │
                                         │  React — panel del docente   │
                                         │  Monitor / Sesiones / Notas  │
@@ -171,13 +171,12 @@ O usar balenaEtcher.
 ```
 POST → GRUB → kernel/initrd (live-boot)
   └─ systemd arranca examlock.target (default)
-       ├─ examlock-firewall.service  → nft carga /etc/nftables.conf
-       ├─ examlock-agent.service     → node /opt/examlock-agent/index.js en :3000
-       └─ multi-user.target
-            └─ getty@tty1 (autologin → user)
-                 └─ .bash_profile
-                      ├─ espera a que :3000 responda (max 15s)
-                      └─ exec cage -- chromium --kiosk http://localhost:3000
+       ├─ nftables.service          → carga /etc/nftables.conf (default-drop + loopback)
+       ├─ examlock-daemon.service   → node /opt/examlock/daemon/index.js en :7878
+       └─ lightdm + XFCE autologin
+            └─ autostart examlock.desktop
+                 ├─ espera a que :7878 responda
+                 └─ exec chromium --kiosk http://localhost:7878
 ```
 
 El alumno ve directamente el formulario de login. No hay escritorio, no hay terminal accesible, no hay otro proceso que no sea el kiosk.
@@ -186,13 +185,11 @@ El alumno ve directamente el formulario de login. No hay escritorio, no hay term
 
 ## Firewall (nftables)
 
-`/etc/nftables.conf` en el live OS. Política default-drop en input y output.
+`/etc/nftables.conf` en el live OS. Política default-drop de salida, con loopback permitido.
 
-**Estado actual (smoke test):** permite solo el server en `10.0.2.2:8080` y DNS a `8.8.8.8`. Todo lo demás bloqueado — facebook.com, google.com, etc.
-
-**Fase 1b (pendiente):** whitelist estática con IP real del servidor.
-
-**Fase 2 (pendiente):** whitelist dinámica por sesión — el docente define dominios permitidos al crear la sesión, el agente los aplica al hacer join.
+**Estado actual:** al boot, `examuser` queda limitado a loopback (`127.0.0.1:7878`).
+El daemon mantiene salida solo a DNS, `SERVER_URL` y Firebase Auth para poder autenticar y sincronizar.
+Al admitir al alumno, el daemon abre internet total o solo la whitelist de la sesión según `blockInternet`.
 
 ---
 
@@ -212,10 +209,33 @@ qemu-system-x86_64 -m 2G -enable-kvm \
 Criterios de smoke test:
 - Grub → kernel arranca
 - Autologin a `user` en tty1
-- Cage fullscreen → Chromium abre `http://localhost:3000`
+- Cage fullscreen → Chromium abre `http://localhost:7878`
 - Login con código de sesión → preguntas del examen visibles
 - `https://facebook.com` no carga (firewall)
 - `http://10.0.2.2:8080/healthz` devuelve `{"ok":true}`
+
+---
+
+## Flujos de desarrollo rapidos
+
+Crear el archivo local de variables una sola vez:
+
+```bash
+cp .env.examlock.example .env.examlock
+```
+
+Luego usar uno de estos wrappers:
+
+```bash
+./scripts/dev-agent.sh          # prueba agent/ui sin reconstruir ISO
+./scripts/dev-lab.sh TEST123    # build local + launcher Docker kiosk
+./scripts/dev-iso.sh            # build completa de la ISO
+```
+
+Notas:
+- `dev-agent.sh` actualiza `/etc/examlock.conf` con `sudo` si hace falta.
+- `dev-lab.sh` toma `SESSION_CODE` del argumento o de `.env.examlock`.
+- `dev-iso.sh` solo evita reescribir variables largas; el build sigue siendo completo.
 
 ---
 

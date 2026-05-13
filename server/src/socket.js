@@ -74,6 +74,7 @@ function handleStudent(socket, sessionId, uid, io, timers) {
   socket.on('student:screenshot', async ({ jpegB64, requestId }) => {
     const url = await uploadImage(jpegB64, `${sessionId}/${uid}/screen_${Date.now()}.jpg`);
     if (!url) return;
+    await db().collection('students').doc(uid).update({ screenUrl: url, lastScreenshotAt: Date.now() });
     await db().collection('screenshots').add({ studentId: uid, sessionId, url, takenAt: Date.now(), type: 'screen' });
     await logEvent(sessionId, 'screenshot-received', { requestId, url }, uid);
     io.to(`teachers:${sessionId}`).emit('monitor:screenshot-update', { uid, url });
@@ -129,7 +130,6 @@ async function uploadImage(jpegB64, filePath) {
     const buf = Buffer.from(jpegB64, 'base64');
     const file = storage().file(filePath);
     await file.save(buf, { contentType: 'image/jpeg', resumable: false });
-    await file.makePublic();
     return `https://storage.googleapis.com/${process.env.GCS_BUCKET}/${filePath}`;
   } catch (err) {
     console.error('upload failed:', err.message);

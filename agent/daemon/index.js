@@ -2,7 +2,7 @@ const express = require('express');
 const path = require('path');
 const { io: ioClient } = require('socket.io-client');
 const fs = require('fs');
-const { applyWhitelist } = require('./firewall');
+const { applyWhitelist, initFirewall } = require('./firewall');
 const { capture } = require('./screenshot');
 const { execSync } = require('child_process');
 
@@ -111,6 +111,7 @@ app.post('/api/finish', (req, res) => {
   if (state.status !== 'admitted') return res.status(409).json({ error: 'not_active' });
   if (state.socket?.connected) state.socket.emit('student:closed', { reason: 'submitted' });
   state.status = 'ended';
+  applyWhitelist([], false, false).catch(err => console.error('[firewall]', err.message));
   broadcast('exam-ended', {});
   res.json({ ok: true });
 });
@@ -145,6 +146,8 @@ app.get('/waiting', (_req, res) => res.sendFile(path.join(__dirname, '..', 'ui',
 app.get('/exam', (_req, res) => res.sendFile(path.join(__dirname, '..', 'ui', 'exam.html')));
 app.get('/ended', (_req, res) => res.sendFile(path.join(__dirname, '..', 'ui', 'ended.html')));
 
+initFirewall().catch(err => console.error('[firewall:init]', err.message));
+
 // ── Socket connection ─────────────────────────────────────────────────────────
 
 function connectSocket(sessionCode) {
@@ -171,7 +174,7 @@ function connectSocket(sessionCode) {
   socket.on('server:admitted', async ({ whitelist = [], blockInternet = false }) => {
     state.status = 'admitted';
     try {
-      await applyWhitelist(whitelist, blockInternet);
+      await applyWhitelist(whitelist, blockInternet, true);
     } catch (err) {
       console.error('[firewall]', err.message);
     }
@@ -181,7 +184,7 @@ function connectSocket(sessionCode) {
   // Whitelist update mid-exam
   socket.on('server:whitelist', async ({ whitelist = [], blockInternet = false }) => {
     try {
-      await applyWhitelist(whitelist, blockInternet);
+      await applyWhitelist(whitelist, blockInternet, true);
     } catch (err) {
       console.error('[firewall]', err.message);
     }
@@ -206,6 +209,7 @@ function connectSocket(sessionCode) {
   // Kicked
   socket.on('server:kicked', ({ reason }) => {
     state.status = 'kicked';
+    applyWhitelist([], false, false).catch(err => console.error('[firewall]', err.message));
     broadcast('kicked', { reason });
     killSession(3000);
   });
@@ -213,6 +217,7 @@ function connectSocket(sessionCode) {
   // Exam ended
   socket.on('server:exam-ended', () => {
     state.status = 'ended';
+    applyWhitelist([], false, false).catch(err => console.error('[firewall]', err.message));
     broadcast('exam-ended', {});
     killSession(5000);
   });

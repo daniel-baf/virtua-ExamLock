@@ -5,7 +5,7 @@ const heartbeat = require('./heartbeat');
 const answers = require('./answers');
 
 const SERVER_URL = process.env.SERVER_URL;
-const PORT = process.env.AGENT_PORT ?? 3000;
+const PORT = process.env.AGENT_PORT ?? 7878;
 
 // Session state — populated after student joins
 let state = {

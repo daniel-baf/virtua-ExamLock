@@ -6,9 +6,9 @@
 graph TB
     subgraph HOST["Host Linux"]
         subgraph EXAMNET["Docker bridge: exam-net\nenable_icc=false"]
-            CONTAINER["container: examlock-student\n--cap-drop ALL\n--read-only\n--tmpfs /tmp\n127.0.0.1:3000→3000"]
+            CONTAINER["container: examlock-student\n--cap-drop ALL\n--read-only\n--tmpfs /tmp\n127.0.0.1:7878→7878"]
         end
-        CAGE["Cage + Chromium\n→ localhost:3000"]
+        CAGE["Cage + Chromium\n→ localhost:7878"]
         IPTABLES["iptables DOCKER-USER\nDROP todo excepto\n→ GCP_IP:443/80"]
     end
     GCP["Cloud Run server\nHTTPS/WSS :443"]
@@ -70,5 +70,5 @@ iptables -A DOCKER-USER -i "$BR_IF" -j DROP
 | `--security-opt no-new-privileges` | El proceso no puede ganar privilegios con setuid |
 | `--read-only` | Filesystem root de solo lectura |
 | `--tmpfs /tmp` | Único directorio escribible, en RAM, se borra al apagar |
-| `-p 127.0.0.1:3000:3000` | Puerto solo expuesto en loopback del host, no en red externa |
+| `-p 127.0.0.1:7878:7878` | Puerto solo expuesto en loopback del host, no en red externa |
 | `--network exam-net` | Aislado en bridge dedicado |

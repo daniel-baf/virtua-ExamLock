@@ -11,6 +11,6 @@ COPY agent/ ./
 
 USER node
 
-EXPOSE 3000
+EXPOSE 7878
 
 ENTRYPOINT ["dumb-init", "node", "index.js"]

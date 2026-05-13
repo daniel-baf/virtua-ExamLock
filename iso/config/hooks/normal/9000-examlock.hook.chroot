@@ -1,5 +1,5 @@
 #!/bin/bash
-# Configure autologin + Firefox kiosk for examuser
+# Configure autologin + Chromium kiosk for examuser
 
 set -e
 
@@ -7,8 +7,9 @@ set -e
 curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
 apt-get install -y nodejs
 
-# Enable daemon
+# Enable daemon + base firewall
 systemctl enable examlock-daemon.service
+systemctl enable nftables.service
 
 # Configure LightDM autologin as examuser
 mkdir -p /etc/lightdm/lightdm.conf.d
@@ -19,7 +20,7 @@ autologin-user-timeout=0
 user-session=xfce
 EOF
 
-# XFCE autostart: launch Firefox kiosk pointing to daemon
+# XFCE autostart: launch Chromium kiosk pointing to daemon
 mkdir -p /home/examuser/.config/autostart
 cat > /home/examuser/.config/autostart/examlock.desktop <<'EOF'
 [Desktop Entry]
@@ -31,11 +32,14 @@ NoDisplay=false
 X-GNOME-Autostart-enabled=true
 EOF
 
-# Base nftables ruleset — drop all output until daemon applies whitelist
+# Base nftables ruleset — only loopback until daemon applies whitelist
 cat > /etc/nftables.conf <<'EOF'
-table inet examlock_base {
+flush ruleset
+table inet examlock_boot {
   chain output {
-    type filter hook output priority -10; policy accept;
+    type filter hook output priority 0; policy drop;
+    oifname "lo" accept
+    ct state established,related accept
   }
 }
 EOF

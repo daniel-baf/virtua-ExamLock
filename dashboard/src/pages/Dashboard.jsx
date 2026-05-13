@@ -24,7 +24,25 @@ export default function Dashboard() {
     }
   }, []);
 
-  useEffect(() => { fetchSessions(); }, [fetchSessions]);
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadInitialSessions() {
+      try {
+        const { sessions } = await api.listSessions();
+        if (cancelled) return;
+        setSessions(sessions);
+      } catch (e) {
+        if (cancelled) return;
+        setError('No se pudieron cargar las sesiones: ' + e.message);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    loadInitialSessions();
+    return () => { cancelled = true; };
+  }, []);
 
   async function handleSignOut() {
     await signOut(auth);
