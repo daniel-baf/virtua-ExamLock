@@ -1,7 +1,7 @@
 #!/bin/bash
 # Grabs one frame from /dev/video0 via ffmpeg and POSTs it to the agent.
 
-AGENT_URL="${1:-http://localhost:3000}"
+AGENT_URL="${1:-http://localhost:7878}"
 DEVICE="${CAMERA_DEVICE:-/dev/video0}"
 TMP="/tmp/examlock_cam_$$.jpg"
 

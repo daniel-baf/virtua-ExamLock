@@ -2,7 +2,7 @@
 # Runs in background on host/VM. Captures screen + camera every 30s.
 # Usage: ./proctor/start.sh [agent_url]
 
-AGENT_URL="${1:-http://localhost:3000}"
+AGENT_URL="${1:-http://localhost:7878}"
 INTERVAL=30
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 

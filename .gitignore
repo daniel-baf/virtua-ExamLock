@@ -9,3 +9,4 @@ infra/.terraform/
 iso/build/
 iso/build.log
 iso/examlock-live.iso
+.env.examlock

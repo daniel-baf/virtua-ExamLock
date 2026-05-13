@@ -22,7 +22,7 @@ export default function Monitor() {
   const [msgTarget, setMsgTarget] = useState(null);
   const [msgText, setMsgText] = useState('');
   const [whitelistText, setWhitelistText] = useState('');
-  const [blockInternet, setBlockInternet] = useState(false);
+  const [blockInternet, setBlockInternet] = useState(true);
   const [whitelistSaving, setWhitelistSaving] = useState(false);
   const socketRef = useRef(null);
 
@@ -60,7 +60,7 @@ export default function Monitor() {
 
   async function handleAdmit(uid) {
     await api.admit(uid);
-    patch(uid, { status: 'admitted', admittedAt: Date.now() });
+    patch(uid, { status: 'admitted' });
   }
 
   async function handleKick(uid) {
@@ -71,7 +71,7 @@ export default function Monitor() {
 
   async function handleReadmit(uid) {
     await api.readmit(uid);
-    patch(uid, { status: 'admitted', admittedAt: Date.now() });
+    patch(uid, { status: 'admitted' });
   }
 
   async function handleScreenshot(uid) {

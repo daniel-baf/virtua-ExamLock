@@ -7,7 +7,7 @@ export default function SessionNew() {
   const [name, setName] = useState('');
   const [timeLimit, setTimeLimit] = useState(90);
   const [domainsText, setDomainsText] = useState('');
-  const [blockInternet, setBlockInternet] = useState(false);
+  const [blockInternet, setBlockInternet] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 

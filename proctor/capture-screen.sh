@@ -2,7 +2,7 @@
 # Captures one screenshot and POSTs it to the agent.
 # Wayland: uses grim. X11: uses scrot. Fallback: import (ImageMagick).
 
-AGENT_URL="${1:-http://localhost:3000}"
+AGENT_URL="${1:-http://localhost:7878}"
 TMP="/tmp/examlock_screen_$$.jpg"
 
 capture() {

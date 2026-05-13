@@ -8,7 +8,7 @@ const router = Router();
 
 // POST /api/session/create
 router.post('/create', requireRole('teacher'), async (req, res) => {
-  const { name, timeLimit = 90, endsAt, whitelist = [], blockInternet = false } = req.body;
+  const { name, timeLimit = 90, endsAt, whitelist = [], blockInternet = true } = req.body;
   if (!name) return res.status(400).json({ error: 'name_required' });
 
   const sessionId = uuidv4();
