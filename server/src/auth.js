@@ -19,4 +19,7 @@ function requireRole(role) {
   };
 }
 
-module.exports = { requireRole };
+const requireTeacher = requireRole('teacher');
+const requireContainer = requireRole('container');
+
+module.exports = { requireRole, requireTeacher, requireContainer };

@@ -6,6 +6,7 @@ const { Server } = require('socket.io');
 
 const sessionRoutes = require('./routes/sessions');
 const studentRoutes = require('./routes/students');
+const examRoutes = require('./routes/exams');
 const devRoutes = require('./routes/dev');
 const registerSocket = require('./socket');
 
@@ -39,6 +40,7 @@ app.get('/healthz', (_req, res) => res.json({ ok: true }));
 
 app.use('/api/session', sessionRoutes);
 app.use('/api/student', studentRoutes);
+app.use('/api/exam', examRoutes);
 app.use('/api/dev', devRoutes);
 
 registerSocket(io);

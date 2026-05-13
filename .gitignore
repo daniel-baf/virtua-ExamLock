@@ -6,3 +6,6 @@ dist/
 .DS_Store
 infra/terraform.tfvars
 infra/.terraform/
+iso/build/
+iso/build.log
+iso/examlock-live.iso
