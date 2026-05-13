@@ -234,19 +234,3 @@ resource "google_cloud_run_domain_mapping" "server" {
   depends_on = [google_cloud_run_v2_service.server]
 }
 
-# ── Outputs ───────────────────────────────────────────────────────────────────
-
-output "server_url" {
-  description = "Cloud Run auto-generated URL"
-  value       = google_cloud_run_v2_service.server.uri
-}
-
-output "server_domain" {
-  description = "Custom domain (if configured)"
-  value       = var.server_domain != "" ? "https://${var.server_domain}" : "(not configured)"
-}
-
-output "artifact_registry" {
-  description = "Docker image base path"
-  value       = "${var.region}-docker.pkg.dev/${var.project_id}/examlock/server"
-}
