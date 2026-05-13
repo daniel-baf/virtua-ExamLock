@@ -1,3 +1,26 @@
+# Red — Aislamiento y reglas
+
+## Diagrama de red (modo Lab/BYOD)
+
+```mermaid
+graph TB
+    subgraph HOST["Host Linux"]
+        subgraph EXAMNET["Docker bridge: exam-net\nenable_icc=false"]
+            CONTAINER["container: examlock-student\n--cap-drop ALL\n--read-only\n--tmpfs /tmp\n127.0.0.1:3000→3000"]
+        end
+        CAGE["Cage + Chromium\n→ localhost:3000"]
+        IPTABLES["iptables DOCKER-USER\nDROP todo excepto\n→ GCP_IP:443/80"]
+    end
+    GCP["Cloud Run server\nHTTPS/WSS :443"]
+
+    CAGE -->|loopback| CONTAINER
+    CONTAINER -->|exam-net| IPTABLES
+    IPTABLES -->|internet| GCP
+    IPTABLES -->|DROP| BLOCK["❌ resto de internet"]
+```
+
+---
+
 # Red Docker — Aislamiento y reglas
 
 ## Creación de la red

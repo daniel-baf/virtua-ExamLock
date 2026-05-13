@@ -63,20 +63,21 @@ El workflow detecta todos los cambios y despliega todo.
 
 ## Flujo continuo (deploys automáticos)
 
-```
-Push a main
-  │
-  ├─ server/** cambió?  → build-server → push imagen → deploy-server (Cloud Run)
-  │                                    → terraform apply (actualiza imagen)
-  │
-  ├─ agent/** cambió?   → build-agent → push imagen (usada por el launcher)
-  │
-  ├─ dashboard/** cambió? → build → firebase deploy
-  │
-  └─ infra/** cambió?   → terraform plan + apply (crea o actualiza infra)
+```mermaid
+flowchart TD
+    PUSH["Push a deploy/dev\n(Cloud Build trigger)"]
+
+    PUSH --> BS["build-server\ndocker build ./server"]
+    PUSH --> BD["build-dashboard\ndocker build ./dashboard\n(VITE_* bakeadas)"]
+
+    BS --> PS["push → Artifact Registry\nexamlock/server:SHA + :latest"]
+    BD --> PD["push → Artifact Registry\nexamlock/dashboard:SHA + :latest"]
+
+    PS --> DS["gcloud run deploy\nexam-server"]
+    PD --> DD["gcloud run deploy\nexam-dashboard"]
 ```
 
-La lógica create-or-update la maneja Terraform: si el recurso existe lo actualiza, si no existe lo crea.
+> Ver diagrama completo en [architecture.md](./architecture.md#cicd--cloud-build).
 
 ---
 
