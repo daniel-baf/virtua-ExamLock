@@ -3,6 +3,7 @@
 #
 # Uso:
 #   ./scripts/dev-vm.sh           # arranca VM + watcher
+#   ./scripts/dev-vm.sh --dev     # arranca VM con iso/examlock-dev.iso
 #   ./scripts/dev-vm.sh --push    # solo empuja archivos a VM ya corriendo
 #   ./scripts/dev-vm.sh --logs    # solo muestra logs del agente en VM
 #
@@ -14,10 +15,10 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-ISO="$REPO_ROOT/iso/examlock-live.iso"
 VM_PORT=2222
 VM_MEM=2048
-MODE="${1:-}"
+ISO_PROFILE="full"
+MODE=""
 
 DEV_KEY="$SCRIPT_DIR/dev-key"
 SSH_OPTS="-p $VM_PORT -i $DEV_KEY -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR -o IdentitiesOnly=yes"
@@ -30,6 +31,27 @@ log()  { echo -e "${B}[vm]${N} $*"; }
 ok()   { echo -e "${G}[vm]${N} $*"; }
 warn() { echo -e "${Y}[vm]${N} $*"; }
 err()  { echo -e "${R}[vm]${N} $*" >&2; }
+
+for arg in "$@"; do
+  case "$arg" in
+    --dev)
+      ISO_PROFILE="dev"
+      ;;
+    --push|--logs|--shell)
+      MODE="$arg"
+      ;;
+    *)
+      err "Flag no soportada: $arg"
+      exit 1
+      ;;
+  esac
+done
+
+ISO_DEFAULT="$REPO_ROOT/iso/examlock-live.iso"
+if [[ "$ISO_PROFILE" == "dev" ]]; then
+  ISO_DEFAULT="$REPO_ROOT/iso/examlock-dev.iso"
+fi
+ISO="${ISO_PATH:-$ISO_DEFAULT}"
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -129,7 +151,7 @@ fi
 
 if [[ ! -f "$ISO" ]]; then
   err "ISO no encontrada: $ISO"
-  err "Construye primero con: ./scripts/build-iso.sh"
+  err "Construye primero con: ./scripts/build-iso.sh o ./scripts/build-iso.sh --dev"
   exit 1
 fi
 

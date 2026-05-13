@@ -10,6 +10,12 @@
 
 Tarda 10–20 min. Usa Docker automáticamente en Arch (no necesita `live-build` nativo).
 
+Para la ISO liviana de desarrollo:
+
+```bash
+./scripts/build-iso.sh --dev
+```
+
 Para construir **y** arrancar la VM directo al terminar:
 
 ```bash
@@ -28,6 +34,12 @@ Para limpiar caché del build anterior (si cambiaste `config/` o el package list
 
 ```bash
 ./scripts/dev-vm.sh
+```
+
+Para usar la ISO dev:
+
+```bash
+./scripts/dev-vm.sh --dev
 ```
 
 - Arranca QEMU con el ISO en background
@@ -72,8 +84,23 @@ Copia `.env.examlock.example` como base si existe.
 
 | Script | Qué hace |
 |--------|----------|
-| `build-iso.sh` | Construye el ISO de producción con Docker |
+| `build-iso.sh` | Construye la ISO full o dev y puede arrancar la VM al terminar |
 | `dev-vm.sh` | QEMU + hot-reload del agente |
-| `dev-agent.sh` | Corre el daemon directo en el host (sin VM, sin firewall) |
-| `dev-iso.sh` | Wrapper legacy de `iso/build.sh` |
-| `dev-lab.sh` | Lanza el agente en contenedor Docker con `launcher/lab.sh` |
+
+
+
+# DEBUG
+
+Prueba sin rebuild
+En la VM actual, por SSH como root, prueba:
+```bash
+cp /etc/lightdm/lightdm.conf /root/lightdm.conf.bak
+sed -i 's/^autologin-user=user$/autologin-user=examuser/' /etc/lightdm/lightdm.conf
+systemctl restart lightdm
+```
+
+Si quieres verificar antes de reiniciar LightDM:
+
+```bash
+grep -n 'autologin-user' /etc/lightdm/lightdm.conf /etc/lightdm/lightdm.conf.d/50-examlock.conf
+```

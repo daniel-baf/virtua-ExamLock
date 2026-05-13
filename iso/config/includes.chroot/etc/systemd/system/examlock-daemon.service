@@ -8,7 +8,7 @@ Type=simple
 User=root
 WorkingDirectory=/opt/examlock
 Environment=DISPLAY=:0
-Environment=XAUTHORITY=/home/examuser/.Xauthority
+Environment=XAUTHORITY=/home/user/.Xauthority
 ExecStart=/usr/bin/node /opt/examlock/daemon/index.js
 Restart=always
 RestartSec=3

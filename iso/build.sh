@@ -5,6 +5,7 @@
 #   FIREBASE_API_KEY=... \
 #   FIREBASE_AUTH_DOMAIN=... \
 #   FIREBASE_PROJECT_ID=... \
+#   ISO_PROFILE=dev|full \
 #   ./build.sh
 #
 # Auto-detecta si live-build está disponible; si no, usa Docker (Debian bookworm).
@@ -16,6 +17,15 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 LOG="$SCRIPT_DIR/build.log"
+ISO_PROFILE="${ISO_PROFILE:-full}"
+
+case "$ISO_PROFILE" in
+  full|dev) ;;
+  *)
+    echo "[iso] ERROR: ISO_PROFILE debe ser 'full' o 'dev'" >&2
+    exit 1
+    ;;
+esac
 
 # ── Parámetros requeridos ─────────────────────────────────────────────────────
 
@@ -28,11 +38,38 @@ LOG="$SCRIPT_DIR/build.log"
 
 _do_build() {
   local BUILD_DIR="$SCRIPT_DIR/build"
+  local PROFILE_LIST_SRC="$SCRIPT_DIR/package-lists/examlock-${ISO_PROFILE}.list.chroot"
+  local OUTPUT="$SCRIPT_DIR/examlock-live.iso"
+  local CACHE_STASH=""
 
-  echo "[iso] Preparando directorio de build..."
+  if [[ "$ISO_PROFILE" == "dev" ]]; then
+    OUTPUT="$SCRIPT_DIR/examlock-dev.iso"
+  fi
+
+  echo "[iso] Preparando directorio de build (perfil: $ISO_PROFILE)..."
+  if [[ ! -f "$PROFILE_LIST_SRC" ]]; then
+    echo "[iso] ERROR: package list no encontrada: $PROFILE_LIST_SRC"
+    exit 1
+  fi
+
+  if [[ -d "$BUILD_DIR/cache" || -d "$BUILD_DIR/.agent-cache" ]]; then
+    CACHE_STASH=$(mktemp -d)
+    [[ -d "$BUILD_DIR/cache" ]] && mv "$BUILD_DIR/cache" "$CACHE_STASH/cache"
+    [[ -d "$BUILD_DIR/.agent-cache" ]] && mv "$BUILD_DIR/.agent-cache" "$CACHE_STASH/.agent-cache"
+  fi
+
   rm -rf "$BUILD_DIR"
   mkdir -p "$BUILD_DIR"
+
+  if [[ -n "$CACHE_STASH" ]]; then
+    [[ -d "$CACHE_STASH/cache" ]] && mv "$CACHE_STASH/cache" "$BUILD_DIR/cache"
+    [[ -d "$CACHE_STASH/.agent-cache" ]] && mv "$CACHE_STASH/.agent-cache" "$BUILD_DIR/.agent-cache"
+    rmdir "$CACHE_STASH" 2>/dev/null || true
+  fi
+
   cp -r "$SCRIPT_DIR/config" "$BUILD_DIR/"
+  mkdir -p "$BUILD_DIR/config/package-lists"
+  cp "$PROFILE_LIST_SRC" "$BUILD_DIR/config/package-lists/examlock.list.chroot"
 
   mkdir -p "$BUILD_DIR/config/includes.chroot/etc"
   cat > "$BUILD_DIR/config/includes.chroot/etc/examlock.conf" <<EOF
@@ -44,14 +81,31 @@ EOF
   echo "[iso] Wrote /etc/examlock.conf"
 
   local AGENT_DST="$BUILD_DIR/config/includes.chroot/opt/examlock"
+  local AGENT_CACHE_ROOT="$BUILD_DIR/.agent-cache"
+  local AGENT_CACHE_KEY_SRC="$REPO_ROOT/agent/package.json"
+  local AGENT_CACHE_KEY
+  local AGENT_CACHE_DIR
   mkdir -p "$AGENT_DST"
   cp -r "$REPO_ROOT/agent/daemon"       "$AGENT_DST/"
   cp -r "$REPO_ROOT/agent/ui"           "$AGENT_DST/"
   cp    "$REPO_ROOT/agent/package.json" "$AGENT_DST/"
   cp    "$REPO_ROOT/agent/package-lock.json" "$AGENT_DST/" 2>/dev/null || true
 
-  echo "[iso] Instalando dependencias del agente..."
-  (cd "$AGENT_DST" && npm ci --omit=dev --silent)
+  if [[ -f "$REPO_ROOT/agent/package-lock.json" ]]; then
+    AGENT_CACHE_KEY_SRC="$REPO_ROOT/agent/package-lock.json"
+  fi
+  AGENT_CACHE_KEY=$(sha256sum "$AGENT_CACHE_KEY_SRC" | cut -d' ' -f1)
+  AGENT_CACHE_DIR="$AGENT_CACHE_ROOT/$AGENT_CACHE_KEY"
+
+  if [[ -d "$AGENT_CACHE_DIR/node_modules" ]]; then
+    echo "[iso] Reutilizando cache de node_modules..."
+    cp -a "$AGENT_CACHE_DIR/node_modules" "$AGENT_DST/"
+  else
+    echo "[iso] Instalando dependencias del agente..."
+    (cd "$AGENT_DST" && npm ci --omit=dev --silent)
+    mkdir -p "$AGENT_CACHE_DIR"
+    cp -a "$AGENT_DST/node_modules" "$AGENT_CACHE_DIR/"
+  fi
 
   echo "[iso] Configurando live-build..."
   cd "$BUILD_DIR"
@@ -59,7 +113,7 @@ EOF
     --distribution bookworm \
     --archive-areas "main contrib non-free non-free-firmware" \
     --binary-images iso-hybrid \
-    --bootappend-live "boot=live components quiet splash hostname=examlock noautologin" \
+    --bootappend-live "boot=live components quiet splash hostname=examlock" \
     --debian-installer none \
     --memtest none
 
@@ -73,7 +127,6 @@ EOF
     exit 1
   fi
 
-  local OUTPUT="$SCRIPT_DIR/examlock-live.iso"
   cp "$ISO_FILE" "$OUTPUT"
   echo ""
   echo "[iso] Listo! ISO: $OUTPUT"
@@ -104,6 +157,7 @@ _launch_native() {
     FIREBASE_API_KEY="$FIREBASE_API_KEY" \
     FIREBASE_AUTH_DOMAIN="$FIREBASE_AUTH_DOMAIN" \
     FIREBASE_PROJECT_ID="$FIREBASE_PROJECT_ID" \
+    ISO_PROFILE="$ISO_PROFILE" \
     nohup bash "$SCRIPT_DIR/build.sh" >> "$LOG" 2>&1 &
   echo "[iso] PID $! → tail -f $LOG"
 }
@@ -119,6 +173,7 @@ _launch_docker() {
     -e FIREBASE_API_KEY="$FIREBASE_API_KEY" \
     -e FIREBASE_AUTH_DOMAIN="$FIREBASE_AUTH_DOMAIN" \
     -e FIREBASE_PROJECT_ID="$FIREBASE_PROJECT_ID" \
+    -e ISO_PROFILE="$ISO_PROFILE" \
     debian:bookworm bash -c "
       set -euo pipefail
       apt-get update -qq
