@@ -29,6 +29,29 @@ router.post('/create', requireTeacher, async (req, res) => {
   res.json({ sessionId, code });
 });
 
+// GET /api/sessions  — list all sessions for the authenticated teacher
+router.get('/', requireTeacher, async (req, res) => {
+  const snap = await db()
+    .collection('sessions')
+    .where('teacherId', '==', req.teacher.uid)
+    .get();
+
+  const sessions = snap.docs.map(d => {
+    const data = d.data();
+    return {
+      sessionId: d.id,
+      name: data.name,
+      code: data.code,
+      active: data.active,
+      createdAt: data.startedAt,
+      endsAt: data.endsAt,
+    };
+  });
+
+  sessions.sort((a, b) => b.createdAt - a.createdAt);
+  res.json({ sessions });
+});
+
 // GET /api/session/:code  — validate code before join
 router.get('/:code', async (req, res) => {
   const snap = await db()
@@ -83,6 +106,16 @@ router.post('/:code/join', async (req, res) => {
   const token = issueContainerToken(sessionDoc.id, studentId, session.endsAt);
 
   res.json({ studentId, sessionId: sessionDoc.id, token, endsAt: session.endsAt });
+});
+
+// GET /api/session/:id/students  — current students in session for monitor
+router.get('/:id/students', requireTeacher, async (req, res) => {
+  const snap = await db()
+    .collection('students')
+    .where('sessionId', '==', req.params.id)
+    .get();
+  const students = snap.docs.map(d => ({ studentId: d.id, ...d.data() }));
+  res.json({ students });
 });
 
 // GET /api/session/:id/results  — teacher only

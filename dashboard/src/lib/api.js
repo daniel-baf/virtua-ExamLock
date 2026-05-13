@@ -24,6 +24,7 @@ async function req(method, path, body) {
 }
 
 export const api = {
+  listSessions: () => req('GET', '/api/session'),
   createSession: (body) => req('POST', '/api/session/create', body),
   getSession: (code) => req('GET', `/api/session/${code}`),
   getResults: (id) => req('GET', `/api/session/${id}/results`),
@@ -32,4 +33,6 @@ export const api = {
   blockInternet: (id) => req('POST', `/api/student/${id}/block-internet`),
   unblockInternet: (id) => req('POST', `/api/student/${id}/unblock-internet`),
   sendMessage: (id, text) => req('POST', `/api/student/${id}/message`, { text }),
+  listStudents: (sessionId) => req('GET', `/api/session/${sessionId}/students`),
+  resetDb: () => req('POST', '/api/dev/reset'),
 };

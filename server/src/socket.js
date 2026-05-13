@@ -1,5 +1,5 @@
 const jwt = require('jsonwebtoken');
-const { db, storage } = require('./firebase');
+const { db, storage, auth } = require('./firebase');
 
 const HEARTBEAT_TIMEOUT_MS = 30_000; // declare offline after 30s missed
 
@@ -7,20 +7,34 @@ module.exports = function registerSocket(io) {
   // Per-student timeout handles
   const heartbeatTimers = new Map();
 
-  io.use((socket, next) => {
+  io.use(async (socket, next) => {
     const token = socket.handshake.auth?.token;
     if (!token) return next(new Error('missing_token'));
+
+    // Container tokens: short-lived JWT signed with JWT_SECRET
     try {
       const payload = jwt.verify(token, process.env.JWT_SECRET);
       socket.session = payload;
-      next();
-    } catch {
+      console.log('[socket] container auth ok, student:', payload.studentId);
+      return next();
+    } catch {}
+
+    // Teacher tokens: Firebase ID tokens
+    try {
+      const decoded = await auth().verifyIdToken(token);
+      const sessionId = socket.handshake.query?.sessionId;
+      socket.session = { type: 'teacher', sessionId, uid: decoded.uid };
+      console.log('[socket] teacher auth ok, uid:', decoded.uid, 'session:', sessionId);
+      return next();
+    } catch (err) {
+      console.error('[socket] auth failed:', err.message);
       next(new Error('invalid_token'));
     }
   });
 
   io.on('connection', socket => {
     const { type, sessionId, studentId } = socket.session ?? {};
+    console.log('[socket] connected type=%s session=%s student=%s', type, sessionId, studentId);
 
     if (type === 'container') {
       handleStudent(socket, sessionId, studentId, io, heartbeatTimers);
@@ -44,9 +58,11 @@ function handleStudent(socket, sessionId, studentId, io, timers) {
     status: 'active',
     connectedAt: Date.now(),
     lastHeartbeat: Date.now(),
+  }).then(async () => {
+    const doc = await db().collection('students').doc(studentId).get();
+    const name = doc.data()?.name ?? studentId.slice(0, 8);
+    io.to(`teachers:${sessionId}`).emit('monitor:student-joined', { studentId, name });
   });
-
-  io.to(`teachers:${sessionId}`).emit('monitor:student-joined', { studentId });
 
   socket.on('student:heartbeat', () => {
     db().collection('students').doc(studentId).update({ lastHeartbeat: Date.now() });

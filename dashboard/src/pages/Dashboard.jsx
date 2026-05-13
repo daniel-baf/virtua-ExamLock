@@ -1,33 +1,47 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { signOut } from 'firebase/auth';
 import { useNavigate, Link } from 'react-router-dom';
 import { auth } from '../lib/firebase';
-
-// Sessions are stored locally for the POC (no list endpoint yet)
-// In production, add GET /api/sessions to server
-const STORAGE_KEY = 'examlock:sessions';
-
-function loadSessions() {
-  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '[]'); }
-  catch { return []; }
-}
-
-export function saveSessions(sessions) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(sessions));
-}
+import { api } from '../lib/api';
 
 export default function Dashboard() {
-  const [sessions, setSessions] = useState(loadSessions);
+  const [sessions, setSessions] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [resetting, setResetting] = useState(false);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    const updated = loadSessions();
-    setSessions(updated);
+  const fetchSessions = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const { sessions } = await api.listSessions();
+      setSessions(sessions);
+    } catch (e) {
+      setError('No se pudieron cargar las sesiones: ' + e.message);
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => { fetchSessions(); }, [fetchSessions]);
 
   async function handleSignOut() {
     await signOut(auth);
     navigate('/');
+  }
+
+  async function handleResetDb() {
+    if (!confirm('Borrar TODOS los datos (sesiones, estudiantes, respuestas, preguntas)?')) return;
+    setResetting(true);
+    try {
+      await api.resetDb();
+      setSessions([]);
+    } catch (e) {
+      alert('Error al resetear: ' + e.message);
+    } finally {
+      setResetting(false);
+    }
   }
 
   return (
@@ -44,6 +58,16 @@ export default function Dashboard() {
         </div>
         <div className="flex items-center gap-4">
           <span className="text-sm text-gray-400">{auth.currentUser?.email}</span>
+          <button onClick={fetchSessions} disabled={loading}
+            className="text-sm text-gray-400 hover:text-white border border-gray-700 hover:border-gray-500
+              px-3 py-1 rounded-lg transition-colors disabled:opacity-40">
+            {loading ? 'Cargando…' : 'Actualizar'}
+          </button>
+          <button onClick={handleResetDb} disabled={resetting}
+            className="text-sm text-red-500 hover:text-red-400 border border-red-800 hover:border-red-600
+              px-3 py-1 rounded-lg transition-colors disabled:opacity-40">
+            {resetting ? 'Borrando…' : 'Reset DB'}
+          </button>
           <button onClick={handleSignOut}
             className="text-sm text-gray-400 hover:text-white transition-colors">
             Cerrar sesión
@@ -61,18 +85,34 @@ export default function Dashboard() {
           </Link>
         </div>
 
-        {sessions.length === 0 ? (
+        {error && (
+          <div className="mb-4 bg-red-950 border border-red-800 text-red-300 text-sm rounded-lg px-4 py-3">
+            {error}
+          </div>
+        )}
+
+        {loading ? (
+          <div className="text-center py-20 text-gray-500">
+            <p>Cargando sesiones…</p>
+          </div>
+        ) : sessions.length === 0 ? (
           <div className="text-center py-20 text-gray-500">
             <p className="text-lg">Sin sesiones aún.</p>
             <p className="text-sm mt-1">Crea una para comenzar.</p>
           </div>
         ) : (
           <div className="space-y-3">
-            {[...sessions].reverse().map(s => (
+            {sessions.map(s => (
               <div key={s.sessionId}
                 className="bg-gray-900 border border-gray-800 rounded-xl p-4 flex items-center justify-between">
                 <div>
-                  <p className="font-medium">{s.name}</p>
+                  <div className="flex items-center gap-2">
+                    <p className="font-medium">{s.name}</p>
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium
+                      ${s.active ? 'bg-green-900 text-green-300' : 'bg-gray-800 text-gray-400'}`}>
+                      {s.active ? 'activa' : 'terminada'}
+                    </span>
+                  </div>
                   <p className="text-sm text-gray-400 mt-0.5">
                     Código: <code className="font-mono text-violet-400">{s.code}</code>
                     {' · '}

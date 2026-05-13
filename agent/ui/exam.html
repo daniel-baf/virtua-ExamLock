@@ -73,6 +73,27 @@
   }
   .saved-badge.show { opacity: 1; }
 
+  #submit-bar {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: #111118;
+    border-top: 1px solid #1f2030;
+    padding: .75rem 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 1rem;
+    z-index: 10;
+  }
+  #submit-bar span { font-size: .85rem; color: #6b7280; }
+  #btn-submit {
+    background: #7c3aed; color: #fff; border: none;
+    border-radius: 8px; padding: .6rem 1.5rem;
+    font-size: .9rem; font-weight: 600; cursor: pointer;
+    transition: background .15s;
+  }
+  #btn-submit:hover { background: #6d28d9; }
+  #btn-submit:disabled { opacity: .5; cursor: not-allowed; }
+
   /* Overlay for messages/blocks */
   #overlay {
     display: none;
@@ -107,6 +128,12 @@
 <main id="main">
   <p style="color:#6b7280;text-align:center;padding:3rem 0">Cargando preguntas…</p>
 </main>
+
+<!-- Submit bar -->
+<div id="submit-bar">
+  <span>Las respuestas se guardan automáticamente</span>
+  <button id="btn-submit" onclick="submitExam()">Entregar examen</button>
+</div>
 
 <!-- Overlay -->
 <div id="overlay">
@@ -251,6 +278,22 @@ evts.addEventListener('connected', () => {
 evts.onerror = () => {
   document.getElementById('dot').classList.add('offline');
 };
+
+// ── Submit ───────────────────────────────────────────────────────────────────
+async function submitExam() {
+  if (!confirm('¿Entregar el examen? No podrás modificar tus respuestas.')) return;
+  const btn = document.getElementById('btn-submit');
+  btn.disabled = true;
+  btn.textContent = 'Entregando…';
+  try {
+    await fetch('/api/submit', { method: 'POST' });
+    window.location.href = '/ended';
+  } catch {
+    btn.disabled = false;
+    btn.textContent = 'Entregar examen';
+    alert('Error al entregar. Intenta de nuevo.');
+  }
+}
 
 // ── Init ─────────────────────────────────────────────────────────────────────
 function escHtml(str) {

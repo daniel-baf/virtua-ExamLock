@@ -15,8 +15,10 @@ export default function Monitor() {
   const { id: sessionId } = useParams();
   const [students, setStudents] = useState({});
   const [connected, setConnected] = useState(false);
+  const [socketError, setSocketError] = useState(null);
   const [msgTarget, setMsgTarget] = useState(null);
   const [msgText, setMsgText] = useState('');
+  const [examEnded, setExamEnded] = useState(false);
   const socketRef = useRef(null);
 
   const patchStudent = useCallback((studentId, patch) => {
@@ -28,15 +30,32 @@ export default function Monitor() {
 
   useEffect(() => {
     let cancelled = false;
+
+    api.listStudents(sessionId)
+      .then(({ students }) => {
+        if (cancelled) return;
+        console.log('[monitor] existing students:', students.length);
+        students.forEach(s => patchStudent(s.studentId, s));
+      })
+      .catch(err => console.error('[monitor] listStudents failed:', err));
+
     connectTeacherSocket(sessionId).then(socket => {
       if (cancelled) return;
       socketRef.current = socket;
       setConnected(socket.connected);
 
-      socket.on('connect', () => setConnected(true));
+      socket.on('connect', () => { setConnected(true); setSocketError(null); });
       socket.on('disconnect', () => setConnected(false));
+      socket.on('connect_error', err => {
+        console.error('[monitor] socket error:', err.message);
+        setSocketError(err.message);
+      });
 
-      socket.on('monitor:student-joined', ({ studentId }) => patchStudent(studentId, { status: 'active' }));
+      socket.on('server:exam-ended', () => setExamEnded(true));
+      socket.on('monitor:student-joined', ({ studentId, name }) => {
+        console.log('[monitor] student joined:', studentId, name);
+        patchStudent(studentId, { status: 'active', name });
+      });
       socket.on('monitor:screenshot-update', ({ studentId, url }) => patchStudent(studentId, { screenUrl: url }));
       socket.on('monitor:camera-update', ({ studentId, url }) => patchStudent(studentId, { cameraUrl: url }));
       socket.on('monitor:student-closed', ({ studentId, reason }) => patchStudent(studentId, { status: 'closed', closeReason: reason }));
@@ -59,7 +78,9 @@ export default function Monitor() {
   }
 
   async function handleEndExam() {
+    if (!confirm('¿Terminar el examen para todos los alumnos?')) return;
     socketRef.current?.emit('teacher:end-exam');
+    setExamEnded(true);
   }
 
   async function sendMessage() {
@@ -80,7 +101,9 @@ export default function Monitor() {
           <Link to="/dashboard" className="text-gray-400 hover:text-white text-sm transition-colors">← Volver</Link>
           <div className="flex items-center gap-2">
             <div className={`w-2 h-2 rounded-full ${connected ? 'bg-green-500' : 'bg-red-500'}`} />
-            <span className="text-sm text-gray-400">{connected ? 'Conectado' : 'Desconectado'}</span>
+            <span className="text-sm text-gray-400">
+              {connected ? 'Socket conectado' : socketError ? `Error: ${socketError}` : 'Conectando…'}
+            </span>
           </div>
         </div>
         <div className="flex items-center gap-4">
@@ -89,12 +112,23 @@ export default function Monitor() {
             {' / '}
             <span className="font-medium">{studentList.length}</span> total
           </span>
-          <button onClick={handleEndExam}
-            className="text-sm bg-red-900 hover:bg-red-800 border border-red-700 px-3 py-1.5 rounded-lg transition-colors">
-            Terminar examen
+          <button onClick={handleEndExam} disabled={examEnded}
+            className="text-sm bg-red-900 hover:bg-red-800 border border-red-700 px-3 py-1.5 rounded-lg
+              transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+            {examEnded ? 'Examen terminado' : 'Terminar examen'}
           </button>
         </div>
       </header>
+
+      {/* Exam ended banner */}
+      {examEnded && (
+        <div className="bg-red-950 border-b border-red-800 px-6 py-2 text-sm text-red-300 text-center">
+          Examen terminado — los alumnos fueron redirigidos a la pantalla de cierre.{' '}
+          <Link to={`/session/${sessionId}/results`} className="underline hover:text-red-200">
+            Ver resultados
+          </Link>
+        </div>
+      )}
 
       {/* Grid */}
       <div className="flex-1 p-4 overflow-auto">

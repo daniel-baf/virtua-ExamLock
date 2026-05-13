@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { api } from '../lib/api';
-import { saveSessions } from './Dashboard';
 
 const QUESTION_TYPES = [
   { value: 'multiple_choice', label: 'Opción múltiple' },
@@ -71,12 +70,8 @@ export default function SessionNew() {
     setError('');
     setSaving(true);
     try {
-      const { sessionId, code } = await api.createSession({ name, timeLimit });
+      const { sessionId } = await api.createSession({ name, timeLimit });
       await api.createQuestions(sessionId, questions.map(({ _id, ...q }) => q));
-
-      const stored = JSON.parse(localStorage.getItem('examlock:sessions') ?? '[]');
-      saveSessions([...stored, { sessionId, code, name, createdAt: Date.now() }]);
-
       navigate('/dashboard');
     } catch (err) {
       setError(err.message);
