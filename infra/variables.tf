@@ -11,9 +11,15 @@ variable "region" {
 }
 
 variable "server_image" {
-  description = "Full image URL for the exam server (e.g. us-central1-docker.pkg.dev/PROJECT/examlock/server:SHA)"
+  description = "Full image URL for the exam server"
   type        = string
-  default     = "us-docker.pkg.dev/cloudrun/container/hello"  # placeholder for first terraform apply
+  default     = "us-docker.pkg.dev/cloudrun/container/hello"
+}
+
+variable "dashboard_image" {
+  description = "Full image URL for the dashboard"
+  type        = string
+  default     = "us-docker.pkg.dev/cloudrun/container/hello"
 }
 
 variable "server_domain" {

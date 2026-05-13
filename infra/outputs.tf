@@ -1,6 +1,11 @@
 output "server_url" {
   description = "Cloud Run server URL"
-  value       = google_cloud_run_v2_service.server.uri
+  value       = google_cloud_run_service.server.status[0].url
+}
+
+output "dashboard_url" {
+  description = "Cloud Run dashboard URL"
+  value       = google_cloud_run_service.dashboard.status[0].url
 }
 
 output "screenshots_bucket" {

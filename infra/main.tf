@@ -6,6 +6,21 @@ import {
   to = google_firestore_database.default
 }
 
+import {
+  id = "projects/copper-axiom-496204-b2/locations/global/workloadIdentityPools/github-pool/providers/github-provider"
+  to = google_iam_workload_identity_pool_provider.github
+}
+
+import {
+  id = "us-central1/copper-axiom-496204-b2/exam-server"
+  to = google_cloud_run_service.server
+}
+
+import {
+  id = "projects/copper-axiom-496204-b2/locations/global/workloadIdentityPools/github-pool"
+  to = google_iam_workload_identity_pool.github
+}
+
 # ── APIs ─────────────────────────────────────────────────────────────────────
 
 resource "google_project_service" "apis" {
@@ -102,76 +117,135 @@ resource "google_project_iam_member" "server_storage" {
   member  = "serviceAccount:${google_service_account.server.email}"
 }
 
-# ── Cloud Run: servidor ───────────────────────────────────────────────────────
+# ── Cloud Run: servidor (API v1 para soporte de invoker-iam-disabled) ─────────
 
-resource "google_cloud_run_v2_service" "server" {
+resource "google_cloud_run_service" "server" {
   name     = "exam-server"
   location = var.region
-  ingress  = "INGRESS_TRAFFIC_ALL"
 
-  # Bypass org policy that blocks allUsers IAM — same pattern used in lasamericas-vantum
-  annotations = {
-    "run.googleapis.com/invoker-iam-disabled" = "true"
+  metadata {
+    annotations = {
+      "run.googleapis.com/ingress"              = "all"
+      "run.googleapis.com/invoker-iam-disabled" = "true"
+    }
   }
 
   template {
-    service_account = google_service_account.server.email
-
-    scaling {
-      min_instance_count = 1
-      max_instance_count = 10
+    metadata {
+      annotations = {
+        "autoscaling.knative.dev/minScale" = "1"
+        "autoscaling.knative.dev/maxScale" = "10"
+      }
     }
 
-    containers {
-      image = var.server_image
+    spec {
+      service_account_name = google_service_account.server.email
 
-      ports {
-        container_port = 8080
-      }
+      containers {
+        image = var.server_image
 
-      resources {
-        limits = {
-          cpu    = "1"
-          memory = "512Mi"
+        ports {
+          container_port = 8080
         }
-      }
 
-      env {
-        name  = "NODE_ENV"
-        value = "production"
-      }
-      env {
-        name  = "GCP_PROJECT_ID"
-        value = var.project_id
-      }
-      env {
-        name  = "GCS_BUCKET"
-        value = google_storage_bucket.screenshots.name
-      }
-      env {
-        name  = "CORS_ORIGINS"
-        value = var.cors_origins
+        resources {
+          limits = {
+            cpu    = "1000m"
+            memory = "512Mi"
+          }
+        }
+
+        env {
+          name  = "NODE_ENV"
+          value = "production"
+        }
+        env {
+          name  = "GCP_PROJECT_ID"
+          value = var.project_id
+        }
+        env {
+          name  = "GCS_BUCKET"
+          value = google_storage_bucket.screenshots.name
+        }
+        env {
+          name  = "CORS_ORIGINS"
+          value = var.cors_origins
+        }
       }
     }
   }
 
-  depends_on = [
-    google_project_service.apis,
-  ]
+  depends_on = [google_project_service.apis]
 
   lifecycle {
-    # image se actualiza por el workflow, no por terraform plan local
-    ignore_changes = [template[0].containers[0].image]
+    ignore_changes = [
+      template[0].spec[0].containers[0].image,
+      metadata[0].annotations["client.knative.dev/user-image"],
+      metadata[0].annotations["run.googleapis.com/client-name"],
+      metadata[0].annotations["run.googleapis.com/client-version"],
+      metadata[0].annotations["run.googleapis.com/operation-id"],
+      metadata[0].annotations["run.googleapis.com/urls"],
+      template[0].metadata[0].annotations["client.knative.dev/user-image"],
+      template[0].metadata[0].annotations["run.googleapis.com/client-name"],
+      template[0].metadata[0].annotations["run.googleapis.com/client-version"],
+    ]
   }
 }
 
-# Cloud Run público — se omite si org policy bloquea allUsers
-resource "google_cloud_run_v2_service_iam_member" "server_public" {
-  count    = var.public_access ? 1 : 0
-  name     = google_cloud_run_v2_service.server.name
+# ── Cloud Run: dashboard ──────────────────────────────────────────────────────
+
+resource "google_cloud_run_service" "dashboard" {
+  name     = "exam-dashboard"
   location = var.region
-  role     = "roles/run.invoker"
-  member   = "allUsers"
+
+  metadata {
+    annotations = {
+      "run.googleapis.com/ingress"              = "all"
+      "run.googleapis.com/invoker-iam-disabled" = "true"
+    }
+  }
+
+  template {
+    metadata {
+      annotations = {
+        "autoscaling.knative.dev/minScale" = "0"
+        "autoscaling.knative.dev/maxScale" = "3"
+      }
+    }
+
+    spec {
+      containers {
+        image = var.dashboard_image
+
+        ports {
+          container_port = 8080
+        }
+
+        resources {
+          limits = {
+            cpu    = "1000m"
+            memory = "256Mi"
+          }
+        }
+      }
+    }
+  }
+
+  depends_on = [google_project_service.apis]
+
+  lifecycle {
+    ignore_changes = [
+      template[0].spec[0].containers[0].image,
+      metadata[0].annotations["client.knative.dev/user-image"],
+      metadata[0].annotations["run.googleapis.com/client-name"],
+      metadata[0].annotations["run.googleapis.com/client-version"],
+      metadata[0].annotations["run.googleapis.com/operation-id"],
+      metadata[0].annotations["run.googleapis.com/urls"],
+      template[0].metadata[0].annotations["client.knative.dev/user-image"],
+      template[0].metadata[0].annotations["run.googleapis.com/client-name"],
+      template[0].metadata[0].annotations["run.googleapis.com/client-version"],
+    ]
+  }
 }
 
 # ── Workload Identity Federation (GitHub Actions sin JSON keys) ───────────────
@@ -244,9 +318,9 @@ resource "google_cloud_run_domain_mapping" "server" {
   }
 
   spec {
-    route_name = google_cloud_run_v2_service.server.name
+    route_name = google_cloud_run_service.server.name
   }
 
-  depends_on = [google_cloud_run_v2_service.server]
+  depends_on = [google_cloud_run_service.server]
 }
 
