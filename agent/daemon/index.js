@@ -2,9 +2,10 @@ const express = require('express');
 const path = require('path');
 const { io: ioClient } = require('socket.io-client');
 const fs = require('fs');
-const { applyWhitelist, initFirewall } = require('./firewall');
+const { applyWhitelist, initFirewall, getDebugState } = require('./firewall');
 const { capture } = require('./screenshot');
 const { execSync } = require('child_process');
+const { log } = require('./logger');
 
 // ── Config ────────────────────────────────────────────────────────────────────
 
@@ -49,6 +50,10 @@ app.get('/config', (_req, res) => {
 
 app.get('/api/state', (_req, res) => res.json({ status: state.status }));
 
+app.get('/api/debug', (_req, res) => {
+  res.json({ state, firewall: getDebugState() });
+});
+
 // ── Login ─────────────────────────────────────────────────────────────────────
 
 app.post('/api/login', async (req, res) => {
@@ -77,6 +82,7 @@ app.post('/api/login', async (req, res) => {
     }
 
     state.idToken = authData.idToken;
+    log('login', 'firebase auth ok for', email);
 
     // 2. Join session on server (verifies role=student + code)
     const joinRes = await fetch(`${SERVER_URL}/api/session/${code}/join`, {
@@ -92,13 +98,14 @@ app.post('/api/login', async (req, res) => {
     state.sessionId = joinData.sessionId;
     state.sessionCode = code;
     state.status = 'waiting';
+    log('login', 'joined session', joinData.sessionId, 'code:', code);
 
     // 3. Connect socket
     connectSocket(code);
 
     res.json({ ok: true, status: 'waiting' });
   } catch (err) {
-    console.error('[login]', err.message);
+    log('login', 'ERROR', err.message);
     state.status = 'idle';
     state.idToken = null;
     res.status(401).json({ error: err.message });
@@ -146,7 +153,7 @@ app.get('/waiting', (_req, res) => res.sendFile(path.join(__dirname, '..', 'ui',
 app.get('/exam', (_req, res) => res.sendFile(path.join(__dirname, '..', 'ui', 'exam.html')));
 app.get('/ended', (_req, res) => res.sendFile(path.join(__dirname, '..', 'ui', 'ended.html')));
 
-initFirewall().catch(err => console.error('[firewall:init]', err.message));
+initFirewall().catch(err => log('firewall', 'init ERROR:', err.message));
 
 // ── Socket connection ─────────────────────────────────────────────────────────
 
@@ -161,34 +168,45 @@ function connectSocket(sessionCode) {
   state.socket = socket;
 
   socket.on('connect', () => {
-    console.log('[socket] connected');
+    log('socket', 'connected, state:', state.status);
     broadcast('state', { status: state.status });
   });
 
   socket.on('disconnect', () => {
-    console.log('[socket] disconnected');
+    log('socket', 'disconnected');
     broadcast('state', { status: state.status });
   });
 
   // Admitted: apply whitelist and redirect UI
   socket.on('server:admitted', async ({ whitelist = [], blockInternet = false }) => {
+    log('socket', 'server:admitted received', { whitelist, blockInternet });
     state.status = 'admitted';
     try {
       await applyWhitelist(whitelist, blockInternet, true);
     } catch (err) {
-      console.error('[firewall]', err.message);
+      log('firewall', 'ERROR applying whitelist:', err.message);
     }
+    const alertText = whitelist.length > 0
+      ? `Acceso habilitado a: ${whitelist.join(', ')}`
+      : blockInternet ? 'Internet restringido — sin dominios autorizados' : 'Acceso libre a internet';
     broadcast('admitted', { whitelist, blockInternet });
+    broadcast('alert', { kind: 'whitelist-applied', text: alertText });
+    log('socket', 'admitted broadcast sent');
   });
 
   // Whitelist update mid-exam
   socket.on('server:whitelist', async ({ whitelist = [], blockInternet = false }) => {
+    log('socket', 'server:whitelist received', { whitelist, blockInternet });
     try {
       await applyWhitelist(whitelist, blockInternet, true);
     } catch (err) {
-      console.error('[firewall]', err.message);
+      log('firewall', 'ERROR applying whitelist update:', err.message);
     }
+    const alertText = whitelist.length > 0
+      ? `Whitelist actualizada: ${whitelist.join(', ')}`
+      : blockInternet ? 'Whitelist vaciada — internet bloqueado' : 'Internet ahora libre';
     broadcast('whitelist', { whitelist, blockInternet });
+    broadcast('alert', { kind: 'whitelist-applied', text: alertText });
   });
 
   // On-demand screenshot
@@ -208,16 +226,18 @@ function connectSocket(sessionCode) {
 
   // Kicked
   socket.on('server:kicked', ({ reason }) => {
+    log('socket', 'server:kicked reason:', reason);
     state.status = 'kicked';
-    applyWhitelist([], false, false).catch(err => console.error('[firewall]', err.message));
+    applyWhitelist([], false, false).catch(err => log('firewall', 'ERROR on kick lock:', err.message));
     broadcast('kicked', { reason });
     killSession(3000);
   });
 
   // Exam ended
   socket.on('server:exam-ended', () => {
+    log('socket', 'server:exam-ended');
     state.status = 'ended';
-    applyWhitelist([], false, false).catch(err => console.error('[firewall]', err.message));
+    applyWhitelist([], false, false).catch(err => log('firewall', 'ERROR on end lock:', err.message));
     broadcast('exam-ended', {});
     killSession(5000);
   });
@@ -238,4 +258,4 @@ function killSession(delayMs) {
 
 // ── Start ─────────────────────────────────────────────────────────────────────
 
-app.listen(7878, '127.0.0.1', () => console.log('[daemon] listening on 127.0.0.1:7878'));
+app.listen(7878, '127.0.0.1', () => log('daemon', 'listening on 127.0.0.1:7878'));

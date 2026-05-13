@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { api } from '../lib/api';
+import DomainList from '../components/DomainList';
 
 export default function SessionNew() {
   const navigate = useNavigate();
   const [name, setName] = useState('');
   const [timeLimit, setTimeLimit] = useState(90);
-  const [domainsText, setDomainsText] = useState('');
+  const [domains, setDomains] = useState([]);
   const [blockInternet, setBlockInternet] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -17,10 +18,6 @@ export default function SessionNew() {
     setError('');
     setSaving(true);
     try {
-      const domains = domainsText
-        .split('\n')
-        .map(d => d.trim().toLowerCase())
-        .filter(Boolean);
       await api.createSession({ name, timeLimit, whitelist: domains, blockInternet });
       navigate('/dashboard');
     } catch (err) {
@@ -82,16 +79,9 @@ export default function SessionNew() {
 
           {blockInternet && (
             <div>
-              <label className="block text-sm text-gray-400 mb-1.5">
-                Dominios permitidos (uno por línea)
-              </label>
-              <textarea value={domainsText} onChange={e => setDomainsText(e.target.value)}
-                rows={5} placeholder={'moodle.universidad.edu\ngoogle.com\nstackoverflow.com'}
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2.5 text-white text-sm
-                  font-mono resize-none focus:outline-none focus:ring-2 focus:ring-violet-500" />
-              <p className="text-xs text-gray-500 mt-1">
-                DNS + localhost siempre permitidos. Vacío = bloqueo total.
-              </p>
+              <label className="block text-sm text-gray-400 mb-1.5">Dominios permitidos</label>
+              <DomainList domains={domains} onChange={setDomains} />
+              <p className="text-xs text-gray-500 mt-2">DNS + localhost siempre permitidos.</p>
             </div>
           )}
         </div>

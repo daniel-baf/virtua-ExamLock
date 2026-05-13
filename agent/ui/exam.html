@@ -90,6 +90,19 @@
     display: none;
     z-index: 100;
   }
+  .alert-toast {
+    position: fixed;
+    top: 1rem; right: 1rem;
+    background: #1a2e1a;
+    border: 1px solid #22c55e60;
+    color: #86efac;
+    padding: .75rem 1rem;
+    border-radius: 10px;
+    font-size: .8rem;
+    max-width: 320px;
+    display: none;
+    z-index: 101;
+  }
 </style>
 </head>
 <body>
@@ -113,6 +126,7 @@
 </main>
 
 <div class="msg-toast" id="msg-toast"></div>
+<div class="alert-toast" id="alert-toast"></div>
 
 <script>
 const es = new EventSource('/api/events');
@@ -137,6 +151,14 @@ es.addEventListener('message', e => {
 
 es.addEventListener('connected', () => { document.getElementById('dot').classList.remove('offline'); });
 es.onerror = () => { document.getElementById('dot').classList.add('offline'); };
+
+es.addEventListener('alert', e => {
+  const { text } = JSON.parse(e.data);
+  const el = document.getElementById('alert-toast');
+  el.textContent = text;
+  el.style.display = 'block';
+  setTimeout(() => { el.style.display = 'none'; }, 6000);
+});
 
 function updateWhitelist(domains = [], block = false) {
   const banner = document.getElementById('blocked');

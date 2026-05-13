@@ -2,8 +2,9 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { connectTeacherSocket, disconnectSocket } from '../lib/socket';
 import { api } from '../lib/api';
+import DomainList from '../components/DomainList';
 
-const TAB_LABELS = { waiting: 'Sala de espera', admitted: 'Activos', kicked: 'Expulsados' };
+const TAB_LABELS = { admitted: 'Activos', kicked: 'Expulsados' };
 const STATUS_COLOR = {
   waiting:  'bg-yellow-500',
   admitted: 'bg-green-500',
@@ -18,12 +19,13 @@ export default function Monitor() {
   const [students, setStudents] = useState({});
   const [connected, setConnected] = useState(false);
   const [examEnded, setExamEnded] = useState(false);
-  const [tab, setTab] = useState('waiting');
+  const [tab, setTab] = useState('admitted');
   const [msgTarget, setMsgTarget] = useState(null);
   const [msgText, setMsgText] = useState('');
-  const [whitelistText, setWhitelistText] = useState('');
+  const [whitelistDomains, setWhitelistDomains] = useState([]);
   const [blockInternet, setBlockInternet] = useState(true);
   const [whitelistSaving, setWhitelistSaving] = useState(false);
+  const [showWhitelist, setShowWhitelist] = useState(false);
   const socketRef = useRef(null);
 
   const patch = useCallback((uid, data) => {
@@ -58,11 +60,6 @@ export default function Monitor() {
     return () => { cancelled = true; disconnectSocket(); };
   }, [sessionId, patch]);
 
-  async function handleAdmit(uid) {
-    await api.admit(uid);
-    patch(uid, { status: 'admitted' });
-  }
-
   async function handleKick(uid) {
     if (!confirm('¿Expulsar a este alumno?')) return;
     await api.kick(uid, 'expelled');
@@ -88,8 +85,7 @@ export default function Monitor() {
   async function applyWhitelist() {
     setWhitelistSaving(true);
     try {
-      const domains = whitelistText.split('\n').map(d => d.trim().toLowerCase()).filter(Boolean);
-      await api.setWhitelist(sessionId, domains, blockInternet);
+      await api.setWhitelist(sessionId, whitelistDomains, blockInternet);
     } finally {
       setWhitelistSaving(false);
     }
@@ -103,8 +99,7 @@ export default function Monitor() {
 
   const list = Object.values(students);
   const byTab = {
-    waiting:  list.filter(s => s.status === 'waiting'),
-    admitted: list.filter(s => s.status === 'admitted' || s.status === 'offline'),
+    admitted: list.filter(s => s.status === 'admitted' || s.status === 'offline' || s.status === 'waiting'),
     kicked:   list.filter(s => s.status === 'kicked' || s.status === 'closed'),
   };
 
@@ -118,27 +113,12 @@ export default function Monitor() {
           <span className="text-sm text-gray-400">{connected ? 'Conectado' : 'Desconectado'}</span>
         </div>
 
-        {/* Whitelist controls */}
-        <div className="flex items-center gap-2 flex-1 max-w-md">
-          <input value={whitelistText} onChange={e => setWhitelistText(e.target.value)}
-            placeholder="dominio.com, otro.com (separados por enter)"
-            className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-white text-xs
-              focus:outline-none focus:ring-1 focus:ring-violet-500" />
-          <label className="flex items-center gap-1.5 cursor-pointer shrink-0">
-            <div onClick={() => setBlockInternet(v => !v)}
-              className={`w-8 h-4 rounded-full relative cursor-pointer transition-colors
-                ${blockInternet ? 'bg-violet-600' : 'bg-gray-700'}`}>
-              <div className={`w-3 h-3 bg-white rounded-full absolute top-0.5 transition-transform
-                ${blockInternet ? 'translate-x-4' : 'translate-x-0.5'}`} />
-            </div>
-            <span className="text-xs text-gray-400">{blockInternet ? 'Restringir' : 'Libre'}</span>
-          </label>
-          <button onClick={applyWhitelist} disabled={whitelistSaving}
-            className="text-xs bg-violet-700 hover:bg-violet-600 px-3 py-1.5 rounded-lg transition-colors
-              disabled:opacity-50 shrink-0">
-            {whitelistSaving ? '…' : 'Aplicar'}
-          </button>
-        </div>
+        {/* Whitelist toggle */}
+        <button
+          onClick={() => setShowWhitelist(v => !v)}
+          className="text-xs bg-gray-800 hover:bg-gray-700 border border-gray-700 px-3 py-1.5 rounded-lg transition-colors">
+          Whitelist
+        </button>
 
         <button onClick={handleEndExam} disabled={examEnded}
           className="text-sm bg-red-900 hover:bg-red-800 border border-red-700 px-3 py-1.5 rounded-lg
@@ -146,6 +126,30 @@ export default function Monitor() {
           {examEnded ? 'Terminado' : 'Terminar examen'}
         </button>
       </header>
+
+      {showWhitelist && (
+        <div className="border-b border-gray-800 bg-gray-900 px-6 py-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-medium text-gray-200">Control de acceso a internet</h3>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <span className="text-xs text-gray-400">{blockInternet ? 'Restringido' : 'Libre'}</span>
+              <div onClick={() => setBlockInternet(v => !v)}
+                className={`w-8 h-4 rounded-full relative cursor-pointer transition-colors
+                  ${blockInternet ? 'bg-violet-600' : 'bg-gray-700'}`}>
+                <div className={`w-3 h-3 bg-white rounded-full absolute top-0.5 transition-transform
+                  ${blockInternet ? 'translate-x-4' : 'translate-x-0.5'}`} />
+              </div>
+            </label>
+          </div>
+          {blockInternet && (
+            <DomainList domains={whitelistDomains} onChange={setWhitelistDomains} />
+          )}
+          <button onClick={applyWhitelist} disabled={whitelistSaving}
+            className="text-xs bg-violet-700 hover:bg-violet-600 px-4 py-2 rounded-lg transition-colors disabled:opacity-50">
+            {whitelistSaving ? 'Aplicando…' : 'Aplicar a todos'}
+          </button>
+        </div>
+      )}
 
       {examEnded && (
         <div className="bg-red-950 border-b border-red-800 px-6 py-2 text-sm text-red-300 text-center">
@@ -184,7 +188,6 @@ export default function Monitor() {
             {byTab[tab].map(s => (
               <StudentCard key={s.uid} student={s}
                 tab={tab}
-                onAdmit={() => handleAdmit(s.uid)}
                 onKick={() => handleKick(s.uid)}
                 onReadmit={() => handleReadmit(s.uid)}
                 onScreenshot={() => handleScreenshot(s.uid)}
@@ -216,7 +219,7 @@ export default function Monitor() {
   );
 }
 
-function StudentCard({ student, tab, onAdmit, onKick, onReadmit, onScreenshot, onMessage }) {
+function StudentCard({ student, tab, onKick, onReadmit, onScreenshot, onMessage }) {
   const { uid, status = 'waiting', screenUrl, email, name } = student;
   const label = email ?? name ?? uid.slice(0, 8);
 
@@ -245,19 +248,6 @@ function StudentCard({ student, tab, onAdmit, onKick, onReadmit, onScreenshot, o
 
         {/* Actions */}
         <div className="flex gap-1 flex-wrap">
-          {tab === 'waiting' && (
-            <>
-              <button onClick={onAdmit}
-                className="flex-1 text-xs bg-green-900 hover:bg-green-800 border border-green-700
-                  py-1 rounded transition-colors">
-                Admitir
-              </button>
-              <button onClick={onMessage}
-                className="px-2 text-xs bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded">
-                ✉
-              </button>
-            </>
-          )}
           {tab === 'admitted' && (
             <>
               <button onClick={onScreenshot}

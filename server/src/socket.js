@@ -52,18 +52,32 @@ module.exports = function registerSocket(io) {
   });
 };
 
-function handleStudent(socket, sessionId, uid, io, timers) {
+async function handleStudent(socket, sessionId, uid, io, timers) {
   socket.join(`student:${uid}`);
   socket.join(`session:${sessionId}`);
 
   resetHeartbeat(uid, sessionId, io, timers);
 
-  db().collection('students').doc(uid).update({
-    lastHeartbeat: Date.now(),
-  }).then(async () => {
-    const doc = await db().collection('students').doc(uid).get();
-    const name = doc.data()?.email ?? uid.slice(0, 8);
-    io.to(`teachers:${sessionId}`).emit('monitor:student-joined', { uid, name, status: doc.data()?.status });
+  const [sessSnap, stuSnap] = await Promise.all([
+    db().collection('sessions').doc(sessionId).get(),
+    db().collection('students').doc(uid).get(),
+  ]);
+  const session = sessSnap.data() ?? {};
+  const student = stuSnap.data() ?? {};
+
+  await db().collection('students').doc(uid).update({ lastHeartbeat: Date.now() });
+
+  io.to(`teachers:${sessionId}`).emit('monitor:student-joined', {
+    uid,
+    name: student.email ?? uid.slice(0, 8),
+    status: student.status,
+  });
+
+  // Always push current whitelist so the agent can apply it (covers first-connect and reconnects)
+  socket.emit('server:admitted', {
+    whitelist: session.whitelist ?? [],
+    blockInternet: session.blockInternet ?? false,
+    whitelistVersion: session.whitelistVersion ?? 0,
   });
 
   socket.on('student:heartbeat', () => {
