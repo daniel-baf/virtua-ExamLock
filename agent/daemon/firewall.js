@@ -109,6 +109,8 @@ let refreshTimer = null;
 let lastDomains = [];
 let lastBlock = false;
 let lastAdmitted = false;
+let lastResolvedIPs = { ipv4: [], ipv6: [] };
+let lastApplyAt = null;
 
 async function initFirewall() {
   await applyWhitelist([], false, false);
@@ -124,12 +126,24 @@ async function applyWhitelist(domains, blockInternet, admitted = true) {
 }
 
 async function buildAndApply(domains, blockInternet, admitted) {
+  const { log } = require('./logger');
   const systemUids = [...new Set([0, DAEMON_UID])];
   const systemHosts = [...new Set([SERVER_HOSTNAME, ...SYSTEM_HOSTS].filter(Boolean))];
   const systemIps = await resolveDomains(systemHosts);
   const studentIps = admitted && blockInternet
     ? await resolveDomains(domains)
     : { ipv4: new Set(), ipv6: new Set() };
+
+  lastResolvedIPs = { ipv4: [...studentIps.ipv4], ipv6: [...studentIps.ipv6] };
+  lastApplyAt = new Date().toISOString();
+
+  log('firewall', 'building ruleset', {
+    admitted,
+    blockInternet,
+    domains,
+    resolvedIpv4: [...studentIps.ipv4],
+    resolvedIpv6: [...studentIps.ipv6],
+  });
 
   const rules = [
     'flush ruleset',
@@ -166,11 +180,12 @@ async function buildAndApply(domains, blockInternet, admitted) {
   rules.push('  }');
   rules.push('}');
 
+  const ruleset = rules.join('\n');
   try {
-    execSync('nft -f /dev/stdin', { input: `${rules.join('\n')}\n`, stdio: ['pipe', 'pipe', 'pipe'] });
-    console.log('[firewall] applied mode:', admitted ? (blockInternet ? 'whitelist' : 'open') : 'locked');
+    execSync('nft -f /dev/stdin', { input: `${ruleset}\n`, stdio: ['pipe', 'pipe', 'pipe'] });
+    log('firewall', 'applied mode:', admitted ? (blockInternet ? 'whitelist' : 'open') : 'locked');
   } catch (err) {
-    console.error('[firewall] apply failed:', err.message);
+    log('firewall', 'apply FAILED:', err.message, 'ruleset:', ruleset);
   }
 }
 
@@ -186,4 +201,16 @@ function stopRefresh() {
   }
 }
 
-module.exports = { applyWhitelist, initFirewall };
+function getDebugState() {
+  return {
+    lastDomains,
+    lastBlock,
+    lastAdmitted,
+    lastResolvedIPs,
+    lastApplyAt,
+    examUid: EXAM_UID,
+    daemonUid: DAEMON_UID,
+  };
+}
+
+module.exports = { applyWhitelist, initFirewall, getDebugState };
