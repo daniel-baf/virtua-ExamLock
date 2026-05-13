@@ -4,3 +4,5 @@ node_modules/
 serviceAccount.json
 dist/
 .DS_Store
+infra/terraform.tfvars
+infra/.terraform/

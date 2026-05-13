@@ -56,12 +56,18 @@ steps:
   # ── Push images ───────────────────────────────────────────────────────────
   - id: push-server
     name: gcr.io/cloud-builders/docker
-    args: [push, --all-tags, ${_REGISTRY}/server]
+    args:
+      - push
+      - --all-tags
+      - ${_REGISTRY}/server
     waitFor: [build-server]
 
   - id: push-dashboard
     name: gcr.io/cloud-builders/docker
-    args: [push, --all-tags, ${_REGISTRY}/dashboard]
+    args:
+      - push
+      - --all-tags
+      - ${_REGISTRY}/dashboard
     waitFor: [build-dashboard]
 
   # ── Deploy server to Cloud Run ────────────────────────────────────────────

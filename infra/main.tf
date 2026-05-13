@@ -12,6 +12,11 @@ import {
 }
 
 import {
+  id = "projects/copper-axiom-496204-b2/locations/us-central1/triggers/36bb99b7-5301-4467-8352-74b1b0ce3d11"
+  to = google_cloudbuild_trigger.deploy_dev
+}
+
+import {
   id = "us-central1/copper-axiom-496204-b2/exam-server"
   to = google_cloud_run_service.server
 }
@@ -294,6 +299,7 @@ locals {
     "roles/storage.admin",
     "roles/iam.serviceAccountUser",
     "roles/firebase.admin",
+    "roles/logging.logWriter",
   ]
 }
 
@@ -302,6 +308,42 @@ resource "google_project_iam_member" "github_sa_roles" {
   project  = var.project_id
   role     = each.key
   member   = "serviceAccount:${google_service_account.github_actions.email}"
+}
+
+# ── Cloud Build trigger — push to deploy/dev ─────────────────────────────────
+# Prerequisito: conectar el repo GitHub en la consola:
+#   Cloud Build → Repositories → Connect repository → GitHub → elegir repo
+# Una vez conectado, el trigger se gestiona desde aquí.
+
+resource "google_cloudbuild_trigger" "deploy_dev" {
+  name        = "deploy-exam-lock"
+  description = "Build y deploy de server + dashboard al push en deploy/dev"
+  location    = var.region
+
+  github {
+    owner = var.github_owner
+    name  = var.github_repo_name
+    push {
+      branch = "^deploy/dev$"
+    }
+  }
+
+  filename = "cloudbuild.yaml"
+
+  substitutions = {
+    _REGION                         = var.region
+    _SERVER_URL                     = google_cloud_run_service.server.status[0].url
+    _VITE_FIREBASE_API_KEY          = var.firebase_api_key
+    _VITE_FIREBASE_AUTH_DOMAIN      = var.firebase_auth_domain
+    _VITE_FIREBASE_PROJECT_ID       = var.project_id
+    _VITE_FIREBASE_STORAGE_BUCKET   = "${var.project_id}.appspot.com"
+    _VITE_FIREBASE_MESSAGING_SENDER_ID = var.firebase_messaging_sender_id
+    _VITE_FIREBASE_APP_ID           = var.firebase_app_id
+  }
+
+  service_account = "projects/${var.project_id}/serviceAccounts/${google_service_account.github_actions.email}"
+
+  depends_on = [google_project_service.apis]
 }
 
 # ── Custom domain mapping (Cloud Run v1 domain mapping) ───────────────────────
