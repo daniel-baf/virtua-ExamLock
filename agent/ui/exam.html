@@ -63,6 +63,20 @@
   .whitelist h3 { font-size: .75rem; color: #9ca3af; margin-bottom: .5rem; text-transform: uppercase; letter-spacing: .05em; }
   .whitelist ul { list-style: none; }
   .whitelist li { font-size: .8rem; color: #a78bfa; padding: .15rem 0; }
+  .finish-btn {
+    margin-top: 1.5rem;
+    width: 100%;
+    background: #7f1d1d;
+    color: #fca5a5;
+    border: 1px solid #991b1b;
+    border-radius: 8px;
+    padding: .7rem;
+    font-size: .875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background .15s;
+  }
+  .finish-btn:hover { background: #991b1b; }
   .msg-toast {
     position: fixed;
     top: 1rem; right: 1rem;
@@ -94,6 +108,7 @@
       <h3>Dominios permitidos</h3>
       <ul id="whitelist-list"></ul>
     </div>
+    <button class="finish-btn" onclick="finishExam()">Finalizar examen</button>
   </div>
 </main>
 
@@ -148,6 +163,19 @@ fetch('/api/state').then(r => r.json()).then(({ status }) => {
   if (status === 'idle') window.location.href = '/';
   if (status === 'kicked' || status === 'ended') window.location.href = '/ended';
 });
+
+async function finishExam() {
+  if (!confirm('¿Seguro que deseas finalizar el examen? No podrás volver a ingresar.')) return;
+  try {
+    const res = await fetch('/api/finish', { method: 'POST' });
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}));
+      alert(`No se pudo finalizar: ${d.error ?? 'error desconocido'}`);
+    }
+  } catch {
+    alert('No se pudo conectar con el daemon.');
+  }
+}
 </script>
 </body>
 </html>

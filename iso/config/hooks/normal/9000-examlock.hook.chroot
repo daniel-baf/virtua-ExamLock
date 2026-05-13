@@ -25,7 +25,7 @@ cat > /home/examuser/.config/autostart/examlock.desktop <<'EOF'
 [Desktop Entry]
 Type=Application
 Name=ExamLock
-Exec=bash -c "sleep 3 && firefox --kiosk http://127.0.0.1:7878"
+Exec=bash -c "until curl -sf http://127.0.0.1:7878/api/state >/dev/null 2>&1; do sleep 0.5; done; chromium --kiosk --noerrdialogs --disable-pinch --no-first-run --disable-features=TranslateUI --incognito http://127.0.0.1:7878"
 Hidden=false
 NoDisplay=false
 X-GNOME-Autostart-enabled=true

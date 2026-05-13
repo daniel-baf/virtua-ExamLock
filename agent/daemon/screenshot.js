@@ -6,12 +6,11 @@ const os = require('os');
 function capture() {
   const tmpFile = path.join(os.tmpdir(), `examlock_${Date.now()}.jpg`);
   try {
+    const x11Env = { ...process.env, DISPLAY: ':0', XAUTHORITY: '/home/examuser/.Xauthority' };
     try {
-      // Wayland
-      execSync(`grim -t jpeg -q 70 "${tmpFile}"`, { stdio: 'pipe' });
+      execSync(`grim -t jpeg -q 70 "${tmpFile}"`, { env: x11Env, stdio: 'pipe' });
     } catch {
-      // X11 fallback
-      execSync(`scrot -q 70 "${tmpFile}"`, { stdio: 'pipe' });
+      execSync(`scrot -q 70 "${tmpFile}"`, { env: x11Env, stdio: 'pipe' });
     }
     return fs.readFileSync(tmpFile).toString('base64');
   } finally {

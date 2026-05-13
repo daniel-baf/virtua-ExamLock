@@ -1,7 +1,19 @@
 const { execSync } = require('child_process');
 const dns = require('dns').promises;
+const fs = require('fs');
 
 const REFRESH_MS = 60_000;
+
+function readServerHostname() {
+  try {
+    const raw = fs.readFileSync('/etc/examlock.conf', 'utf8');
+    const match = raw.match(/^SERVER_URL=(.+)$/m);
+    if (match) return new URL(match[1].trim()).hostname;
+  } catch {}
+  return null;
+}
+
+const SERVER_HOSTNAME = readServerHostname();
 let refreshTimer = null;
 let lastDomains = [];
 let lastBlock = false;
@@ -26,8 +38,9 @@ async function applyWhitelist(domains, blockInternet) {
 
 async function buildAndApply(domains) {
   const ips = new Set(['127.0.0.0/8']);
+  const allDomains = SERVER_HOSTNAME ? [SERVER_HOSTNAME, ...domains] : [...domains];
 
-  for (const domain of domains) {
+  for (const domain of allDomains) {
     try {
       const addrs = await dns.resolve4(domain);
       addrs.forEach(ip => ips.add(ip));
