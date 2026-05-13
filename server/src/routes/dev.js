@@ -1,12 +1,12 @@
 const { Router } = require('express');
 const { db } = require('../firebase');
-const { requireTeacher } = require('../auth');
+const { requireRole } = require('../auth');
 
 const router = Router();
 
 // POST /api/dev/reset  — wipe all test data, teacher auth required
-router.post('/reset', requireTeacher, async (req, res) => {
-  const collections = ['sessions', 'students', 'answers', 'questions'];
+router.post('/reset', requireRole('teacher'), async (req, res) => {
+  const collections = ['sessions', 'students', 'events', 'screenshots'];
 
   await Promise.all(
     collections.map(async (col) => {

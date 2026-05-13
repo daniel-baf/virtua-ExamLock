@@ -1,0 +1,19 @@
+[Unit]
+Description=ExamLock Daemon
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/examlock
+ExecStart=/usr/bin/node /opt/examlock/daemon/index.js
+Restart=always
+RestartSec=3
+StandardOutput=journal
+StandardError=journal
+CapabilityBoundingSet=CAP_NET_ADMIN CAP_NET_RAW
+AmbientCapabilities=CAP_NET_ADMIN CAP_NET_RAW
+
+[Install]
+WantedBy=multi-user.target

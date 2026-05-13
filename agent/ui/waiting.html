@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ExamLock — Sala de espera</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: system-ui, sans-serif;
+    background: #0a0a0f;
+    color: #e5e7eb;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+  }
+  .card {
+    background: #111118;
+    border: 1px solid #1f2030;
+    border-radius: 16px;
+    padding: 2.5rem 2rem;
+    width: 100%;
+    max-width: 400px;
+    text-align: center;
+  }
+  .spinner {
+    width: 48px; height: 48px;
+    border: 3px solid #2d2d3d;
+    border-top-color: #7c3aed;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 1.5rem;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  h1 { font-size: 1.25rem; margin-bottom: .5rem; }
+  .sub { color: #6b7280; font-size: .875rem; line-height: 1.5; }
+  .msg-box {
+    background: #1a1a2e;
+    border: 1px solid #7c3aed40;
+    border-radius: 10px;
+    padding: .75rem 1rem;
+    margin-top: 1.5rem;
+    font-size: .875rem;
+    color: #a78bfa;
+    display: none;
+  }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="spinner"></div>
+  <h1>Sala de espera</h1>
+  <p class="sub">Tu docente te admitirá al examen en breve.<br>No cierres esta ventana.</p>
+  <div class="msg-box" id="msg"></div>
+</div>
+
+<script>
+const es = new EventSource('/api/events');
+
+es.addEventListener('admitted', () => {
+  window.location.href = '/exam';
+});
+
+es.addEventListener('kicked', () => {
+  window.location.href = '/ended';
+});
+
+es.addEventListener('exam-ended', () => {
+  window.location.href = '/ended';
+});
+
+es.addEventListener('message', e => {
+  const { text } = JSON.parse(e.data);
+  const box = document.getElementById('msg');
+  box.textContent = `Mensaje del docente: ${text}`;
+  box.style.display = 'block';
+});
+
+// Redirect if somehow we're here but already admitted
+fetch('/api/state').then(r => r.json()).then(({ status }) => {
+  if (status === 'admitted') window.location.href = '/exam';
+  if (status === 'kicked' || status === 'ended') window.location.href = '/ended';
+  if (status === 'idle') window.location.href = '/';
+});
+</script>
+</body>
+</html>

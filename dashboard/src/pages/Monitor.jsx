@@ -1,31 +1,33 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { connectTeacherSocket, disconnectSocket } from '../lib/socket';
 import { api } from '../lib/api';
 
-const STATUS_LABEL = { active: 'activo', offline: 'offline', closed: 'cerrado', reactivating: 'reactivando' };
+const TAB_LABELS = { waiting: 'Sala de espera', admitted: 'Activos', kicked: 'Expulsados' };
 const STATUS_COLOR = {
-  active: 'bg-green-500',
-  offline: 'bg-yellow-500',
-  closed: 'bg-red-500',
-  reactivating: 'bg-blue-500',
+  waiting:  'bg-yellow-500',
+  admitted: 'bg-green-500',
+  offline:  'bg-gray-500',
+  kicked:   'bg-red-500',
+  closed:   'bg-gray-600',
 };
 
 export default function Monitor() {
   const { id: sessionId } = useParams();
+  const navigate = useNavigate();
   const [students, setStudents] = useState({});
   const [connected, setConnected] = useState(false);
-  const [socketError, setSocketError] = useState(null);
+  const [examEnded, setExamEnded] = useState(false);
+  const [tab, setTab] = useState('waiting');
   const [msgTarget, setMsgTarget] = useState(null);
   const [msgText, setMsgText] = useState('');
-  const [examEnded, setExamEnded] = useState(false);
+  const [whitelistText, setWhitelistText] = useState('');
+  const [blockInternet, setBlockInternet] = useState(false);
+  const [whitelistSaving, setWhitelistSaving] = useState(false);
   const socketRef = useRef(null);
 
-  const patchStudent = useCallback((studentId, patch) => {
-    setStudents(prev => ({
-      ...prev,
-      [studentId]: { ...(prev[studentId] ?? {}), studentId, ...patch },
-    }));
+  const patch = useCallback((uid, data) => {
+    setStudents(prev => ({ ...prev, [uid]: { ...(prev[uid] ?? {}), uid, ...data } }));
   }, []);
 
   useEffect(() => {
@@ -34,53 +36,46 @@ export default function Monitor() {
     api.listStudents(sessionId)
       .then(({ students }) => {
         if (cancelled) return;
-        console.log('[monitor] existing students:', students.length);
-        students.forEach(s => patchStudent(s.studentId, s));
+        students.forEach(s => patch(s.uid, s));
       })
-      .catch(err => console.error('[monitor] listStudents failed:', err));
+      .catch(console.error);
 
     connectTeacherSocket(sessionId).then(socket => {
       if (cancelled) return;
       socketRef.current = socket;
       setConnected(socket.connected);
 
-      socket.on('connect', () => { setConnected(true); setSocketError(null); });
+      socket.on('connect',    () => { setConnected(true); });
       socket.on('disconnect', () => setConnected(false));
-      socket.on('connect_error', err => {
-        console.error('[monitor] socket error:', err.message);
-        setSocketError(err.message);
-      });
 
-      socket.on('server:exam-ended', () => setExamEnded(true));
-      socket.on('monitor:student-joined', ({ studentId, name }) => {
-        console.log('[monitor] student joined:', studentId, name);
-        patchStudent(studentId, { status: 'active', name });
-      });
-      socket.on('monitor:screenshot-update', ({ studentId, url }) => patchStudent(studentId, { screenUrl: url }));
-      socket.on('monitor:camera-update', ({ studentId, url }) => patchStudent(studentId, { cameraUrl: url }));
-      socket.on('monitor:student-closed', ({ studentId, reason }) => patchStudent(studentId, { status: 'closed', closeReason: reason }));
-      socket.on('monitor:student-offline', ({ studentId }) => patchStudent(studentId, { status: 'offline' }));
+      socket.on('monitor:student-joined',    ({ uid, name, status }) => patch(uid, { name, status: status ?? 'waiting' }));
+      socket.on('monitor:screenshot-update', ({ uid, url }) => patch(uid, { screenUrl: url }));
+      socket.on('monitor:student-closed',    ({ uid }) => patch(uid, { status: 'closed' }));
+      socket.on('monitor:student-offline',   ({ uid }) => patch(uid, { status: 'offline' }));
+      socket.on('server:exam-ended',         () => setExamEnded(true));
     });
-    return () => {
-      cancelled = true;
-      disconnectSocket();
-    };
-  }, [sessionId, patchStudent]);
 
-  async function handleBlock(studentId, blocked) {
-    await (blocked ? api.blockInternet(studentId) : api.unblockInternet(studentId));
-    patchStudent(studentId, { internetBlocked: blocked });
+    return () => { cancelled = true; disconnectSocket(); };
+  }, [sessionId, patch]);
+
+  async function handleAdmit(uid) {
+    await api.admit(uid);
+    patch(uid, { status: 'admitted', admittedAt: Date.now() });
   }
 
-  async function handleReactivate(studentId) {
-    await api.reactivateStudent(studentId);
-    patchStudent(studentId, { status: 'reactivating' });
+  async function handleKick(uid) {
+    if (!confirm('¿Expulsar a este alumno?')) return;
+    await api.kick(uid, 'expelled');
+    patch(uid, { status: 'kicked' });
   }
 
-  async function handleEndExam() {
-    if (!confirm('¿Terminar el examen para todos los alumnos?')) return;
-    socketRef.current?.emit('teacher:end-exam');
-    setExamEnded(true);
+  async function handleReadmit(uid) {
+    await api.readmit(uid);
+    patch(uid, { status: 'admitted', admittedAt: Date.now() });
+  }
+
+  async function handleScreenshot(uid) {
+    await api.requestScreenshot(uid);
   }
 
   async function sendMessage() {
@@ -90,75 +85,110 @@ export default function Monitor() {
     setMsgTarget(null);
   }
 
-  async function reloadStudents() {
+  async function applyWhitelist() {
+    setWhitelistSaving(true);
     try {
-      const { students: fresh } = await api.listStudents(sessionId);
-      console.log('[monitor] reload:', fresh.length, 'students');
-      setStudents({});
-      fresh.forEach(s => patchStudent(s.studentId, s));
-    } catch (err) {
-      console.error('[monitor] reload failed:', err);
+      const domains = whitelistText.split('\n').map(d => d.trim().toLowerCase()).filter(Boolean);
+      await api.setWhitelist(sessionId, domains, blockInternet);
+    } finally {
+      setWhitelistSaving(false);
     }
   }
 
-  const studentList = Object.values(students);
-  const active = studentList.filter(s => s.status === 'active').length;
+  async function handleEndExam() {
+    if (!confirm('¿Terminar el examen para todos?')) return;
+    socketRef.current?.emit('teacher:end-exam');
+    setExamEnded(true);
+  }
+
+  const list = Object.values(students);
+  const byTab = {
+    waiting:  list.filter(s => s.status === 'waiting'),
+    admitted: list.filter(s => s.status === 'admitted' || s.status === 'offline'),
+    kicked:   list.filter(s => s.status === 'kicked' || s.status === 'closed'),
+  };
 
   return (
     <div className="min-h-screen bg-gray-950 text-white flex flex-col">
       {/* Header */}
-      <header className="border-b border-gray-800 px-6 py-3 flex items-center justify-between shrink-0">
-        <div className="flex items-center gap-4">
-          <Link to="/dashboard" className="text-gray-400 hover:text-white text-sm transition-colors">← Volver</Link>
-          <div className="flex items-center gap-2">
-            <div className={`w-2 h-2 rounded-full ${connected ? 'bg-green-500' : 'bg-red-500'}`} />
-            <span className="text-sm text-gray-400">
-              {connected ? 'Socket conectado' : socketError ? `Error: ${socketError}` : 'Conectando…'}
-            </span>
-          </div>
+      <header className="border-b border-gray-800 px-6 py-3 flex items-center justify-between shrink-0 gap-4">
+        <div className="flex items-center gap-3">
+          <Link to="/dashboard" className="text-gray-400 hover:text-white text-sm">← Volver</Link>
+          <div className={`w-2 h-2 rounded-full ${connected ? 'bg-green-500' : 'bg-red-500'}`} />
+          <span className="text-sm text-gray-400">{connected ? 'Conectado' : 'Desconectado'}</span>
         </div>
-        <div className="flex items-center gap-4">
-          <span className="text-sm text-gray-400">
-            <span className="text-green-400 font-medium">{active}</span> activos
-            {' / '}
-            <span className="font-medium">{studentList.length}</span> total
-          </span>
-          <button onClick={reloadStudents}
-            className="text-sm text-gray-400 hover:text-white border border-gray-700 hover:border-gray-500
-              px-3 py-1.5 rounded-lg transition-colors">
-            ↺ Recargar
-          </button>
-          <button onClick={handleEndExam} disabled={examEnded}
-            className="text-sm bg-red-900 hover:bg-red-800 border border-red-700 px-3 py-1.5 rounded-lg
-              transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
-            {examEnded ? 'Examen terminado' : 'Terminar examen'}
+
+        {/* Whitelist controls */}
+        <div className="flex items-center gap-2 flex-1 max-w-md">
+          <input value={whitelistText} onChange={e => setWhitelistText(e.target.value)}
+            placeholder="dominio.com, otro.com (separados por enter)"
+            className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-white text-xs
+              focus:outline-none focus:ring-1 focus:ring-violet-500" />
+          <label className="flex items-center gap-1.5 cursor-pointer shrink-0">
+            <div onClick={() => setBlockInternet(v => !v)}
+              className={`w-8 h-4 rounded-full relative cursor-pointer transition-colors
+                ${blockInternet ? 'bg-violet-600' : 'bg-gray-700'}`}>
+              <div className={`w-3 h-3 bg-white rounded-full absolute top-0.5 transition-transform
+                ${blockInternet ? 'translate-x-4' : 'translate-x-0.5'}`} />
+            </div>
+            <span className="text-xs text-gray-400">{blockInternet ? 'Restringir' : 'Libre'}</span>
+          </label>
+          <button onClick={applyWhitelist} disabled={whitelistSaving}
+            className="text-xs bg-violet-700 hover:bg-violet-600 px-3 py-1.5 rounded-lg transition-colors
+              disabled:opacity-50 shrink-0">
+            {whitelistSaving ? '…' : 'Aplicar'}
           </button>
         </div>
+
+        <button onClick={handleEndExam} disabled={examEnded}
+          className="text-sm bg-red-900 hover:bg-red-800 border border-red-700 px-3 py-1.5 rounded-lg
+            transition-colors disabled:opacity-40 shrink-0">
+          {examEnded ? 'Terminado' : 'Terminar examen'}
+        </button>
       </header>
 
-      {/* Exam ended banner */}
       {examEnded && (
         <div className="bg-red-950 border-b border-red-800 px-6 py-2 text-sm text-red-300 text-center">
-          Examen terminado — los alumnos fueron redirigidos a la pantalla de cierre.{' '}
-          <Link to={`/session/${sessionId}/results`} className="underline hover:text-red-200">
-            Ver resultados
-          </Link>
+          Examen terminado.{' '}
+          <button onClick={() => navigate(`/session/${sessionId}/audit`)} className="underline hover:text-red-200">
+            Ver auditoría
+          </button>
         </div>
       )}
 
+      {/* Tabs */}
+      <div className="border-b border-gray-800 px-6 flex gap-1">
+        {Object.entries(TAB_LABELS).map(([key, label]) => (
+          <button key={key} onClick={() => setTab(key)}
+            className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors
+              ${tab === key
+                ? 'border-violet-500 text-violet-400'
+                : 'border-transparent text-gray-400 hover:text-gray-200'}`}>
+            {label}
+            <span className={`ml-1.5 text-xs px-1.5 py-0.5 rounded-full
+              ${tab === key ? 'bg-violet-900 text-violet-300' : 'bg-gray-800 text-gray-500'}`}>
+              {byTab[key].length}
+            </span>
+          </button>
+        ))}
+      </div>
+
       {/* Grid */}
       <div className="flex-1 p-4 overflow-auto">
-        {studentList.length === 0 ? (
+        {byTab[tab].length === 0 ? (
           <div className="flex items-center justify-center h-full text-gray-600">
-            <p>Esperando alumnos…</p>
+            <p>Sin alumnos en esta categoría.</p>
           </div>
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
-            {studentList.map(s => (
-              <StudentCard key={s.studentId} student={s}
-                onBlock={() => handleBlock(s.studentId, !s.internetBlocked)}
-                onReactivate={() => handleReactivate(s.studentId)}
-                onMessage={() => setMsgTarget(s.studentId)} />
+            {byTab[tab].map(s => (
+              <StudentCard key={s.uid} student={s}
+                tab={tab}
+                onAdmit={() => handleAdmit(s.uid)}
+                onKick={() => handleKick(s.uid)}
+                onReadmit={() => handleReadmit(s.uid)}
+                onScreenshot={() => handleScreenshot(s.uid)}
+                onMessage={() => setMsgTarget(s.uid)} />
             ))}
           </div>
         )}
@@ -170,18 +200,14 @@ export default function Monitor() {
           <div className="bg-gray-900 border border-gray-700 rounded-2xl p-5 w-full max-w-sm space-y-4">
             <h3 className="font-medium">Enviar mensaje</h3>
             <textarea value={msgText} onChange={e => setMsgText(e.target.value)} rows={3}
-              placeholder="Mensaje para el alumno…"
+              placeholder="Mensaje para el alumno…" autoFocus
               className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2.5 text-white text-sm
                 resize-none focus:outline-none focus:ring-2 focus:ring-violet-500" />
             <div className="flex gap-2">
-              <button onClick={() => setMsgTarget(null)}
-                className="flex-1 bg-gray-800 hover:bg-gray-700 text-sm py-2 rounded-lg transition-colors">
-                Cancelar
-              </button>
+              <button onClick={() => { setMsgTarget(null); setMsgText(''); }}
+                className="flex-1 bg-gray-800 hover:bg-gray-700 text-sm py-2 rounded-lg">Cancelar</button>
               <button onClick={sendMessage}
-                className="flex-1 bg-violet-600 hover:bg-violet-500 text-sm py-2 rounded-lg transition-colors">
-                Enviar
-              </button>
+                className="flex-1 bg-violet-600 hover:bg-violet-500 text-sm py-2 rounded-lg">Enviar</button>
             </div>
           </div>
         </div>
@@ -190,64 +216,73 @@ export default function Monitor() {
   );
 }
 
-function StudentCard({ student, onBlock, onReactivate, onMessage }) {
-  const { studentId, status = 'active', screenUrl, cameraUrl, internetBlocked, closeReason } = student;
-  const name = student.name ?? studentId.slice(0, 8);
+function StudentCard({ student, tab, onAdmit, onKick, onReadmit, onScreenshot, onMessage }) {
+  const { uid, status = 'waiting', screenUrl, email, name } = student;
+  const label = email ?? name ?? uid.slice(0, 8);
 
   return (
     <div className={`bg-gray-900 border rounded-xl overflow-hidden
-      ${status === 'closed' ? 'border-red-800' : status === 'offline' ? 'border-yellow-800' : 'border-gray-800'}`}>
+      ${status === 'kicked' || status === 'closed' ? 'border-red-800'
+        : status === 'offline' ? 'border-yellow-800'
+        : status === 'admitted' ? 'border-green-900'
+        : 'border-gray-800'}`}>
+
       {/* Screen thumbnail */}
       <div className="aspect-video bg-gray-800 relative">
         {screenUrl
           ? <img src={screenUrl} alt="pantalla" className="w-full h-full object-cover" />
-          : <div className="w-full h-full flex items-center justify-center text-gray-600 text-xs">
-              Sin captura
-            </div>
+          : <div className="w-full h-full flex items-center justify-center text-gray-600 text-xs">Sin captura</div>
         }
-        {/* Camera pip */}
-        {cameraUrl && (
-          <img src={cameraUrl} alt="cámara"
-            className="absolute bottom-1 right-1 w-12 h-9 object-cover rounded border border-gray-700" />
-        )}
-        {status === 'closed' && (
-          <div className="absolute inset-0 bg-red-950/80 flex flex-col items-center justify-center">
-            <span className="text-2xl">⚠</span>
-            <span className="text-xs text-red-300 mt-1">{closeReason ?? 'cerrado'}</span>
-          </div>
-        )}
+        <div className={`absolute top-1 right-1 w-2 h-2 rounded-full ${STATUS_COLOR[status] ?? 'bg-gray-500'}`} />
       </div>
 
       {/* Info */}
-      <div className="p-2.5">
-        <div className="flex items-center gap-1.5 mb-2">
-          <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${STATUS_COLOR[status] ?? 'bg-gray-500'}`} />
-          <span className="text-xs font-medium truncate flex-1">{name}</span>
-          <span className="text-xs text-gray-500">{STATUS_LABEL[status] ?? status}</span>
-        </div>
+      <div className="p-2.5 space-y-2">
+        <p className="text-xs font-medium truncate" title={label}>{label}</p>
+        {student.attempts > 0 && (
+          <p className="text-xs text-gray-500">{student.attempts} reingreso(s)</p>
+        )}
 
-        {/* Controls */}
-        <div className="flex gap-1">
-          {status === 'closed' || status === 'offline' ? (
-            <button onClick={onReactivate}
+        {/* Actions */}
+        <div className="flex gap-1 flex-wrap">
+          {tab === 'waiting' && (
+            <>
+              <button onClick={onAdmit}
+                className="flex-1 text-xs bg-green-900 hover:bg-green-800 border border-green-700
+                  py-1 rounded transition-colors">
+                Admitir
+              </button>
+              <button onClick={onMessage}
+                className="px-2 text-xs bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded">
+                ✉
+              </button>
+            </>
+          )}
+          {tab === 'admitted' && (
+            <>
+              <button onClick={onScreenshot}
+                className="flex-1 text-xs bg-indigo-900 hover:bg-indigo-800 border border-indigo-700
+                  py-1 rounded transition-colors">
+                📸
+              </button>
+              <button onClick={onKick}
+                className="flex-1 text-xs bg-red-950 hover:bg-red-900 border border-red-800
+                  py-1 rounded transition-colors text-red-400">
+                Expulsar
+              </button>
+              <button onClick={onMessage}
+                className="px-2 text-xs bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded">
+                ✉
+              </button>
+            </>
+          )}
+          {tab === 'kicked' && (
+            <button onClick={onReadmit}
               className="flex-1 text-xs bg-blue-900 hover:bg-blue-800 border border-blue-700
                 py-1 rounded transition-colors">
-              Reactivar
-            </button>
-          ) : (
-            <button onClick={onBlock}
-              className={`flex-1 text-xs py-1 rounded border transition-colors
-                ${internetBlocked
-                  ? 'bg-orange-950 border-orange-800 hover:bg-orange-900 text-orange-300'
-                  : 'bg-gray-800 border-gray-700 hover:bg-gray-700'}`}>
-              {internetBlocked ? 'Desbloquear' : 'Bloquear red'}
+              Readmitir
             </button>
           )}
-          <button onClick={onMessage}
-            className="px-2 text-xs bg-gray-800 hover:bg-gray-700 border border-gray-700
-              rounded transition-colors">
-            ✉
-          </button>
         </div>
       </div>
     </div>

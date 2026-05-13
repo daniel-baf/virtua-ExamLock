@@ -10,6 +10,8 @@ resource "google_project_service" "apis" {
     "iamcredentials.googleapis.com",
     "cloudresourcemanager.googleapis.com",
     "secretmanager.googleapis.com",
+    "cloudbuild.googleapis.com",
+    "domains.googleapis.com",
   ])
   service            = each.key
   disable_on_destroy = false
@@ -90,27 +92,6 @@ resource "google_project_iam_member" "server_storage" {
   member  = "serviceAccount:${google_service_account.server.email}"
 }
 
-# ── Secret Manager: JWT_SECRET ───────────────────────────────────────────────
-
-resource "google_secret_manager_secret" "jwt_secret" {
-  secret_id = "examlock-jwt-secret"
-  replication {
-    auto {}
-  }
-  depends_on = [google_project_service.apis]
-}
-
-resource "google_secret_manager_secret_version" "jwt_secret" {
-  secret      = google_secret_manager_secret.jwt_secret.id
-  secret_data = var.jwt_secret
-}
-
-resource "google_secret_manager_secret_iam_member" "server_jwt" {
-  secret_id = google_secret_manager_secret.jwt_secret.secret_id
-  role      = "roles/secretmanager.secretAccessor"
-  member    = "serviceAccount:${google_service_account.server.email}"
-}
-
 # ── Cloud Run: servidor ───────────────────────────────────────────────────────
 
 resource "google_cloud_run_v2_service" "server" {
@@ -156,21 +137,11 @@ resource "google_cloud_run_v2_service" "server" {
         name  = "CORS_ORIGINS"
         value = var.cors_origins
       }
-      env {
-        name = "JWT_SECRET"
-        value_source {
-          secret_key_ref {
-            secret  = google_secret_manager_secret.jwt_secret.secret_id
-            version = "latest"
-          }
-        }
-      }
     }
   }
 
   depends_on = [
     google_project_service.apis,
-    google_secret_manager_secret_version.jwt_secret,
   ]
 
   lifecycle {
@@ -233,7 +204,6 @@ locals {
     "roles/storage.admin",
     "roles/iam.serviceAccountUser",
     "roles/firebase.admin",
-    "roles/secretmanager.admin",
   ]
 }
 
@@ -242,4 +212,41 @@ resource "google_project_iam_member" "github_sa_roles" {
   project  = var.project_id
   role     = each.key
   member   = "serviceAccount:${google_service_account.github_actions.email}"
+}
+
+# ── Custom domain mapping (Cloud Run v1 domain mapping) ───────────────────────
+# Requires domain ownership verified in Google Search Console first.
+# After apply, point your DNS CNAME/A to the value shown in `terraform output server_domain_target`.
+
+resource "google_cloud_run_domain_mapping" "server" {
+  count    = var.server_domain != "" ? 1 : 0
+  location = var.region
+  name     = var.server_domain
+
+  metadata {
+    namespace = var.project_id
+  }
+
+  spec {
+    route_name = google_cloud_run_v2_service.server.name
+  }
+
+  depends_on = [google_cloud_run_v2_service.server]
+}
+
+# ── Outputs ───────────────────────────────────────────────────────────────────
+
+output "server_url" {
+  description = "Cloud Run auto-generated URL"
+  value       = google_cloud_run_v2_service.server.uri
+}
+
+output "server_domain" {
+  description = "Custom domain (if configured)"
+  value       = var.server_domain != "" ? "https://${var.server_domain}" : "(not configured)"
+}
+
+output "artifact_registry" {
+  description = "Docker image base path"
+  value       = "${var.region}-docker.pkg.dev/${var.project_id}/examlock/server"
 }

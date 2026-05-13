@@ -79,14 +79,17 @@
 <div class="card">
   <div class="logo">🔒</div>
   <h1>ExamLock</h1>
-  <p class="sub">Ingresa tus datos para comenzar</p>
+  <p class="sub">Ingresa con tus credenciales universitarias</p>
 
   <div class="error" id="error"></div>
 
-  <label for="name">Nombre completo</label>
-  <input id="name" type="text" placeholder="Juan Pérez" autocomplete="off" autofocus>
+  <label for="email">Correo institucional</label>
+  <input id="email" type="email" placeholder="alumno@universidad.edu" autocomplete="off" autofocus>
 
-  <label for="code">Código de sesión</label>
+  <label for="password">Contraseña</label>
+  <input id="password" type="password" placeholder="••••••••" autocomplete="off">
+
+  <label for="code">Código de examen</label>
   <input id="code" type="text" placeholder="CALC-B7X2" autocomplete="off"
     style="text-transform:uppercase; letter-spacing:.1em;">
 
@@ -95,13 +98,13 @@
 
 <script>
 async function login() {
-  const name = document.getElementById('name').value.trim();
-  const code = document.getElementById('code').value.trim().toUpperCase();
-  const btn  = document.getElementById('btn');
-  const err  = document.getElementById('error');
+  const email    = document.getElementById('email').value.trim();
+  const password = document.getElementById('password').value;
+  const code     = document.getElementById('code').value.trim().toUpperCase();
+  const btn      = document.getElementById('btn');
 
-  err.style.display = 'none';
-  if (!name || !code) { showError('Completa todos los campos.'); return; }
+  hideError();
+  if (!email || !password || !code) { showError('Completa todos los campos.'); return; }
 
   btn.disabled = true;
   btn.textContent = 'Conectando…';
@@ -110,13 +113,13 @@ async function login() {
     const res = await fetch('/api/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ studentName: name, sessionCode: code }),
+      body: JSON.stringify({ email, password, code }),
     });
     const data = await res.json();
     if (!res.ok) { showError(friendlyError(data.error)); return; }
-    window.location.href = '/exam';
+    window.location.href = '/waiting';
   } catch {
-    showError('No se pudo conectar con el servidor.');
+    showError('No se pudo conectar con el servidor local.');
   } finally {
     btn.disabled = false;
     btn.textContent = 'Ingresar al examen';
@@ -128,19 +131,23 @@ function showError(msg) {
   el.textContent = msg;
   el.style.display = 'block';
 }
+function hideError() {
+  document.getElementById('error').style.display = 'none';
+}
 
 function friendlyError(code) {
   const map = {
-    session_not_found: 'Código de sesión incorrecto.',
+    invalid_credentials: 'Correo o contraseña incorrectos.',
+    session_not_found: 'Código de examen incorrecto o inactivo.',
     session_expired: 'La sesión ha terminado.',
+    kicked: 'Fuiste expulsado de este examen.',
+    wrong_role: 'Esta cuenta no es de estudiante.',
     server_unreachable: 'No se puede conectar al servidor.',
   };
-  return map[code] ?? 'Error al ingresar.';
+  return map[code] ?? `Error: ${code}`;
 }
 
-document.addEventListener('keydown', e => {
-  if (e.key === 'Enter') login();
-});
+document.addEventListener('keydown', e => { if (e.key === 'Enter') login(); });
 </script>
 </body>
 </html>

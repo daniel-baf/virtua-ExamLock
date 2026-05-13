@@ -1,0 +1,91 @@
+substitutions:
+  _REGION: us-central1
+  _SERVICE: exam-server
+  _REGISTRY: ${_REGION}-docker.pkg.dev/${PROJECT_ID}/examlock/server
+  # Set these in Cloud Build trigger substitutions:
+  #   _SERVER_DOMAIN  — custom domain, e.g. exam.tuuniversidad.com (or Cloud Run URL)
+  #   _VITE_FIREBASE_API_KEY
+  #   _VITE_FIREBASE_AUTH_DOMAIN
+  #   _VITE_FIREBASE_PROJECT_ID
+  #   _VITE_FIREBASE_STORAGE_BUCKET
+  #   _VITE_FIREBASE_MESSAGING_SENDER_ID
+  #   _VITE_FIREBASE_APP_ID
+  _SERVER_DOMAIN: ""
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+  machineType: E2_MEDIUM
+
+steps:
+  # ── 1. Build server Docker image ──────────────────────────────────────────
+  - id: build-server
+    name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - -t
+      - ${_REGISTRY}:${SHORT_SHA}
+      - -t
+      - ${_REGISTRY}:latest
+      - ./server
+
+  # ── 2. Push server image ──────────────────────────────────────────────────
+  - id: push-server
+    name: gcr.io/cloud-builders/docker
+    args:
+      - push
+      - --all-tags
+      - ${_REGISTRY}
+    waitFor: [build-server]
+
+  # ── 3. Deploy to Cloud Run ────────────────────────────────────────────────
+  - id: deploy-cloud-run
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - ${_SERVICE}
+      - --image=${_REGISTRY}:${SHORT_SHA}
+      - --region=${_REGION}
+      - --platform=managed
+      - --allow-unauthenticated
+      - --min-instances=1
+      - --max-instances=10
+      - --memory=512Mi
+      - --set-env-vars=NODE_ENV=production,GCP_PROJECT_ID=${PROJECT_ID},GCS_BUCKET=${PROJECT_ID}-examlock-screenshots,CORS_ORIGINS=*
+    waitFor: [push-server]
+
+  # ── 4. Build dashboard ────────────────────────────────────────────────────
+  - id: build-dashboard
+    name: node:20-slim
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        cd dashboard
+        npm ci --silent
+        VITE_SERVER_URL="https://${_SERVER_DOMAIN}" \
+        VITE_FIREBASE_API_KEY="${_VITE_FIREBASE_API_KEY}" \
+        VITE_FIREBASE_AUTH_DOMAIN="${_VITE_FIREBASE_AUTH_DOMAIN}" \
+        VITE_FIREBASE_PROJECT_ID="${_VITE_FIREBASE_PROJECT_ID}" \
+        VITE_FIREBASE_STORAGE_BUCKET="${_VITE_FIREBASE_STORAGE_BUCKET}" \
+        VITE_FIREBASE_MESSAGING_SENDER_ID="${_VITE_FIREBASE_MESSAGING_SENDER_ID}" \
+        VITE_FIREBASE_APP_ID="${_VITE_FIREBASE_APP_ID}" \
+        npm run build
+    waitFor: ['-']
+
+  # ── 5. Deploy dashboard to Firebase Hosting ───────────────────────────────
+  - id: deploy-hosting
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        npm install -g firebase-tools --silent
+        cd dashboard
+        firebase deploy --only hosting --project=${PROJECT_ID} --non-interactive
+    waitFor: [build-dashboard]
+
+images:
+  - ${_REGISTRY}:${SHORT_SHA}
+  - ${_REGISTRY}:latest

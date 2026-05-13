@@ -16,10 +16,10 @@ variable "server_image" {
   default     = "us-docker.pkg.dev/cloudrun/container/hello"  # placeholder for first terraform apply
 }
 
-variable "jwt_secret" {
-  description = "JWT secret for container session tokens"
+variable "server_domain" {
+  description = "Custom domain for Cloud Run server (e.g. exam.tuuniversidad.com). Leave empty to use auto URL."
   type        = string
-  sensitive   = true
+  default     = ""
 }
 
 variable "cors_origins" {

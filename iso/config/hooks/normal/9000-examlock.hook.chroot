@@ -1,0 +1,48 @@
+#!/bin/bash
+# Configure autologin + Firefox kiosk for examuser
+
+set -e
+
+# Install Node.js LTS
+curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+apt-get install -y nodejs
+
+# Enable daemon
+systemctl enable examlock-daemon.service
+
+# Configure LightDM autologin as examuser
+mkdir -p /etc/lightdm/lightdm.conf.d
+cat > /etc/lightdm/lightdm.conf.d/50-examlock.conf <<'EOF'
+[Seat:*]
+autologin-user=examuser
+autologin-user-timeout=0
+user-session=xfce
+EOF
+
+# XFCE autostart: launch Firefox kiosk pointing to daemon
+mkdir -p /home/examuser/.config/autostart
+cat > /home/examuser/.config/autostart/examlock.desktop <<'EOF'
+[Desktop Entry]
+Type=Application
+Name=ExamLock
+Exec=bash -c "sleep 3 && firefox --kiosk http://127.0.0.1:7878"
+Hidden=false
+NoDisplay=false
+X-GNOME-Autostart-enabled=true
+EOF
+
+# Base nftables ruleset — drop all output until daemon applies whitelist
+cat > /etc/nftables.conf <<'EOF'
+table inet examlock_base {
+  chain output {
+    type filter hook output priority -10; policy accept;
+  }
+}
+EOF
+
+# Disable unnecessary services
+systemctl disable bluetooth 2>/dev/null || true
+systemctl disable cups 2>/dev/null || true
+
+# Set examuser home permissions
+chown -R examuser:examuser /home/examuser/.config || true

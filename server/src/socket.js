@@ -1,30 +1,18 @@
-const jwt = require('jsonwebtoken');
 const { db, storage, auth } = require('./firebase');
+const { logEvent } = require('./events');
 
-const HEARTBEAT_TIMEOUT_MS = 30_000; // declare offline after 30s missed
+const HEARTBEAT_TIMEOUT_MS = 30_000;
 
 module.exports = function registerSocket(io) {
-  // Per-student timeout handles
   const heartbeatTimers = new Map();
 
   io.use(async (socket, next) => {
     const token = socket.handshake.auth?.token;
     if (!token) return next(new Error('missing_token'));
-
-    // Container tokens: short-lived JWT signed with JWT_SECRET
-    try {
-      const payload = jwt.verify(token, process.env.JWT_SECRET);
-      socket.session = payload;
-      console.log('[socket] container auth ok, student:', payload.studentId);
-      return next();
-    } catch {}
-
-    // Teacher tokens: Firebase ID tokens
     try {
       const decoded = await auth().verifyIdToken(token);
-      const sessionId = socket.handshake.query?.sessionId;
-      socket.session = { type: 'teacher', sessionId, uid: decoded.uid };
-      console.log('[socket] teacher auth ok, uid:', decoded.uid, 'session:', sessionId);
+      if (!decoded.role) return next(new Error('no_role'));
+      socket.user = decoded;
       return next();
     } catch (err) {
       console.error('[socket] auth failed:', err.message);
@@ -32,13 +20,31 @@ module.exports = function registerSocket(io) {
     }
   });
 
-  io.on('connection', socket => {
-    const { type, sessionId, studentId } = socket.session ?? {};
-    console.log('[socket] connected type=%s session=%s student=%s', type, sessionId, studentId);
+  io.on('connection', async socket => {
+    const { role, uid } = socket.user;
 
-    if (type === 'container') {
-      handleStudent(socket, sessionId, studentId, io, heartbeatTimers);
-    } else if (type === 'teacher') {
+    if (role === 'student') {
+      const sessionCode = socket.handshake.query?.sessionCode;
+      if (!sessionCode) return socket.disconnect(true);
+
+      const snap = await db().collection('sessions')
+        .where('code', '==', sessionCode)
+        .where('active', '==', true)
+        .limit(1)
+        .get();
+      if (snap.empty) return socket.disconnect(true);
+
+      const sessionId = snap.docs[0].id;
+      const studentDoc = await db().collection('students').doc(uid).get();
+      if (!studentDoc.exists || studentDoc.data().sessionId !== sessionId) {
+        return socket.disconnect(true);
+      }
+      if (studentDoc.data().status === 'kicked') return socket.disconnect(true);
+
+      handleStudent(socket, sessionId, uid, io, heartbeatTimers);
+    } else if (role === 'teacher') {
+      const sessionId = socket.handshake.query?.sessionId;
+      if (!sessionId) return socket.disconnect(true);
       handleTeacher(socket, sessionId, io);
     } else {
       socket.disconnect(true);
@@ -46,98 +52,85 @@ module.exports = function registerSocket(io) {
   });
 };
 
-// ── Student (container) ──────────────────────────────────────────────────────
-
-function handleStudent(socket, sessionId, studentId, io, timers) {
-  socket.join(`student:${studentId}`);
+function handleStudent(socket, sessionId, uid, io, timers) {
+  socket.join(`student:${uid}`);
   socket.join(`session:${sessionId}`);
 
-  resetHeartbeat(studentId, sessionId, io, timers);
+  resetHeartbeat(uid, sessionId, io, timers);
 
-  db().collection('students').doc(studentId).update({
-    status: 'active',
-    connectedAt: Date.now(),
+  db().collection('students').doc(uid).update({
     lastHeartbeat: Date.now(),
   }).then(async () => {
-    const doc = await db().collection('students').doc(studentId).get();
-    const name = doc.data()?.name ?? studentId.slice(0, 8);
-    io.to(`teachers:${sessionId}`).emit('monitor:student-joined', { studentId, name });
+    const doc = await db().collection('students').doc(uid).get();
+    const name = doc.data()?.email ?? uid.slice(0, 8);
+    io.to(`teachers:${sessionId}`).emit('monitor:student-joined', { uid, name, status: doc.data()?.status });
   });
 
   socket.on('student:heartbeat', () => {
-    db().collection('students').doc(studentId).update({ lastHeartbeat: Date.now() });
-    resetHeartbeat(studentId, sessionId, io, timers);
+    db().collection('students').doc(uid).update({ lastHeartbeat: Date.now() });
+    resetHeartbeat(uid, sessionId, io, timers);
   });
 
-  socket.on('student:screenshot', async ({ imageBase64 }) => {
-    const url = await uploadImage(imageBase64, `${sessionId}/${studentId}/screen_${Date.now()}.jpg`);
+  socket.on('student:screenshot', async ({ jpegB64, requestId }) => {
+    const url = await uploadImage(jpegB64, `${sessionId}/${uid}/screen_${Date.now()}.jpg`);
     if (!url) return;
-    await db().collection('screenshots').add({ studentId, sessionId, url, takenAt: Date.now(), type: 'screen' });
-    io.to(`teachers:${sessionId}`).emit('monitor:screenshot-update', { studentId, url });
-  });
-
-  socket.on('student:camera', async ({ imageBase64 }) => {
-    const url = await uploadImage(imageBase64, `${sessionId}/${studentId}/cam_${Date.now()}.jpg`);
-    if (!url) return;
-    await db().collection('screenshots').add({ studentId, sessionId, url, takenAt: Date.now(), type: 'camera' });
-    io.to(`teachers:${sessionId}`).emit('monitor:camera-update', { studentId, url });
+    await db().collection('screenshots').add({ studentId: uid, sessionId, url, takenAt: Date.now(), type: 'screen' });
+    await logEvent(sessionId, 'screenshot-received', { requestId, url }, uid);
+    io.to(`teachers:${sessionId}`).emit('monitor:screenshot-update', { uid, url });
   });
 
   socket.on('student:closed', async ({ reason }) => {
-    clearTimer(studentId, timers);
-    await db().collection('students').doc(studentId).update({
+    clearTimer(uid, timers);
+    await db().collection('students').doc(uid).update({
       status: 'closed',
       closedAt: Date.now(),
-      closeReason: reason ?? 'unknown',
     });
-    io.to(`teachers:${sessionId}`).emit('monitor:student-closed', { studentId, reason });
+    await logEvent(sessionId, 'closed', { reason }, uid);
+    io.to(`teachers:${sessionId}`).emit('monitor:student-closed', { uid, reason });
   });
 
   socket.on('disconnect', () => {
-    clearTimer(studentId, timers);
-    db().collection('students').doc(studentId).update({ status: 'offline' });
-    io.to(`teachers:${sessionId}`).emit('monitor:student-offline', { studentId });
+    clearTimer(uid, timers);
+    db().collection('students').doc(uid).update({ status: 'offline' });
+    logEvent(sessionId, 'offline', {}, uid);
+    io.to(`teachers:${sessionId}`).emit('monitor:student-offline', { uid });
   });
 }
-
-// ── Teacher ──────────────────────────────────────────────────────────────────
 
 function handleTeacher(socket, sessionId, io) {
   socket.join(`teachers:${sessionId}`);
 
   socket.on('teacher:end-exam', async () => {
     await db().collection('sessions').doc(sessionId).update({ active: false });
+    await logEvent(sessionId, 'exam-ended', {});
     io.to(`session:${sessionId}`).emit('server:exam-ended');
   });
-
-  // block/unblock/reactivate/message handled via REST (routes/students.js)
 }
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
-
-function resetHeartbeat(studentId, sessionId, io, timers) {
-  clearTimer(studentId, timers);
+function resetHeartbeat(uid, sessionId, io, timers) {
+  clearTimer(uid, timers);
   const t = setTimeout(() => {
-    db().collection('students').doc(studentId).update({ status: 'offline' });
-    io.to(`teachers:${sessionId}`).emit('monitor:student-offline', { studentId });
+    db().collection('students').doc(uid).update({ status: 'offline' });
+    logEvent(sessionId, 'offline', {}, uid);
+    io.to(`teachers:${sessionId}`).emit('monitor:student-offline', { uid });
   }, HEARTBEAT_TIMEOUT_MS);
-  timers.set(studentId, t);
+  timers.set(uid, t);
 }
 
-function clearTimer(studentId, timers) {
-  if (timers.has(studentId)) {
-    clearTimeout(timers.get(studentId));
-    timers.delete(studentId);
+function clearTimer(uid, timers) {
+  if (timers.has(uid)) {
+    clearTimeout(timers.get(uid));
+    timers.delete(uid);
   }
 }
 
-async function uploadImage(imageBase64, path) {
+async function uploadImage(jpegB64, filePath) {
   try {
-    const buf = Buffer.from(imageBase64, 'base64');
-    const file = storage().file(path);
+    const buf = Buffer.from(jpegB64, 'base64');
+    const file = storage().file(filePath);
     await file.save(buf, { contentType: 'image/jpeg', resumable: false });
     await file.makePublic();
-    return `https://storage.googleapis.com/${process.env.GCS_BUCKET}/${path}`;
+    return `https://storage.googleapis.com/${process.env.GCS_BUCKET}/${filePath}`;
   } catch (err) {
     console.error('upload failed:', err.message);
     return null;

@@ -124,9 +124,9 @@ export default function Dashboard() {
                     className="text-sm bg-gray-800 hover:bg-gray-700 px-3 py-1.5 rounded-lg transition-colors">
                     Monitor
                   </Link>
-                  <Link to={`/session/${s.sessionId}/results`}
+                  <Link to={`/session/${s.sessionId}/audit`}
                     className="text-sm bg-gray-800 hover:bg-gray-700 px-3 py-1.5 rounded-lg transition-colors">
-                    Resultados
+                    Auditoría
                   </Link>
                 </div>
               </div>

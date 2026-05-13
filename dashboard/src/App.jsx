@@ -4,7 +4,7 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import SessionNew from './pages/SessionNew';
 import Monitor from './pages/Monitor';
-import Results from './pages/Results';
+import Audit from './pages/Audit';
 
 export default function App() {
   return (
@@ -14,7 +14,7 @@ export default function App() {
         <Route path="/dashboard" element={<RequireAuth><Dashboard /></RequireAuth>} />
         <Route path="/session/new" element={<RequireAuth><SessionNew /></RequireAuth>} />
         <Route path="/session/:id/monitor" element={<RequireAuth><Monitor /></RequireAuth>} />
-        <Route path="/session/:id/results" element={<RequireAuth><Results /></RequireAuth>} />
+        <Route path="/session/:id/audit" element={<RequireAuth><Audit /></RequireAuth>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>

@@ -24,15 +24,22 @@ async function req(method, path, body) {
 }
 
 export const api = {
-  listSessions: () => req('GET', '/api/session'),
-  createSession: (body) => req('POST', '/api/session/create', body),
-  getSession: (code) => req('GET', `/api/session/${code}`),
-  getResults: (id) => req('GET', `/api/session/${id}/results`),
-  createQuestions: (sessionId, questions) => req('POST', `/api/exam/${sessionId}/questions`, { questions }),
-  reactivateStudent: (id) => req('POST', `/api/student/${id}/reactivate`),
-  blockInternet: (id) => req('POST', `/api/student/${id}/block-internet`),
-  unblockInternet: (id) => req('POST', `/api/student/${id}/unblock-internet`),
-  sendMessage: (id, text) => req('POST', `/api/student/${id}/message`, { text }),
-  listStudents: (sessionId) => req('GET', `/api/session/${sessionId}/students`),
+  // Sessions
+  listSessions:   ()           => req('GET',  '/api/session'),
+  createSession:  (body)       => req('POST', '/api/session/create', body),
+  getSession:     (code)       => req('GET',  `/api/session/${code}`),
+  listStudents:   (sessionId)  => req('GET',  `/api/session/${sessionId}/students`),
+  setWhitelist:   (sessionId, domains, blockInternet) =>
+                                  req('PUT',  `/api/session/${sessionId}/whitelist`, { domains, blockInternet }),
+  getAudit:       (sessionId)  => req('GET',  `/api/session/${sessionId}/audit`),
+
+  // Students
+  admit:           (uid)        => req('POST', `/api/student/${uid}/admit`),
+  kick:            (uid, reason)=> req('POST', `/api/student/${uid}/kick`, { reason }),
+  readmit:         (uid)        => req('POST', `/api/student/${uid}/readmit`),
+  requestScreenshot: (uid)      => req('POST', `/api/student/${uid}/screenshot`),
+  sendMessage:     (uid, text)  => req('POST', `/api/student/${uid}/message`, { text }),
+
+  // Dev
   resetDb: () => req('POST', '/api/dev/reset'),
 };
