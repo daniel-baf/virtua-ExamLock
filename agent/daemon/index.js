@@ -30,6 +30,7 @@ const state = {
 let browserSeen = false;
 let closingSession = false;
 let screenshotInFlight = false;
+let initialScreenshotSent = false;
 
 // ── App ───────────────────────────────────────────────────────────────────────
 
@@ -196,6 +197,7 @@ function connectSocket(sessionCode) {
     broadcast('admitted', { whitelist, blockInternet });
     broadcast('alert', { kind: 'whitelist-applied', text: alertText });
     log('socket', 'admitted broadcast sent');
+    sendInitialScreenshot();
   });
 
   // Whitelist update mid-exam
@@ -315,6 +317,15 @@ function startPeriodicScreenshots() {
     if (!state.socket?.connected) return;
     sendScreenshot(`auto_${Date.now()}`).catch(err => log('screenshot', 'periodic ERROR:', err.message));
   }, SCREENSHOT_INTERVAL_MS);
+}
+
+function sendInitialScreenshot() {
+  if (initialScreenshotSent) return;
+  initialScreenshotSent = true;
+  setTimeout(() => {
+    if (state.status !== 'admitted') return;
+    sendScreenshot(`login_${Date.now()}`).catch(err => log('screenshot', 'initial ERROR:', err.message));
+  }, 1500);
 }
 
 function killSession(delayMs) {
