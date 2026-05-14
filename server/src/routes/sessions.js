@@ -132,6 +132,35 @@ router.get('/:id/students', requireRole('teacher'), async (req, res) => {
   res.json({ students });
 });
 
+// POST /api/session/:id/screenshot-all  — request screenshots from all active students
+router.post('/:id/screenshot-all', requireRole('teacher'), async (req, res) => {
+  const sessionId = req.params.id;
+  const sessionDoc = await db().collection('sessions').doc(sessionId).get();
+  if (!sessionDoc.exists) return res.status(404).json({ error: 'not_found' });
+  if (sessionDoc.data().teacherId !== req.user.uid) return res.status(403).json({ error: 'forbidden' });
+
+  const snap = await db().collection('students').where('sessionId', '==', sessionId).get();
+  const requestId = Date.now().toString();
+  const activeStatuses = new Set(['admitted']);
+  const students = snap.docs.map(d => ({ uid: d.id, ...d.data() }));
+  const targets = students.filter(s => activeStatuses.has(s.status));
+  const skipped = students.length - targets.length;
+
+  targets.forEach(s => {
+    req.app.get('io').to(`student:${s.uid}`).emit('server:capture-now', {
+      requestId: `${requestId}_${s.uid}`,
+    });
+  });
+
+  await logEvent(sessionId, 'screenshot-all-requested', {
+    requestId,
+    requested: targets.length,
+    skipped,
+  });
+
+  res.json({ ok: true, requestId, requested: targets.length, skipped });
+});
+
 // PUT /api/session/:id/whitelist  — teacher updates whitelist, broadcasts to all students
 router.put('/:id/whitelist', requireRole('teacher'), async (req, res) => {
   const { domains = [], blockInternet = false } = req.body;

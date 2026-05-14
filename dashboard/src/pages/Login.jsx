@@ -25,62 +25,106 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-950 flex items-center justify-center px-4">
-      <div className="w-full max-w-sm">
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-violet-600 mb-4">
-            <svg className="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-            </svg>
-          </div>
-          <h1 className="text-2xl font-bold text-white">ExamLock</h1>
-          <p className="text-gray-400 text-sm mt-1">Panel del docente</p>
-        </div>
-
-        <form onSubmit={handleSubmit} className="bg-gray-900 rounded-2xl p-6 space-y-4 border border-gray-800">
-          {error && (
-            <div className="bg-red-950 border border-red-800 text-red-300 text-sm rounded-lg px-4 py-3">
-              {error}
+    <div className="min-h-screen bg-[#090a0c] text-zinc-100">
+      <div className="mx-auto grid min-h-screen w-full max-w-6xl grid-cols-1 lg:grid-cols-[1fr_420px]">
+        <section className="hidden border-r border-zinc-900 px-10 py-10 lg:flex lg:flex-col lg:justify-between">
+          <div className="flex items-center gap-3">
+            <div className="grid h-9 w-9 place-items-center rounded-lg border border-zinc-800 bg-zinc-950">
+              <span className="h-3 w-3 rounded-full bg-emerald-400" />
             </div>
-          )}
-          <div>
-            <label className="block text-sm text-gray-400 mb-1.5">Email</label>
-            <input
-              type="email" required autoFocus
-              value={email} onChange={e => setEmail(e.target.value)}
-              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2.5 text-white text-sm
-                focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
-            />
+            <span className="text-sm font-semibold tracking-wide">ExamLock</span>
           </div>
-          <div>
-            <label className="block text-sm text-gray-400 mb-1.5">Contraseña</label>
-            <input
-              type="password" required
-              value={password} onChange={e => setPassword(e.target.value)}
-              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2.5 text-white text-sm
-                focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
-            />
+
+          <div className="max-w-xl">
+            <p className="mb-4 text-xs uppercase tracking-[0.25em] text-zinc-600">Panel docente</p>
+            <h1 className="text-5xl font-semibold leading-tight tracking-tight text-white">
+              Supervision clara para laboratorios en vivo.
+            </h1>
+            <p className="mt-5 max-w-md text-sm leading-6 text-zinc-500">
+              Control de red, capturas bajo demanda, evidencia historica y estado de alumnos desde una sola consola.
+            </p>
           </div>
-          <button
-            type="submit" disabled={loading}
-            className="w-full bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white font-medium
-              rounded-lg py-2.5 text-sm transition-colors"
-          >
-            {loading ? 'Ingresando…' : 'Ingresar'}
-          </button>
-        </form>
+
+          <div className="grid grid-cols-3 gap-3 text-xs text-zinc-500">
+            <div className="rounded-lg border border-zinc-900 bg-zinc-950/50 p-3">
+              <p className="text-zinc-300">Tiempo real</p>
+              <p className="mt-1">Socket docente activo</p>
+            </div>
+            <div className="rounded-lg border border-zinc-900 bg-zinc-950/50 p-3">
+              <p className="text-zinc-300">Evidencia</p>
+              <p className="mt-1">Capturas y auditoria</p>
+            </div>
+            <div className="rounded-lg border border-zinc-900 bg-zinc-950/50 p-3">
+              <p className="text-zinc-300">Red</p>
+              <p className="mt-1">Whitelist por sesion</p>
+            </div>
+          </div>
+        </section>
+
+        <main className="flex items-center justify-center px-5 py-10">
+          <div className="w-full max-w-sm">
+            <div className="mb-8 lg:hidden">
+              <div className="mb-4 grid h-10 w-10 place-items-center rounded-lg border border-zinc-800 bg-zinc-950">
+                <span className="h-3 w-3 rounded-full bg-emerald-400" />
+              </div>
+              <h1 className="text-2xl font-semibold">ExamLock</h1>
+              <p className="mt-1 text-sm text-zinc-500">Panel docente</p>
+            </div>
+
+            <div className="rounded-lg border border-zinc-800 bg-[#101216] p-6 shadow-2xl">
+              <div className="mb-6">
+                <p className="text-xs uppercase tracking-[0.22em] text-zinc-600">Acceso</p>
+                <h2 className="mt-2 text-xl font-semibold text-white">Iniciar sesion</h2>
+              </div>
+
+              <form onSubmit={handleSubmit} className="space-y-4">
+                {error && (
+                  <div className="rounded-md border border-rose-900 bg-rose-950/60 px-3 py-2 text-sm text-rose-200">
+                    {error}
+                  </div>
+                )}
+
+                <Field label="Email">
+                  <input type="email" required autoFocus value={email} onChange={e => setEmail(e.target.value)}
+                    className="h-11 w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 text-sm text-white
+                      outline-none transition focus:border-sky-500" />
+                </Field>
+
+                <Field label="Contrasena">
+                  <input type="password" required value={password} onChange={e => setPassword(e.target.value)}
+                    className="h-11 w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 text-sm text-white
+                      outline-none transition focus:border-sky-500" />
+                </Field>
+
+                <button type="submit" disabled={loading}
+                  className="h-11 w-full rounded-md bg-zinc-100 text-sm font-semibold text-zinc-950 transition
+                    hover:bg-white disabled:opacity-50">
+                  {loading ? 'Ingresando...' : 'Entrar al panel'}
+                </button>
+              </form>
+            </div>
+          </div>
+        </main>
       </div>
     </div>
+  );
+}
+
+function Field({ label, children }) {
+  return (
+    <label className="block">
+      <span className="mb-1.5 block text-xs font-medium text-zinc-500">{label}</span>
+      {children}
+    </label>
   );
 }
 
 function friendlyError(code) {
   const map = {
     'auth/user-not-found': 'Usuario no encontrado.',
-    'auth/wrong-password': 'Contraseña incorrecta.',
-    'auth/invalid-credential': 'Credenciales inválidas.',
-    'auth/too-many-requests': 'Demasiados intentos. Intenta más tarde.',
+    'auth/wrong-password': 'Contrasena incorrecta.',
+    'auth/invalid-credential': 'Credenciales invalidas.',
+    'auth/too-many-requests': 'Demasiados intentos. Intenta mas tarde.',
   };
-  return map[code] ?? 'Error al iniciar sesión.';
+  return map[code] ?? 'Error al iniciar sesion.';
 }
