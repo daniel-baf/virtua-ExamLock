@@ -24,5 +24,5 @@ module.exports = {
   EXAM_USER: getConfigValue('EXAMLOCK_USER', 'user'),
   SERVER_URL: getConfigValue('SERVER_URL'),
   FIREBASE_API_KEY: getConfigValue('FIREBASE_API_KEY'),
-  SCREENSHOT_INTERVAL_MS: Number(getConfigValue('SCREENSHOT_INTERVAL_MS', 30_000)),
+  SCREENSHOT_INTERVAL_MS: Number(getConfigValue('SCREENSHOT_INTERVAL_MS', 300_000)),
 };
