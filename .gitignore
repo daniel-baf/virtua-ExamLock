@@ -8,6 +8,6 @@ infra/terraform.tfvars
 infra/.terraform/
 iso/build/
 iso/build.log
-iso/examlock-live.iso
+iso/*.iso
 .env.examlock
 scripts/dev-key
