@@ -3,6 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { connectTeacherSocket, disconnectSocket } from '../lib/socket';
 import { api } from '../lib/api';
 import DomainList from '../components/DomainList';
+import AuthImage from '../components/AuthImage';
 
 const TAB_LABELS = { admitted: 'En curso', kicked: 'Cerrados' };
 const STATUS_META = {
@@ -333,7 +334,7 @@ function StudentCard({ student, tab, onKick, onReadmit, onScreenshot, onMessage,
       <button onClick={onHistory} className="block w-full text-left">
         <div className="relative aspect-video bg-zinc-950">
           {screenUrl
-            ? <img src={screenUrl} alt="pantalla" className="h-full w-full object-cover" />
+            ? <AuthImage uid={uid} src={screenUrl} alt="pantalla" className="grid h-full w-full place-items-center object-cover text-xs text-zinc-600" />
             : <div className="grid h-full place-items-center text-xs text-zinc-600">Sin captura</div>
           }
           <div className="absolute left-2 top-2 flex items-center gap-1.5 rounded bg-black/70 px-2 py-1 text-[11px] text-zinc-200">
@@ -428,14 +429,15 @@ function HistoryPanel({ student, screenshots, loading, error, onClose, onCapture
           {!loading && !error && screenshots.length > 0 && (
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               {screenshots.map((sc, index) => (
-                <a key={sc.id ?? `${sc.url}-${index}`} href={sc.url} target="_blank" rel="noopener noreferrer"
+                <div key={sc.id ?? `${sc.url}-${index}`}
                   className="group overflow-hidden rounded-lg border border-zinc-800 bg-zinc-950 hover:border-sky-700">
-                  <img src={sc.url} alt={`captura ${index + 1}`} className="aspect-video w-full object-cover" />
+                  <AuthImage uid={student.uid} src={sc.url} alt={`captura ${index + 1}`}
+                    className="grid aspect-video w-full place-items-center object-cover text-xs text-zinc-600" />
                   <div className="flex items-center justify-between px-3 py-2 text-xs text-zinc-500">
                     <span>{fmtTime(sc.takenAt)}</span>
-                    <span className="text-zinc-600 group-hover:text-sky-300">Abrir</span>
+                    <span className="text-zinc-600 group-hover:text-sky-300">Vista protegida</span>
                   </div>
-                </a>
+                </div>
               ))}
             </div>
           )}

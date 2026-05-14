@@ -10,6 +10,29 @@ async function headers() {
   };
 }
 
+function imagePathFromStorageUrl(url) {
+  try {
+    const parsed = new URL(url);
+    const bucket = parsed.pathname.split('/')[1];
+    const prefix = `/${bucket}/`;
+    if (!parsed.pathname.startsWith(prefix)) return null;
+    return decodeURIComponent(parsed.pathname.slice(prefix.length));
+  } catch {
+    return null;
+  }
+}
+
+async function imageBlobUrl(uid, storageUrl) {
+  const path = imagePathFromStorageUrl(storageUrl);
+  if (!path) return storageUrl;
+  const res = await fetch(`${BASE}/api/student/${uid}/screenshot-image?path=${encodeURIComponent(path)}`, {
+    headers: await headers(),
+  });
+  if (!res.ok) throw new Error('image_load_failed');
+  const blob = await res.blob();
+  return URL.createObjectURL(blob);
+}
+
 async function req(method, path, body) {
   const res = await fetch(`${BASE}${path}`, {
     method,
@@ -41,6 +64,7 @@ export const api = {
   readmit:         (uid)        => req('POST', `/api/student/${uid}/readmit`),
   requestScreenshot: (uid)      => req('POST', `/api/student/${uid}/screenshot`),
   listStudentScreenshots: (uid) => req('GET',  `/api/student/${uid}/screenshots`),
+  imageBlobUrl,
   sendMessage:     (uid, text)  => req('POST', `/api/student/${uid}/message`, { text }),
 
   // Dev
