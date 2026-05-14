@@ -29,6 +29,8 @@ export const api = {
   createSession:  (body)       => req('POST', '/api/session/create', body),
   getSession:     (code)       => req('GET',  `/api/session/${code}`),
   listStudents:   (sessionId)  => req('GET',  `/api/session/${sessionId}/students`),
+  requestAllScreenshots: (sessionId) =>
+                                  req('POST', `/api/session/${sessionId}/screenshot-all`),
   setWhitelist:   (sessionId, domains, blockInternet) =>
                                   req('PUT',  `/api/session/${sessionId}/whitelist`, { domains, blockInternet }),
   getAudit:       (sessionId)  => req('GET',  `/api/session/${sessionId}/audit`),
@@ -38,6 +40,7 @@ export const api = {
   kick:            (uid, reason)=> req('POST', `/api/student/${uid}/kick`, { reason }),
   readmit:         (uid)        => req('POST', `/api/student/${uid}/readmit`),
   requestScreenshot: (uid)      => req('POST', `/api/student/${uid}/screenshot`),
+  listStudentScreenshots: (uid) => req('GET',  `/api/student/${uid}/screenshots`),
   sendMessage:     (uid, text)  => req('POST', `/api/student/${uid}/message`, { text }),
 
   // Dev

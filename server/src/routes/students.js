@@ -92,6 +92,27 @@ router.post('/:uid/screenshot', requireRole('teacher'), async (req, res) => {
   res.json({ ok: true, requestId });
 });
 
+// GET /api/student/:uid/screenshots  — latest screenshots for live monitor
+router.get('/:uid/screenshots', requireRole('teacher'), async (req, res) => {
+  const doc = await ownsStudent(req.user.uid, req.params.uid);
+  if (!doc) return res.status(404).json({ error: 'not_found' });
+
+  const sessionId = doc.data().sessionId;
+  const snap = await db()
+    .collection('screenshots')
+    .where('sessionId', '==', sessionId)
+    .orderBy('takenAt', 'desc')
+    .limit(500)
+    .get();
+
+  const screenshots = snap.docs
+    .map(d => ({ id: d.id, ...d.data() }))
+    .filter(sc => sc.studentId === req.params.uid)
+    .slice(0, 100);
+
+  res.json({ screenshots });
+});
+
 // POST /api/student/:uid/message
 router.post('/:uid/message', requireRole('teacher'), async (req, res) => {
   const { text } = req.body;
