@@ -1,5 +1,5 @@
 #!/bin/bash
-# Configure Chromium kiosk for the live default user
+# Configure ExamLock for the live default user
 
 set -e
 
@@ -11,26 +11,43 @@ apt-get install -y nodejs
 systemctl enable examlock-daemon.service
 systemctl enable nftables.service
 
-# XFCE autostart: launch Chromium kiosk pointing to daemon
+# XFCE autostart: launch Chromium in a normal window pointing to daemon
 # /etc/xdg/autostart applies to all users — no dependency on home dir
 mkdir -p /etc/xdg/autostart
 cat > /etc/xdg/autostart/examlock.desktop <<'EOF'
 [Desktop Entry]
 Type=Application
 Name=ExamLock
-Exec=bash -c "until curl -sf http://127.0.0.1:7878/api/state >/dev/null 2>&1; do sleep 0.5; done; chromium --kiosk --noerrdialogs --disable-pinch --no-first-run --disable-features=TranslateUI --incognito --disable-background-networking --disable-sync --no-default-browser-check http://127.0.0.1:7878"
+Exec=bash -c "until curl -sf http://127.0.0.1:7878/api/state >/dev/null 2>&1; do sleep 0.5; done; chromium --noerrdialogs --disable-pinch --no-first-run --disable-features=TranslateUI --disable-background-networking --disable-background-mode --disable-sync --no-default-browser-check --window-size=1280,800 --window-position=40,40 http://127.0.0.1:7878"
 Hidden=false
 NoDisplay=false
 X-GNOME-Autostart-enabled=true
 EOF
 
 # XFCE config via /etc/skel — live-config copies skel to /home/user on boot
-# Disable panel, keyboard shortcuts, and desktop context menu
+# Disable desktop context menu, but keep a minimal panel for desktop workflows.
 mkdir -p /etc/skel/.config/xfce4/xfconf/xfce-perchannel-xml
 cat > /etc/skel/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-panel.xml <<'EOF'
 <?xml version="1.0" encoding="UTF-8"?>
 <channel name="xfce4-panel" version="1.0">
-  <property name="panels" type="array"/>
+  <property name="panels" type="array">
+    <value type="int" value="1"/>
+    <property name="panel-1" type="empty">
+      <property name="position" type="string" value="p=6;x=0;y=0"/>
+      <property name="length" type="uint" value="100"/>
+      <property name="size" type="uint" value="32"/>
+      <property name="plugin-ids" type="array">
+        <value type="int" value="1"/>
+        <value type="int" value="2"/>
+        <value type="int" value="3"/>
+      </property>
+    </property>
+  </property>
+  <property name="plugins" type="empty">
+    <property name="plugin-1" type="string" value="applicationsmenu"/>
+    <property name="plugin-2" type="string" value="tasklist"/>
+    <property name="plugin-3" type="string" value="clock"/>
+  </property>
 </channel>
 EOF
 

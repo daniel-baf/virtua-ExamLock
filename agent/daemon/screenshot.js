@@ -1,13 +1,12 @@
-const { execSync } = require('child_process');
+const { execFileSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
-
-const EXAM_USER = 'examuser';
+const { EXAM_USER } = require('./config');
 
 function getExamUid() {
   try {
-    return execSync(`id -u ${EXAM_USER}`, { stdio: 'pipe' }).toString().trim();
+    return execFileSync('id', ['-u', EXAM_USER], { stdio: 'pipe' }).toString().trim();
   } catch { return null; }
 }
 
@@ -18,22 +17,19 @@ function capture() {
 
   const errors = [];
 
-  // Try Wayland (grim) — run as examuser so it can reach their Wayland socket
+  // Try Wayland (grim) as the desktop user so it can reach their Wayland socket.
   if (examUid) {
     const waylandSocket = detectWaylandSocket(examUid);
     if (waylandSocket) {
       try {
-        execSync(
-          `runuser -u ${EXAM_USER} -- grim -t jpeg -q 70 "${tmpFile}"`,
-          {
-            env: {
-              ...process.env,
-              WAYLAND_DISPLAY: waylandSocket,
-              XDG_RUNTIME_DIR: `/run/user/${examUid}`,
-            },
-            stdio: 'pipe',
-          }
-        );
+        execFileSync('runuser', ['-u', EXAM_USER, '--', 'grim', '-t', 'jpeg', '-q', '70', tmpFile], {
+          env: {
+            ...process.env,
+            WAYLAND_DISPLAY: waylandSocket,
+            XDG_RUNTIME_DIR: `/run/user/${examUid}`,
+          },
+          stdio: 'pipe',
+        });
         log('screenshot', 'captured via grim (wayland)');
         return fs.readFileSync(tmpFile).toString('base64');
       } catch (err) {
@@ -44,7 +40,7 @@ function capture() {
     }
   }
 
-  // Try X11 (scrot) — run as examuser
+  // Try X11 (scrot) as the desktop user.
   const xauthority = `/home/${EXAM_USER}/.Xauthority`;
   const xEnv = {
     ...process.env,
@@ -52,10 +48,11 @@ function capture() {
     XAUTHORITY: xauthority,
   };
   try {
-    const cmd = examUid
-      ? `runuser -u ${EXAM_USER} -- scrot -q 70 "${tmpFile}"`
-      : `scrot -q 70 "${tmpFile}"`;
-    execSync(cmd, { env: xEnv, stdio: 'pipe' });
+    if (examUid) {
+      execFileSync('runuser', ['-u', EXAM_USER, '--', 'scrot', '-q', '70', tmpFile], { env: xEnv, stdio: 'pipe' });
+    } else {
+      execFileSync('scrot', ['-q', '70', tmpFile], { env: xEnv, stdio: 'pipe' });
+    }
     log('screenshot', 'captured via scrot (x11)');
     return fs.readFileSync(tmpFile).toString('base64');
   } catch (err) {

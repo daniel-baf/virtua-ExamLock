@@ -9,13 +9,14 @@ User=root
 WorkingDirectory=/opt/examlock
 Environment=DISPLAY=:0
 Environment=XAUTHORITY=/home/user/.Xauthority
+Environment=EXAMLOCK_USER=user
 ExecStart=/usr/bin/node /opt/examlock/daemon/index.js
 Restart=always
 RestartSec=3
 StandardOutput=journal
 StandardError=journal
-CapabilityBoundingSet=CAP_NET_ADMIN CAP_NET_RAW
-AmbientCapabilities=CAP_NET_ADMIN CAP_NET_RAW
+CapabilityBoundingSet=CAP_NET_ADMIN CAP_NET_RAW CAP_SETUID CAP_SETGID
+AmbientCapabilities=CAP_NET_ADMIN CAP_NET_RAW CAP_SETUID CAP_SETGID
 
 [Install]
 WantedBy=multi-user.target

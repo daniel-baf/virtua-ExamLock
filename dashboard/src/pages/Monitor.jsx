@@ -51,8 +51,9 @@ export default function Monitor() {
       socket.on('disconnect', () => setConnected(false));
 
       socket.on('monitor:student-joined',    ({ uid, name, status }) => patch(uid, { name, status: status ?? 'waiting' }));
-      socket.on('monitor:screenshot-update', ({ uid, url }) => patch(uid, { screenUrl: url }));
-      socket.on('monitor:student-closed',    ({ uid }) => patch(uid, { status: 'closed' }));
+      socket.on('monitor:screenshot-update', ({ uid, url }) => patch(uid, { screenUrl: url, screenshotError: null }));
+      socket.on('monitor:screenshot-error',  ({ uid, error }) => patch(uid, { screenshotError: error }));
+      socket.on('monitor:student-closed',    ({ uid, reason }) => patch(uid, { status: 'closed', closeReason: reason }));
       socket.on('monitor:student-offline',   ({ uid }) => patch(uid, { status: 'offline' }));
       socket.on('server:exam-ended',         () => setExamEnded(true));
     });
@@ -222,6 +223,11 @@ export default function Monitor() {
 function StudentCard({ student, tab, onKick, onReadmit, onScreenshot, onMessage }) {
   const { uid, status = 'waiting', screenUrl, email, name } = student;
   const label = email ?? name ?? uid.slice(0, 8);
+  const closeLabel = student.closeReason === 'browser_closed'
+    ? 'Cerro el navegador'
+    : student.closeReason === 'submitted'
+      ? 'Finalizo el examen'
+      : student.closeReason;
 
   return (
     <div className={`bg-gray-900 border rounded-xl overflow-hidden
@@ -244,6 +250,14 @@ function StudentCard({ student, tab, onKick, onReadmit, onScreenshot, onMessage 
         <p className="text-xs font-medium truncate" title={label}>{label}</p>
         {student.attempts > 0 && (
           <p className="text-xs text-gray-500">{student.attempts} reingreso(s)</p>
+        )}
+        {status === 'closed' && closeLabel && (
+          <p className="text-xs text-gray-500 truncate" title={closeLabel}>{closeLabel}</p>
+        )}
+        {student.screenshotError && (
+          <p className="text-xs text-red-400 truncate" title={student.screenshotError}>
+            Error de captura
+          </p>
         )}
 
         {/* Actions */}
