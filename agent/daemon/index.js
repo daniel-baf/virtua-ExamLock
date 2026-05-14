@@ -1,28 +1,21 @@
 const express = require('express');
 const path = require('path');
 const { io: ioClient } = require('socket.io-client');
-const fs = require('fs');
 const { applyWhitelist, initFirewall, getDebugState } = require('./firewall');
 const { capture } = require('./screenshot');
-const { execSync } = require('child_process');
+const { execFileSync } = require('child_process');
 const { log } = require('./logger');
+const {
+  config,
+  EXAM_USER,
+  SERVER_URL,
+  FIREBASE_API_KEY,
+  SCREENSHOT_INTERVAL_MS,
+} = require('./config');
 
 // ── Config ────────────────────────────────────────────────────────────────────
 
-function readConfig() {
-  const raw = fs.readFileSync('/etc/examlock.conf', 'utf8');
-  const cfg = {};
-  raw.split('\n').forEach(line => {
-    const eq = line.indexOf('=');
-    if (eq < 0) return;
-    cfg[line.slice(0, eq).trim()] = line.slice(eq + 1).trim();
-  });
-  return cfg;
-}
-
-const config = readConfig();
-const SERVER_URL = config.SERVER_URL;
-const FIREBASE_API_KEY = config.FIREBASE_API_KEY;
+const BROWSER_PROCESS_PATTERN = '(chromium|chromium-browser|google-chrome)';
 
 // ── State ─────────────────────────────────────────────────────────────────────
 
@@ -33,6 +26,10 @@ const state = {
   sessionCode: null,
   socket: null,
 };
+
+let browserSeen = false;
+let closingSession = false;
+let screenshotInFlight = false;
 
 // ── App ───────────────────────────────────────────────────────────────────────
 
@@ -118,12 +115,9 @@ app.post('/api/login', async (req, res) => {
 
 // ── Finish exam ───────────────────────────────────────────────────────────────
 
-app.post('/api/finish', (req, res) => {
+app.post('/api/finish', async (req, res) => {
   if (state.status !== 'admitted') return res.status(409).json({ error: 'not_active' });
-  if (state.socket?.connected) state.socket.emit('student:closed', { reason: 'submitted' });
-  state.status = 'ended';
-  applyWhitelist([], false, false).catch(err => console.error('[firewall]', err.message));
-  broadcast('exam-ended', {});
+  await closeSession('submitted', { kill: false });
   res.json({ ok: true });
 });
 
@@ -160,9 +154,9 @@ app.get('/ended', (_req, res) => res.sendFile(path.join(__dirname, '..', 'ui', '
 initFirewall().catch(err => log('firewall', 'init ERROR:', err.message));
 
 try {
-  execSync('id -u examuser', { stdio: 'pipe' });
+  execFileSync('id', ['-u', EXAM_USER], { stdio: 'pipe' });
 } catch {
-  log('startup', 'CRITICAL: examuser does not exist — firewall and screenshots will not work');
+  log('startup', `CRITICAL: ${EXAM_USER} does not exist — firewall and screenshots will not work`);
 }
 
 // ── Socket connection ─────────────────────────────────────────────────────────
@@ -221,15 +215,7 @@ function connectSocket(sessionCode) {
 
   // On-demand screenshot
   socket.on('server:capture-now', async ({ requestId }) => {
-    log('screenshot', 'capture requested', requestId);
-    try {
-      const jpegB64 = capture();
-      log('screenshot', 'capture ok, sending to server');
-      socket.emit('student:screenshot', { jpegB64, requestId });
-    } catch (err) {
-      log('screenshot', 'ERROR:', err.message);
-      socket.emit('student:screenshot-error', { requestId, error: err.message });
-    }
+    await sendScreenshot(requestId ?? `manual_${Date.now()}`);
   });
 
   // Message from teacher
@@ -261,14 +247,87 @@ function connectSocket(sessionCode) {
   }, 10_000);
 }
 
+async function sendScreenshot(requestId) {
+  if (!state.socket?.connected) return;
+  if (screenshotInFlight) {
+    log('screenshot', 'skipping capture already in flight', requestId);
+    return;
+  }
+
+  screenshotInFlight = true;
+  log('screenshot', 'capture requested', requestId);
+  try {
+    const jpegB64 = capture();
+    log('screenshot', 'capture ok, sending to server');
+    state.socket.emit('student:screenshot', { jpegB64, requestId });
+  } catch (err) {
+    log('screenshot', 'ERROR:', err.message);
+    state.socket.emit('student:screenshot-error', { requestId, error: err.message });
+  } finally {
+    screenshotInFlight = false;
+  }
+}
+
+async function closeSession(reason, { kill = true, killDelayMs = 2000 } = {}) {
+  if (closingSession) return;
+  closingSession = true;
+
+  log('session', 'closing session:', reason);
+  if (state.socket?.connected) state.socket.emit('student:closed', { reason });
+  state.status = 'ended';
+  try {
+    await applyWhitelist([], false, false);
+  } catch (err) {
+    log('firewall', 'ERROR on close lock:', err.message);
+  }
+  broadcast('exam-ended', { reason });
+  if (kill) killSession(killDelayMs);
+}
+
+function hasBrowserProcess() {
+  try {
+    execFileSync('pgrep', ['-u', EXAM_USER, '-f', BROWSER_PROCESS_PATTERN], { stdio: 'pipe' });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function startBrowserWatchdog() {
+  setInterval(() => {
+    const browserRunning = hasBrowserProcess();
+    if (browserRunning) {
+      browserSeen = true;
+      return;
+    }
+
+    if (state.status === 'admitted' && browserSeen) {
+      closeSession('browser_closed').catch(err => log('session', 'ERROR closing after browser exit:', err.message));
+    }
+  }, 2000);
+}
+
+function startPeriodicScreenshots() {
+  if (!Number.isFinite(SCREENSHOT_INTERVAL_MS) || SCREENSHOT_INTERVAL_MS <= 0) return;
+
+  setInterval(() => {
+    if (state.status !== 'admitted') return;
+    if (!state.socket?.connected) return;
+    sendScreenshot(`auto_${Date.now()}`).catch(err => log('screenshot', 'periodic ERROR:', err.message));
+  }, SCREENSHOT_INTERVAL_MS);
+}
+
 function killSession(delayMs) {
   setTimeout(() => {
     try {
-      execSync('loginctl terminate-user examuser', { stdio: 'pipe' });
+      execFileSync('loginctl', ['terminate-user', EXAM_USER], { stdio: 'pipe' });
     } catch {}
   }, delayMs);
 }
 
 // ── Start ─────────────────────────────────────────────────────────────────────
+
+startBrowserWatchdog();
+startPeriodicScreenshots();
 
 app.listen(7878, '127.0.0.1', () => log('daemon', 'listening on 127.0.0.1:7878'));

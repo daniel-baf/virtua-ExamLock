@@ -1,10 +1,10 @@
-const { execSync } = require('child_process');
+const { execFileSync, execSync } = require('child_process');
 const dns = require('dns').promises;
 const fs = require('fs');
 const net = require('net');
+const { EXAM_USER } = require('./config');
 
 const REFRESH_MS = 60_000;
-const EXAM_USER = 'examuser';
 const SYSTEM_HOSTS = ['identitytoolkit.googleapis.com'];
 
 function readConfig() {
@@ -32,7 +32,7 @@ function readServerHostname() {
 
 function readExamUid() {
   try {
-    return Number(execSync(`id -u ${EXAM_USER}`, { stdio: 'pipe' }).toString().trim());
+    return Number(execFileSync('id', ['-u', EXAM_USER], { stdio: 'pipe' }).toString().trim());
   } catch {
     return null;
   }

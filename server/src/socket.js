@@ -55,6 +55,7 @@ module.exports = function registerSocket(io) {
 async function handleStudent(socket, sessionId, uid, io, timers) {
   socket.join(`student:${uid}`);
   socket.join(`session:${sessionId}`);
+  let closedByStudent = false;
 
   resetHeartbeat(uid, sessionId, io, timers);
 
@@ -87,27 +88,43 @@ async function handleStudent(socket, sessionId, uid, io, timers) {
 
   socket.on('student:screenshot', async ({ jpegB64, requestId }) => {
     const url = await uploadImage(jpegB64, `${sessionId}/${uid}/screen_${Date.now()}.jpg`);
-    if (!url) return;
+    if (!url) {
+      await logEvent(sessionId, 'screenshot-error', { requestId, error: 'upload_failed' }, uid);
+      io.to(`teachers:${sessionId}`).emit('monitor:screenshot-error', { uid, error: 'upload_failed' });
+      return;
+    }
     await db().collection('students').doc(uid).update({ screenUrl: url, lastScreenshotAt: Date.now() });
     await db().collection('screenshots').add({ studentId: uid, sessionId, url, takenAt: Date.now(), type: 'screen' });
     await logEvent(sessionId, 'screenshot-received', { requestId, url }, uid);
     io.to(`teachers:${sessionId}`).emit('monitor:screenshot-update', { uid, url });
   });
 
+  socket.on('student:screenshot-error', async ({ requestId, error }) => {
+    const message = String(error ?? 'unknown_capture_error').slice(0, 500);
+    await logEvent(sessionId, 'screenshot-error', { requestId, error: message }, uid);
+    io.to(`teachers:${sessionId}`).emit('monitor:screenshot-error', { uid, error: message });
+  });
+
   socket.on('student:closed', async ({ reason }) => {
+    closedByStudent = true;
     clearTimer(uid, timers);
     await db().collection('students').doc(uid).update({
       status: 'closed',
       closedAt: Date.now(),
+      closeReason: reason ?? 'unknown',
     });
     await logEvent(sessionId, 'closed', { reason }, uid);
     io.to(`teachers:${sessionId}`).emit('monitor:student-closed', { uid, reason });
   });
 
-  socket.on('disconnect', () => {
+  socket.on('disconnect', async () => {
     clearTimer(uid, timers);
-    db().collection('students').doc(uid).update({ status: 'offline' });
-    logEvent(sessionId, 'offline', {}, uid);
+    if (closedByStudent) return;
+    const current = await db().collection('students').doc(uid).get();
+    const status = current.data()?.status;
+    if (status === 'closed' || status === 'kicked') return;
+    await db().collection('students').doc(uid).update({ status: 'offline' });
+    await logEvent(sessionId, 'offline', {}, uid);
     io.to(`teachers:${sessionId}`).emit('monitor:student-offline', { uid });
   });
 }
