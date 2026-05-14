@@ -1,5 +1,6 @@
 const { Router } = require('express');
 const { db } = require('../firebase');
+const { storage } = require('../firebase');
 const { requireRole } = require('../auth');
 const { logEvent } = require('../events');
 
@@ -94,23 +95,50 @@ router.post('/:uid/screenshot', requireRole('teacher'), async (req, res) => {
 
 // GET /api/student/:uid/screenshots  — latest screenshots for live monitor
 router.get('/:uid/screenshots', requireRole('teacher'), async (req, res) => {
+  try {
+    const doc = await ownsStudent(req.user.uid, req.params.uid);
+    if (!doc) return res.status(404).json({ error: 'not_found' });
+
+    const sessionId = doc.data().sessionId;
+    const snap = await db()
+      .collection('screenshots')
+      .where('studentId', '==', req.params.uid)
+      .get();
+
+    const screenshots = snap.docs
+      .map(d => ({ id: d.id, ...d.data() }))
+      .filter(sc => sc.sessionId === sessionId)
+      .sort((a, b) => (b.takenAt ?? 0) - (a.takenAt ?? 0))
+      .slice(0, 100);
+
+    res.json({ screenshots });
+  } catch (err) {
+    console.error('[screenshots] failed:', err.message);
+    res.status(500).json({ error: 'screenshots_failed' });
+  }
+});
+
+// GET /api/student/:uid/screenshot-image?path=... — authenticated image proxy
+router.get('/:uid/screenshot-image', requireRole('teacher'), async (req, res) => {
   const doc = await ownsStudent(req.user.uid, req.params.uid);
   if (!doc) return res.status(404).json({ error: 'not_found' });
 
+  const filePath = String(req.query.path ?? '');
   const sessionId = doc.data().sessionId;
-  const snap = await db()
-    .collection('screenshots')
-    .where('sessionId', '==', sessionId)
-    .orderBy('takenAt', 'desc')
-    .limit(500)
-    .get();
+  const expectedPrefix = `${sessionId}/${req.params.uid}/`;
+  if (!filePath.startsWith(expectedPrefix) || filePath.includes('..')) {
+    return res.status(403).json({ error: 'forbidden' });
+  }
 
-  const screenshots = snap.docs
-    .map(d => ({ id: d.id, ...d.data() }))
-    .filter(sc => sc.studentId === req.params.uid)
-    .slice(0, 100);
-
-  res.json({ screenshots });
+  try {
+    const [buf] = await storage().file(filePath).download();
+    res.setHeader('Content-Type', 'image/jpeg');
+    res.setHeader('Cache-Control', 'private, max-age=300');
+    res.send(buf);
+  } catch (err) {
+    console.error('[screenshot-image] failed:', err.message);
+    res.status(404).json({ error: 'image_not_found' });
+  }
 });
 
 // POST /api/student/:uid/message

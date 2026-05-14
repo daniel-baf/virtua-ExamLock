@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { api } from '../lib/api';
+import AuthImage from '../components/AuthImage';
 
 const EVENT_LABEL = {
   join:                   'Ingresó',
@@ -127,11 +128,11 @@ export default function Audit() {
                         </h4>
                         <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
                           {s.screenshots.map((sc, i) => (
-                            <a key={i} href={sc.url} target="_blank" rel="noopener noreferrer">
-                              <img src={sc.url} alt={`captura ${i + 1}`}
-                                className="w-full aspect-video object-cover rounded border border-gray-700
-                                  hover:border-violet-500 transition-colors" />
-                            </a>
+                            <div key={i}>
+                              <AuthImage uid={s.uid} src={sc.url} alt={`captura ${i + 1}`}
+                                className="grid w-full aspect-video place-items-center object-cover rounded border border-gray-700
+                                  hover:border-violet-500 transition-colors text-xs text-gray-600" />
+                            </div>
                           ))}
                         </div>
                       </div>
