@@ -1,7 +1,7 @@
 import AuthImage from '@/shared/components/AuthImage';
 import { closeReasonLabel, fmtTime, STATUS_META } from '../monitoringModel';
 
-export default function StudentCard({ student, tab, onKick, onReadmit, onScreenshot, onMessage, onHistory }) {
+export default function StudentCard({ student, tab, onKick, onReadmit, onScreenshot, onMessage, onHistory, onLive }) {
   const { uid, status = 'waiting', screenUrl, email, name } = student;
   const meta = STATUS_META[status] ?? STATUS_META.offline;
   const label = email ?? name ?? uid.slice(0, 8);
@@ -30,12 +30,14 @@ export default function StudentCard({ student, tab, onKick, onReadmit, onScreens
           {student.attempts > 0 && <p className="student-card__warning">{student.attempts} reingreso(s)</p>}
           {status === 'closed' && closeLabel && <p className="student-card__meta">{closeLabel}</p>}
           {student.screenshotError && <p className="student-card__error" title={student.screenshotError}>Error de captura</p>}
+          {student.streamReady && <p className="student-card__meta">Stream preparado</p>}
         </div>
 
         <div className="student-actions">
           <button onClick={onHistory} className="student-action">Historial</button>
           {tab === 'admitted' && (
             <>
+              <button onClick={onLive} className="student-action student-action--live">Ver</button>
               <button onClick={onScreenshot} className="student-action student-action--info">Capturar</button>
               <button onClick={onMessage} className="student-action">Mensaje</button>
               <button onClick={onKick} className="student-action student-action--danger">Expulsar</button>

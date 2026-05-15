@@ -25,4 +25,5 @@ module.exports = {
   SERVER_URL: getConfigValue('SERVER_URL'),
   FIREBASE_API_KEY: getConfigValue('FIREBASE_API_KEY'),
   SCREENSHOT_INTERVAL_MS: Number(getConfigValue('SCREENSHOT_INTERVAL_MS', 300_000)),
+  LIVE_STREAM_INTERVAL_MS: Number(getConfigValue('LIVE_STREAM_INTERVAL_MS', 1000)),
 };

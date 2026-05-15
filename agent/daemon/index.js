@@ -11,6 +11,7 @@ const {
   SERVER_URL,
   FIREBASE_API_KEY,
   SCREENSHOT_INTERVAL_MS,
+  LIVE_STREAM_INTERVAL_MS,
 } = require('./config');
 
 // ── Config ────────────────────────────────────────────────────────────────────
@@ -32,6 +33,8 @@ let browserSeen = false;
 let closingSession = false;
 let screenshotInFlight = false;
 let initialScreenshotSent = false;
+let liveStreamTimer = null;
+let liveStreamViewer = null;
 
 // ── App ───────────────────────────────────────────────────────────────────────
 
@@ -200,6 +203,7 @@ function connectSocket(sessionCode) {
     broadcast('admitted', { whitelist, blockInternet, endsAt: state.endsAt });
     broadcast('alert', { kind: 'whitelist-applied', text: alertText });
     log('socket', 'admitted broadcast sent');
+    socket.emit('student:stream-ready');
     sendInitialScreenshot();
   });
 
@@ -223,6 +227,14 @@ function connectSocket(sessionCode) {
     await sendScreenshot(requestId ?? `manual_${Date.now()}`);
   });
 
+  socket.on('server:stream-start', ({ viewerId }) => {
+    startLiveStream(viewerId);
+  });
+
+  socket.on('server:stream-stop', ({ viewerId }) => {
+    stopLiveStream(viewerId);
+  });
+
   // Message from teacher
   socket.on('server:message', ({ text }) => {
     broadcast('message', { text });
@@ -231,6 +243,7 @@ function connectSocket(sessionCode) {
   // Kicked
   socket.on('server:kicked', ({ reason }) => {
     log('socket', 'server:kicked reason:', reason);
+    stopLiveStream();
     state.status = 'kicked';
     applyWhitelist([], false, false).catch(err => log('firewall', 'ERROR on kick lock:', err.message));
     broadcast('kicked', { reason });
@@ -240,6 +253,7 @@ function connectSocket(sessionCode) {
   // Exam ended
   socket.on('server:exam-ended', () => {
     log('socket', 'server:exam-ended');
+    stopLiveStream();
     state.status = 'ended';
     applyWhitelist([], false, false).catch(err => log('firewall', 'ERROR on end lock:', err.message));
     broadcast('exam-ended', {});
@@ -273,11 +287,66 @@ async function sendScreenshot(requestId) {
   }
 }
 
+async function captureFrame() {
+  if (!state.socket?.connected || state.status !== 'admitted') return;
+  if (!liveStreamViewer) return;
+  if (screenshotInFlight) return;
+
+  screenshotInFlight = true;
+  try {
+    const jpegB64 = capture();
+    state.socket.emit('student:stream-frame', {
+      viewerId: liveStreamViewer,
+      jpegB64,
+      takenAt: Date.now(),
+    });
+  } catch (err) {
+    log('stream', 'ERROR:', err.message);
+    state.socket.emit('student:stream-error', {
+      viewerId: liveStreamViewer,
+      error: err.message,
+    });
+  } finally {
+    screenshotInFlight = false;
+  }
+}
+
+function startLiveStream(viewerId) {
+  if (state.status !== 'admitted') return;
+  if (!viewerId) return;
+
+  liveStreamViewer = viewerId;
+  if (liveStreamTimer) clearInterval(liveStreamTimer);
+
+  const interval = Number.isFinite(LIVE_STREAM_INTERVAL_MS) && LIVE_STREAM_INTERVAL_MS > 0
+    ? LIVE_STREAM_INTERVAL_MS
+    : 1000;
+
+  log('stream', 'starting live stream for viewer', viewerId, 'interval:', interval);
+  state.socket.emit('student:stream-started', { viewerId });
+  captureFrame().catch(err => log('stream', 'initial frame ERROR:', err.message));
+  liveStreamTimer = setInterval(() => {
+    captureFrame().catch(err => log('stream', 'frame ERROR:', err.message));
+  }, interval);
+}
+
+function stopLiveStream(viewerId = null) {
+  if (viewerId && liveStreamViewer && viewerId !== liveStreamViewer) return;
+  if (liveStreamTimer) clearInterval(liveStreamTimer);
+  liveStreamTimer = null;
+  if (liveStreamViewer && state.socket?.connected) {
+    state.socket.emit('student:stream-stopped', { viewerId: liveStreamViewer });
+  }
+  if (liveStreamViewer) log('stream', 'stopped live stream for viewer', liveStreamViewer);
+  liveStreamViewer = null;
+}
+
 async function closeSession(reason, { kill = true, killDelayMs = 2000 } = {}) {
   if (closingSession) return;
   closingSession = true;
 
   log('session', 'closing session:', reason);
+  stopLiveStream();
   if (state.socket?.connected) state.socket.emit('student:closed', { reason });
   state.status = 'ended';
   try {

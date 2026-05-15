@@ -45,6 +45,8 @@ module.exports = function registerSocket(io) {
     } else if (role === 'teacher') {
       const sessionId = socket.handshake.query?.sessionId;
       if (!sessionId) return socket.disconnect(true);
+      const sessionDoc = await db().collection('sessions').doc(sessionId).get();
+      if (!sessionDoc.exists || sessionDoc.data().teacherId !== uid) return socket.disconnect(true);
       handleTeacher(socket, sessionId, io);
     } else {
       socket.disconnect(true);
@@ -106,6 +108,33 @@ async function handleStudent(socket, sessionId, uid, io, timers) {
     io.to(`teachers:${sessionId}`).emit('monitor:screenshot-error', { uid, error: message });
   });
 
+  socket.on('student:stream-ready', async () => {
+    await db().collection('students').doc(uid).update({ streamReady: true, streamReadyAt: Date.now() });
+    io.to(`teachers:${sessionId}`).emit('monitor:stream-ready', { uid });
+  });
+
+  socket.on('student:stream-started', ({ viewerId }) => {
+    if (!viewerId) return;
+    io.to(viewerId).emit('monitor:stream-started', { uid });
+  });
+
+  socket.on('student:stream-frame', ({ viewerId, jpegB64, takenAt }) => {
+    if (!viewerId || !jpegB64) return;
+    io.to(viewerId).emit('monitor:stream-frame', { uid, jpegB64, takenAt: takenAt ?? Date.now() });
+  });
+
+  socket.on('student:stream-error', async ({ viewerId, error }) => {
+    const message = String(error ?? 'unknown_stream_error').slice(0, 500);
+    await logEvent(sessionId, 'stream-error', { viewerId, error: message }, uid);
+    if (viewerId) io.to(viewerId).emit('monitor:stream-error', { uid, error: message });
+    io.to(`teachers:${sessionId}`).emit('monitor:stream-status', { uid, status: 'error', error: message });
+  });
+
+  socket.on('student:stream-stopped', ({ viewerId }) => {
+    if (viewerId) io.to(viewerId).emit('monitor:stream-stopped', { uid });
+    io.to(`teachers:${sessionId}`).emit('monitor:stream-status', { uid, status: 'ready' });
+  });
+
   socket.on('student:closed', async ({ reason }) => {
     closedByStudent = true;
     clearTimer(uid, timers);
@@ -124,7 +153,7 @@ async function handleStudent(socket, sessionId, uid, io, timers) {
     const current = await db().collection('students').doc(uid).get();
     const status = current.data()?.status;
     if (status === 'closed' || status === 'kicked') return;
-    await db().collection('students').doc(uid).update({ status: 'offline' });
+    await db().collection('students').doc(uid).update({ status: 'offline', streamReady: false });
     await logEvent(sessionId, 'offline', {}, uid);
     io.to(`teachers:${sessionId}`).emit('monitor:student-offline', { uid });
   });
@@ -138,12 +167,39 @@ function handleTeacher(socket, sessionId, io) {
     await logEvent(sessionId, 'exam-ended', {});
     io.to(`session:${sessionId}`).emit('server:exam-ended');
   });
+
+  socket.on('teacher:stream-start', async ({ uid }) => {
+    if (!uid) return;
+    const studentDoc = await db().collection('students').doc(uid).get();
+    if (!studentDoc.exists || studentDoc.data().sessionId !== sessionId) {
+      socket.emit('monitor:stream-error', { uid, error: 'student_not_found' });
+      return;
+    }
+    if (studentDoc.data().status !== 'admitted') {
+      socket.emit('monitor:stream-error', { uid, error: 'student_not_active' });
+      return;
+    }
+    await logEvent(sessionId, 'stream-start-requested', { viewerId: socket.id }, uid);
+    io.to(`student:${uid}`).emit('server:stream-start', { viewerId: socket.id });
+    io.to(`teachers:${sessionId}`).emit('monitor:stream-status', { uid, status: 'connecting' });
+  });
+
+  socket.on('teacher:stream-stop', async ({ uid }) => {
+    if (!uid) return;
+    await logEvent(sessionId, 'stream-stop-requested', { viewerId: socket.id }, uid);
+    io.to(`student:${uid}`).emit('server:stream-stop', { viewerId: socket.id });
+    io.to(`teachers:${sessionId}`).emit('monitor:stream-status', { uid, status: 'ready' });
+  });
+
+  socket.on('disconnect', () => {
+    io.to(`session:${sessionId}`).emit('server:stream-stop', { viewerId: socket.id });
+  });
 }
 
 function resetHeartbeat(uid, sessionId, io, timers) {
   clearTimer(uid, timers);
   const t = setTimeout(() => {
-    db().collection('students').doc(uid).update({ status: 'offline' });
+    db().collection('students').doc(uid).update({ status: 'offline', streamReady: false });
     logEvent(sessionId, 'offline', {}, uid);
     io.to(`teachers:${sessionId}`).emit('monitor:student-offline', { uid });
   }, HEARTBEAT_TIMEOUT_MS);
