@@ -3,6 +3,7 @@ const { v4: uuidv4 } = require('uuid');
 const { db } = require('../firebase');
 const { requireRole } = require('../auth');
 const { logEvent } = require('../events');
+const { activeDomains, defaultWhitelist, normalizeWhitelist } = require('../networkDefaults');
 
 const router = Router();
 
@@ -16,6 +17,8 @@ router.post('/create', requireRole('teacher'), async (req, res) => {
   const now = Date.now();
   const end = endsAt ? new Date(endsAt).getTime() : now + timeLimit * 60 * 1000;
 
+  const normalizedWhitelist = normalizeWhitelist(whitelist);
+
   await db().collection('sessions').doc(sessionId).set({
     name,
     code,
@@ -24,12 +27,17 @@ router.post('/create', requireRole('teacher'), async (req, res) => {
     timeLimit,
     startedAt: now,
     endsAt: end,
-    whitelist,
+    whitelist: normalizedWhitelist,
     blockInternet,
     whitelistVersion: 0,
   });
 
   res.json({ sessionId, code });
+});
+
+// GET /api/session/network-defaults — institutional default whitelist
+router.get('/network-defaults', requireRole('teacher'), async (_req, res) => {
+  res.json({ whitelist: defaultWhitelist() });
 });
 
 // GET /api/session  — list sessions for authenticated teacher
@@ -48,7 +56,7 @@ router.get('/', requireRole('teacher'), async (req, res) => {
       active: data.active,
       createdAt: data.startedAt,
       endsAt: data.endsAt,
-      whitelist: data.whitelist ?? [],
+      whitelist: normalizeWhitelist(data.whitelist ?? []),
       blockInternet: data.blockInternet ?? true,
     };
   });
@@ -73,7 +81,7 @@ router.get('/id/:id', requireRole('teacher'), async (req, res) => {
       active: data.active,
       createdAt: data.startedAt,
       endsAt: data.endsAt,
-      whitelist: data.whitelist ?? [],
+      whitelist: normalizeWhitelist(data.whitelist ?? []),
       blockInternet: data.blockInternet ?? true,
     },
   });
@@ -192,15 +200,20 @@ router.put('/:id/whitelist', requireRole('teacher'), async (req, res) => {
   if (doc.data().teacherId !== req.user.uid) return res.status(403).json({ error: 'forbidden' });
 
   const version = (doc.data().whitelistVersion ?? 0) + 1;
-  await sessionRef.update({ whitelist: domains, blockInternet, whitelistVersion: version });
+  const whitelist = normalizeWhitelist(domains);
+  await sessionRef.update({ whitelist, blockInternet, whitelistVersion: version });
 
   req.app.get('io').to(`session:${req.params.id}`).emit('server:whitelist', {
-    whitelist: domains,
+    whitelist: activeDomains(whitelist),
     blockInternet,
     version,
   });
 
-  await logEvent(req.params.id, 'whitelist-applied', { domains, blockInternet });
+  await logEvent(req.params.id, 'whitelist-applied', {
+    domains: activeDomains(whitelist),
+    configuredDomains: whitelist,
+    blockInternet,
+  });
   res.json({ ok: true, version });
 });
 

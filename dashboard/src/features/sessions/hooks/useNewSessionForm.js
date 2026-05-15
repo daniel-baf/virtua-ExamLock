@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { createSession } from '../services/sessionsService';
+import { mergeDomainLists, normalizeDomainList } from '../domainModel';
+import { createSession, getNetworkDefaults } from '../services/sessionsService';
 
 export default function useNewSessionForm() {
   const navigate = useNavigate();
@@ -9,6 +10,7 @@ export default function useNewSessionForm() {
   const [domains, setDomains] = useState([]);
   const [blockInternet, setBlockInternet] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [defaultLoading, setDefaultLoading] = useState(false);
   const [error, setError] = useState('');
 
   async function submit(e) {
@@ -17,12 +19,25 @@ export default function useNewSessionForm() {
     setError('');
     setSaving(true);
     try {
-      await createSession({ name, timeLimit, whitelist: domains, blockInternet });
+      await createSession({ name, timeLimit, whitelist: normalizeDomainList(domains), blockInternet });
       navigate('/dashboard');
     } catch (err) {
       setError(err.message);
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function loadDefaultDomains() {
+    setDefaultLoading(true);
+    setError('');
+    try {
+      const { whitelist } = await getNetworkDefaults();
+      setDomains(current => mergeDomainLists(current, whitelist, 'default'));
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setDefaultLoading(false);
     }
   }
 
@@ -32,11 +47,13 @@ export default function useNewSessionForm() {
     domains,
     blockInternet,
     saving,
+    defaultLoading,
     error,
     setName,
     setTimeLimit,
     setDomains,
     setBlockInternet,
+    loadDefaultDomains,
     submit,
   };
 }

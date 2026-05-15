@@ -1,5 +1,6 @@
 const { db, storage, auth } = require('./firebase');
 const { logEvent } = require('./events');
+const { activeDomains } = require('./networkDefaults');
 
 const HEARTBEAT_TIMEOUT_MS = 30_000;
 
@@ -78,7 +79,7 @@ async function handleStudent(socket, sessionId, uid, io, timers) {
 
   // Always push current whitelist so the agent can apply it (covers first-connect and reconnects)
   socket.emit('server:admitted', {
-    whitelist: session.whitelist ?? [],
+    whitelist: activeDomains(session.whitelist ?? []),
     blockInternet: session.blockInternet ?? false,
     endsAt: session.endsAt,
     whitelistVersion: session.whitelistVersion ?? 0,

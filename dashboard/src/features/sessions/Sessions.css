@@ -426,6 +426,41 @@
   gap: 8px;
 }
 
+.domain-tools,
+.preset-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.preset-pill {
+  align-items: center;
+  background: #0d0f12;
+  border: 1px solid #27272a;
+  border-radius: 6px;
+  display: inline-flex;
+  overflow: hidden;
+}
+
+.preset-pill button {
+  background: transparent;
+  border: 0;
+  color: #a1a1aa;
+  cursor: pointer;
+  font-size: 12px;
+  padding: 7px 9px;
+}
+
+.preset-pill button:hover {
+  color: #fff;
+}
+
+.preset-pill button + button {
+  border-left: 1px solid #27272a;
+  color: #71717a;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
 .domain-input {
   flex: 1;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
@@ -458,6 +493,44 @@
 
 .domain-table td:last-child {
   text-align: right;
+  white-space: nowrap;
+}
+
+.domain-row--disabled td:first-child {
+  color: #71717a;
+  text-decoration: line-through;
+}
+
+.domain-source {
+  background: #082f49;
+  border-radius: 4px;
+  color: #bae6fd;
+  display: inline-block;
+  font-family: inherit;
+  font-size: 10px;
+  margin-left: 8px;
+  padding: 2px 5px;
+  text-decoration: none;
+}
+
+.domain-status {
+  border-radius: 999px;
+  cursor: pointer;
+  font-size: 11px;
+  margin-right: 8px;
+  padding: 4px 8px;
+}
+
+.domain-status--on {
+  background: #052e16;
+  border: 1px solid #15803d;
+  color: #bbf7d0;
+}
+
+.domain-status--off {
+  background: #27272a;
+  border: 1px solid #3f3f46;
+  color: #a1a1aa;
 }
 
 .domain-empty,

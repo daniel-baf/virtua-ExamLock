@@ -1,5 +1,8 @@
+import { activeDomainCount, normalizeDomainList } from '../domainModel';
+
 export default function SessionWhitelistTable({ session }) {
-  const domains = session.whitelist ?? [];
+  const domains = normalizeDomainList(session.whitelist ?? []);
+  const activeCount = activeDomainCount(domains);
 
   if (!session.blockInternet) {
     return (
@@ -14,7 +17,9 @@ export default function SessionWhitelistTable({ session }) {
       <div className="whitelist-box__summary">
         <p>Dominios permitidos</p>
         <p>
-          {domains.length > 0 ? `${domains.length} dominio(s) configurado(s)` : 'Sin dominios configurados; el bloqueo es total.'}
+          {domains.length > 0
+            ? `${activeCount} activo(s), ${domains.length - activeCount} apagado(s)`
+            : 'Sin dominios configurados; el bloqueo es total.'}
         </p>
       </div>
 
@@ -29,10 +34,10 @@ export default function SessionWhitelistTable({ session }) {
             </tr>
           </thead>
           <tbody>
-            {domains.map((domain, index) => (
-              <tr key={`${session.sessionId}-${domain}`}>
+            {domains.map((entry, index) => (
+              <tr key={`${session.sessionId}-${entry.domain}`}>
                 <td>{index + 1}</td>
-                <td>{domain}</td>
+                <td>{entry.enabled ? entry.domain : `${entry.domain} (off)`}</td>
               </tr>
             ))}
           </tbody>

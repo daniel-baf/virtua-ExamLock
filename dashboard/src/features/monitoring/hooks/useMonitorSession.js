@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   connectTeacherSocket,
   disconnectSocket,
+  getNetworkDefaults,
   getSessionSummary,
   kickStudent,
   listStudentScreenshots,
@@ -12,6 +13,7 @@ import {
   sendStudentMessage,
   setWhitelist,
 } from '../services/monitoringService';
+import { activeDomainCount, mergeDomainLists, normalizeDomainList } from '@/features/sessions/domainModel';
 
 export default function useMonitorSession(sessionId) {
   const [students, setStudents] = useState({});
@@ -26,6 +28,7 @@ export default function useMonitorSession(sessionId) {
   const [whitelistDomains, setWhitelistDomains] = useState([]);
   const [blockInternet, setBlockInternet] = useState(true);
   const [whitelistSaving, setWhitelistSaving] = useState(false);
+  const [defaultLoading, setDefaultLoading] = useState(false);
   const [showWhitelist, setShowWhitelist] = useState(false);
   const [captureAllBusy, setCaptureAllBusy] = useState(false);
   const [captureAllNote, setCaptureAllNote] = useState('');
@@ -55,7 +58,7 @@ export default function useMonitorSession(sessionId) {
       .then(({ session: loadedSession }) => {
         if (cancelled) return;
         setSession(loadedSession);
-        setWhitelistDomains(loadedSession.whitelist ?? []);
+        setWhitelistDomains(normalizeDomainList(loadedSession.whitelist ?? []));
         setBlockInternet(loadedSession.blockInternet ?? true);
         setExamEnded(!loadedSession.active);
       })
@@ -235,12 +238,23 @@ export default function useMonitorSession(sessionId) {
   async function applyWhitelist() {
     setWhitelistSaving(true);
     try {
-      await setWhitelist(sessionId, whitelistDomains, blockInternet);
+      const normalized = normalizeDomainList(whitelistDomains);
+      await setWhitelist(sessionId, normalized, blockInternet);
       setSession(prev => prev
-        ? { ...prev, whitelist: whitelistDomains, blockInternet }
+        ? { ...prev, whitelist: normalized, blockInternet }
         : prev);
     } finally {
       setWhitelistSaving(false);
+    }
+  }
+
+  async function loadDefaultDomains() {
+    setDefaultLoading(true);
+    try {
+      const { whitelist } = await getNetworkDefaults();
+      setWhitelistDomains(current => mergeDomainLists(current, whitelist, 'default'));
+    } finally {
+      setDefaultLoading(false);
     }
   }
 
@@ -262,6 +276,7 @@ export default function useMonitorSession(sessionId) {
     whitelistDomains,
     blockInternet,
     whitelistSaving,
+    defaultLoading,
     showWhitelist,
     captureAllBusy,
     captureAllNote,
@@ -275,6 +290,7 @@ export default function useMonitorSession(sessionId) {
     liveError,
     liveTakenAt,
     totals,
+    activeWhitelistCount: activeDomainCount(whitelistDomains),
     studentsByTab,
     setTab,
     setMessageTarget,
@@ -292,6 +308,7 @@ export default function useMonitorSession(sessionId) {
     closeLive,
     sendMessage,
     applyWhitelist,
+    loadDefaultDomains,
     endExam,
   };
 }

@@ -37,8 +37,11 @@ export default function MonitorPage() {
           domains={monitor.whitelistDomains}
           blockInternet={monitor.blockInternet}
           saving={monitor.whitelistSaving}
+          defaultLoading={monitor.defaultLoading}
+          activeCount={monitor.activeWhitelistCount}
           onDomainsChange={monitor.setWhitelistDomains}
           onToggleBlockInternet={() => monitor.setBlockInternet(value => !value)}
+          onLoadDefault={monitor.loadDefaultDomains}
           onApply={monitor.applyWhitelist}
         />
       )}

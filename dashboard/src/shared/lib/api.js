@@ -50,6 +50,7 @@ export const api = {
   // Sessions
   listSessions:   ()           => req('GET',  '/api/session'),
   createSession:  (body)       => req('POST', '/api/session/create', body),
+  getNetworkDefaults: ()       => req('GET',  '/api/session/network-defaults'),
   getSession:     (code)       => req('GET',  `/api/session/${code}`),
   getSessionSummary: (sessionId) =>
                                   req('GET',  `/api/session/id/${sessionId}`),
