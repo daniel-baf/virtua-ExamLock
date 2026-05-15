@@ -117,7 +117,7 @@ router.post('/:code/join', requireRole('student'), async (req, res) => {
 
   await logEvent(sessionId, 'join', { email: req.user.email }, uid);
 
-  res.json({ sessionId, status: 'admitted' });
+  res.json({ sessionId, status: 'admitted', endsAt: session.endsAt });
 });
 
 // GET /api/session/:id/students  — teacher monitor

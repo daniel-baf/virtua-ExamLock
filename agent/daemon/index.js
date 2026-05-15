@@ -24,6 +24,7 @@ const state = {
   idToken: null,
   sessionId: null,
   sessionCode: null,
+  endsAt: null,
   socket: null,
 };
 
@@ -46,7 +47,7 @@ app.get('/config', (_req, res) => {
   });
 });
 
-app.get('/api/state', (_req, res) => res.json({ status: state.status }));
+app.get('/api/state', (_req, res) => res.json({ status: state.status, endsAt: state.endsAt }));
 
 app.get('/api/debug', (_req, res) => {
   const { socket, ...safeState } = state;
@@ -99,6 +100,7 @@ app.post('/api/login', async (req, res) => {
 
     state.sessionId = joinData.sessionId;
     state.sessionCode = code;
+    state.endsAt = joinData.endsAt ?? null;
     state.status = 'waiting';
     log('login', 'joined session', joinData.sessionId, 'code:', code);
 
@@ -140,7 +142,7 @@ app.get('/api/events', (req, res) => {
   const send = msg => res.write(msg);
   sseClients.add(send);
   res.write('event: connected\ndata: {}\n\n');
-  res.write(`event: state\ndata: ${JSON.stringify({ status: state.status })}\n\n`);
+  res.write(`event: state\ndata: ${JSON.stringify({ status: state.status, endsAt: state.endsAt })}\n\n`);
 
   req.on('close', () => sseClients.delete(send));
 });
@@ -174,18 +176,19 @@ function connectSocket(sessionCode) {
 
   socket.on('connect', () => {
     log('socket', 'connected, state:', state.status);
-    broadcast('state', { status: state.status });
+    broadcast('state', { status: state.status, endsAt: state.endsAt });
   });
 
   socket.on('disconnect', () => {
     log('socket', 'disconnected');
-    broadcast('state', { status: state.status });
+    broadcast('state', { status: state.status, endsAt: state.endsAt });
   });
 
   // Admitted: apply whitelist and redirect UI
-  socket.on('server:admitted', async ({ whitelist = [], blockInternet = false }) => {
+  socket.on('server:admitted', async ({ whitelist = [], blockInternet = false, endsAt = null }) => {
     log('socket', 'server:admitted received', { whitelist, blockInternet });
     state.status = 'admitted';
+    state.endsAt = endsAt ?? state.endsAt;
     try {
       await applyWhitelist(whitelist, blockInternet, true);
     } catch (err) {
@@ -194,7 +197,7 @@ function connectSocket(sessionCode) {
     const alertText = whitelist.length > 0
       ? `Acceso habilitado a: ${whitelist.join(', ')}`
       : blockInternet ? 'Internet restringido — sin dominios autorizados' : 'Acceso libre a internet';
-    broadcast('admitted', { whitelist, blockInternet });
+    broadcast('admitted', { whitelist, blockInternet, endsAt: state.endsAt });
     broadcast('alert', { kind: 'whitelist-applied', text: alertText });
     log('socket', 'admitted broadcast sent');
     sendInitialScreenshot();

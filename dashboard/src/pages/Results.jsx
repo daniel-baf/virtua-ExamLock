@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { api } from '../lib/api';
+import { api } from '@/shared/lib/api';
 
 export default function Results() {
   const { id: sessionId } = useParams();

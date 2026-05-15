@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 import { Navigate } from 'react-router-dom';
-import { auth } from '../lib/firebase';
+import { auth } from '@/shared/lib/firebase';
 
 export default function RequireAuth({ children }) {
   const [state, setState] = useState('loading'); // 'loading' | 'ok' | 'anon' | 'wrong_role'
@@ -20,18 +20,18 @@ export default function RequireAuth({ children }) {
 
   if (state === 'loading') {
     return (
-      <div className="min-h-screen bg-gray-950 flex items-center justify-center">
-        <div className="w-5 h-5 border-2 border-violet-500 border-t-transparent rounded-full animate-spin" />
+      <div className="flex min-h-screen items-center justify-center bg-[#090a0c]">
+        <div className="h-5 w-5 animate-spin rounded-full border-2 border-zinc-700 border-t-sky-400" />
       </div>
     );
   }
   if (state === 'anon') return <Navigate to="/" replace />;
   if (state === 'wrong_role') {
     return (
-      <div className="min-h-screen bg-gray-950 flex items-center justify-center text-white">
+      <div className="flex min-h-screen items-center justify-center bg-[#090a0c] text-white">
         <div className="text-center">
-          <p className="text-red-400 mb-2">Esta cuenta no tiene acceso de docente.</p>
-          <button onClick={() => auth.signOut()} className="text-sm text-gray-400 underline">
+          <p className="mb-2 text-rose-300">Esta cuenta no tiene acceso de docente.</p>
+          <button onClick={() => auth.signOut()} className="text-sm text-zinc-500 underline hover:text-zinc-200">
             Cerrar sesión
           </button>
         </div>

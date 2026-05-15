@@ -78,6 +78,7 @@ async function handleStudent(socket, sessionId, uid, io, timers) {
   socket.emit('server:admitted', {
     whitelist: session.whitelist ?? [],
     blockInternet: session.blockInternet ?? false,
+    endsAt: session.endsAt,
     whitelistVersion: session.whitelistVersion ?? 0,
   });
 

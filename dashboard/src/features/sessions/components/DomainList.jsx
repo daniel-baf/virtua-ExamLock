@@ -20,36 +20,35 @@ export default function DomainList({ domains, onChange }) {
   }
 
   return (
-    <div className="space-y-2">
-      <div className="flex gap-2">
+    <div className="domain-list">
+      <div className="domain-row">
         <input
           value={draft}
           onChange={e => setDraft(e.target.value)}
           onKeyDown={onKey}
           placeholder="moodle.universidad.edu"
-          className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm
-            font-mono focus:outline-none focus:ring-2 focus:ring-violet-500"
+          className="domain-input"
         />
         <button
           type="button"
           onClick={add}
-          className="bg-violet-700 hover:bg-violet-600 text-white text-sm px-3 py-2 rounded-lg transition-colors">
+          className="btn link-btn">
           Agregar
         </button>
       </div>
 
       {domains.length > 0 && (
-        <div className="border border-gray-700 rounded-lg overflow-hidden">
+        <div className="domain-table">
           <table className="w-full text-sm">
             <tbody>
               {domains.map(d => (
-                <tr key={d} className="border-b border-gray-800 last:border-0">
-                  <td className="px-3 py-2 font-mono text-violet-300">{d}</td>
-                  <td className="px-3 py-2 text-right">
+                <tr key={d}>
+                  <td>{d}</td>
+                  <td>
                     <button
                       type="button"
                       onClick={() => remove(d)}
-                      className="text-gray-500 hover:text-red-400 transition-colors text-xs">
+                      className="remove-btn">
                       Quitar
                     </button>
                   </td>
@@ -61,7 +60,7 @@ export default function DomainList({ domains, onChange }) {
       )}
 
       {domains.length === 0 && (
-        <p className="text-xs text-gray-600">Sin dominios — bloqueo total.</p>
+        <p className="domain-empty">Sin dominios - bloqueo total.</p>
       )}
     </div>
   );

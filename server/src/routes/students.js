@@ -32,6 +32,7 @@ router.post('/:uid/admit', requireRole('teacher'), async (req, res) => {
   req.app.get('io').to(`student:${req.params.uid}`).emit('server:admitted', {
     whitelist,
     blockInternet,
+    endsAt: session.data().endsAt,
     whitelistVersion: session.data().whitelistVersion ?? 0,
   });
 
@@ -75,6 +76,7 @@ router.post('/:uid/readmit', requireRole('teacher'), async (req, res) => {
   req.app.get('io').to(`student:${req.params.uid}`).emit('server:admitted', {
     whitelist,
     blockInternet,
+    endsAt: session.data().endsAt,
     whitelistVersion: session.data().whitelistVersion ?? 0,
   });
 
