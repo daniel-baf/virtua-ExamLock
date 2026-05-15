@@ -33,8 +33,14 @@ export default function useMonitorSession(sessionId) {
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyError, setHistoryError] = useState('');
   const [historyShots, setHistoryShots] = useState([]);
+  const [liveTarget, setLiveTarget] = useState(null);
+  const [liveFrame, setLiveFrame] = useState('');
+  const [liveStatus, setLiveStatus] = useState('stopped');
+  const [liveError, setLiveError] = useState('');
+  const [liveTakenAt, setLiveTakenAt] = useState(null);
   const socketRef = useRef(null);
   const historyTargetRef = useRef(null);
+  const liveTargetRef = useRef(null);
 
   const patch = useCallback((uid, data) => {
     setStudents(prev => ({ ...prev, [uid]: { ...(prev[uid] ?? {}), uid, ...data } }));
@@ -83,13 +89,48 @@ export default function useMonitorSession(sessionId) {
         });
       });
       socket.on('monitor:screenshot-error', ({ uid, error }) => patch(uid, { screenshotError: error }));
+      socket.on('monitor:stream-ready', ({ uid }) => patch(uid, { streamReady: true, streamStatus: 'ready' }));
+      socket.on('monitor:stream-status', ({ uid, status, error }) => {
+        patch(uid, { streamStatus: status, streamError: error ?? null });
+        if (liveTargetRef.current?.uid === uid) {
+          setLiveStatus(status);
+          if (error) setLiveError(error);
+        }
+      });
+      socket.on('monitor:stream-started', ({ uid }) => {
+        patch(uid, { streamStatus: 'live', streamError: null });
+        if (liveTargetRef.current?.uid === uid) {
+          setLiveStatus('live');
+          setLiveError('');
+        }
+      });
+      socket.on('monitor:stream-frame', ({ uid, jpegB64, takenAt }) => {
+        if (liveTargetRef.current?.uid !== uid) return;
+        setLiveFrame(`data:image/jpeg;base64,${jpegB64}`);
+        setLiveTakenAt(takenAt ?? Date.now());
+        setLiveStatus('live');
+        setLiveError('');
+      });
+      socket.on('monitor:stream-error', ({ uid, error }) => {
+        patch(uid, { streamStatus: 'error', streamError: error });
+        if (liveTargetRef.current?.uid === uid) {
+          setLiveStatus('error');
+          setLiveError(error);
+        }
+      });
+      socket.on('monitor:stream-stopped', ({ uid }) => {
+        patch(uid, { streamStatus: 'ready' });
+        if (liveTargetRef.current?.uid === uid) setLiveStatus('stopped');
+      });
       socket.on('monitor:student-closed', ({ uid, reason }) => patch(uid, { status: 'closed', closeReason: reason }));
-      socket.on('monitor:student-offline', ({ uid }) => patch(uid, { status: 'offline' }));
+      socket.on('monitor:student-offline', ({ uid }) => patch(uid, { status: 'offline', streamReady: false, streamStatus: 'offline' }));
       socket.on('server:exam-ended', () => setExamEnded(true));
     });
 
     return () => {
       cancelled = true;
+      const uid = liveTargetRef.current?.uid;
+      if (uid) socketRef.current?.emit('teacher:stream-stop', { uid });
       disconnectSocket();
     };
   }, [sessionId, patch]);
@@ -162,6 +203,28 @@ export default function useMonitorSession(sessionId) {
     setHistoryTarget(null);
   }
 
+  function openLive(student) {
+    liveTargetRef.current = student;
+    setLiveTarget(student);
+    setLiveFrame('');
+    setLiveStatus('connecting');
+    setLiveError('');
+    setLiveTakenAt(null);
+    socketRef.current?.emit('teacher:stream-start', { uid: student.uid });
+    patch(student.uid, { streamStatus: 'connecting', streamError: null });
+  }
+
+  function closeLive() {
+    const uid = liveTargetRef.current?.uid;
+    if (uid) socketRef.current?.emit('teacher:stream-stop', { uid });
+    liveTargetRef.current = null;
+    setLiveTarget(null);
+    setLiveFrame('');
+    setLiveStatus('stopped');
+    setLiveError('');
+    setLiveTakenAt(null);
+  }
+
   async function sendMessage() {
     if (!messageText.trim() || !messageTarget) return;
     await sendStudentMessage(messageTarget, messageText);
@@ -206,6 +269,11 @@ export default function useMonitorSession(sessionId) {
     historyLoading,
     historyError,
     historyShots,
+    liveTarget,
+    liveFrame,
+    liveStatus,
+    liveError,
+    liveTakenAt,
     totals,
     studentsByTab,
     setTab,
@@ -220,6 +288,8 @@ export default function useMonitorSession(sessionId) {
     capture,
     openHistory,
     closeHistory,
+    openLive,
+    closeLive,
     sendMessage,
     applyWhitelist,
     endExam,

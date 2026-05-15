@@ -1,5 +1,6 @@
 import { useNavigate, useParams } from 'react-router-dom';
 import HistoryPanel from '../components/HistoryPanel';
+import LiveStreamDialog from '../components/LiveStreamDialog';
 import MessageDialog from '../components/MessageDialog';
 import MonitorHeader from '../components/MonitorHeader';
 import MonitorTabs from '../components/MonitorTabs';
@@ -64,6 +65,7 @@ export default function MonitorPage() {
                 student={student}
                 tab={monitor.tab}
                 onHistory={() => monitor.openHistory(student)}
+                onLive={() => monitor.openLive(student)}
                 onKick={() => monitor.kick(student.uid)}
                 onReadmit={() => monitor.readmit(student.uid)}
                 onScreenshot={() => monitor.capture(student.uid)}
@@ -94,6 +96,17 @@ export default function MonitorPage() {
           error={monitor.historyError}
           onClose={monitor.closeHistory}
           onCapture={() => monitor.capture(monitor.historyTarget.uid)}
+        />
+      )}
+
+      {monitor.liveTarget && (
+        <LiveStreamDialog
+          student={monitor.liveTarget}
+          frameSrc={monitor.liveFrame}
+          status={monitor.liveStatus}
+          error={monitor.liveError}
+          takenAt={monitor.liveTakenAt}
+          onClose={monitor.closeLive}
         />
       )}
     </div>
