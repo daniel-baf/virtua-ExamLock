@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   connectTeacherSocket,
   disconnectSocket,
+  getSessionSummary,
   kickStudent,
   listStudentScreenshots,
   listStudents,
@@ -14,6 +15,9 @@ import {
 
 export default function useMonitorSession(sessionId) {
   const [students, setStudents] = useState({});
+  const [session, setSession] = useState(null);
+  const [sessionLoading, setSessionLoading] = useState(true);
+  const [sessionError, setSessionError] = useState('');
   const [connected, setConnected] = useState(false);
   const [examEnded, setExamEnded] = useState(false);
   const [tab, setTab] = useState('admitted');
@@ -38,6 +42,23 @@ export default function useMonitorSession(sessionId) {
 
   useEffect(() => {
     let cancelled = false;
+
+    setSessionLoading(true);
+    setSessionError('');
+    getSessionSummary(sessionId)
+      .then(({ session: loadedSession }) => {
+        if (cancelled) return;
+        setSession(loadedSession);
+        setWhitelistDomains(loadedSession.whitelist ?? []);
+        setBlockInternet(loadedSession.blockInternet ?? true);
+        setExamEnded(!loadedSession.active);
+      })
+      .catch(err => {
+        if (!cancelled) setSessionError(`No se pudo cargar la sesion: ${err.message}`);
+      })
+      .finally(() => {
+        if (!cancelled) setSessionLoading(false);
+      });
 
     listStudents(sessionId)
       .then(({ students }) => {
@@ -152,6 +173,9 @@ export default function useMonitorSession(sessionId) {
     setWhitelistSaving(true);
     try {
       await setWhitelist(sessionId, whitelistDomains, blockInternet);
+      setSession(prev => prev
+        ? { ...prev, whitelist: whitelistDomains, blockInternet }
+        : prev);
     } finally {
       setWhitelistSaving(false);
     }
@@ -164,6 +188,9 @@ export default function useMonitorSession(sessionId) {
   }
 
   return {
+    session,
+    sessionLoading,
+    sessionError,
     connected,
     examEnded,
     tab,

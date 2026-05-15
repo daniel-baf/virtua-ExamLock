@@ -57,6 +57,28 @@ router.get('/', requireRole('teacher'), async (req, res) => {
   res.json({ sessions });
 });
 
+// GET /api/session/id/:id  — teacher session summary
+router.get('/id/:id', requireRole('teacher'), async (req, res) => {
+  const sessionDoc = await db().collection('sessions').doc(req.params.id).get();
+  if (!sessionDoc.exists) return res.status(404).json({ error: 'not_found' });
+
+  const data = sessionDoc.data();
+  if (data.teacherId !== req.user.uid) return res.status(403).json({ error: 'forbidden' });
+
+  res.json({
+    session: {
+      sessionId: sessionDoc.id,
+      name: data.name,
+      code: data.code,
+      active: data.active,
+      createdAt: data.startedAt,
+      endsAt: data.endsAt,
+      whitelist: data.whitelist ?? [],
+      blockInternet: data.blockInternet ?? true,
+    },
+  });
+});
+
 // GET /api/session/:code  — validate code before join (public)
 router.get('/:code', async (req, res) => {
   const snap = await db()

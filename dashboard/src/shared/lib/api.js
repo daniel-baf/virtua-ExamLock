@@ -51,6 +51,8 @@ export const api = {
   listSessions:   ()           => req('GET',  '/api/session'),
   createSession:  (body)       => req('POST', '/api/session/create', body),
   getSession:     (code)       => req('GET',  `/api/session/${code}`),
+  getSessionSummary: (sessionId) =>
+                                  req('GET',  `/api/session/id/${sessionId}`),
   listStudents:   (sessionId)  => req('GET',  `/api/session/${sessionId}/students`),
   requestAllScreenshots: (sessionId) =>
                                   req('POST', `/api/session/${sessionId}/screenshot-all`),
