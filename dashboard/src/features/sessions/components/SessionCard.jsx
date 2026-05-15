@@ -11,9 +11,11 @@ export default function SessionCard({ session }) {
             <StatusBadge active={session.active} />
             <NetworkBadge blocked={session.blockInternet} />
           </div>
+          <div className="session-code-panel" aria-label={`Codigo de sesion ${session.code}`}>
+            <span className="session-code-panel__label">Codigo de sesion</span>
+            <code className="session-code-panel__value">{session.code}</code>
+          </div>
           <p className="session-card__meta">
-            Codigo: <code className="session-card__code">{session.code}</code>
-            {' · '}
             {new Date(session.createdAt).toLocaleDateString('es', { dateStyle: 'medium' })}
           </p>
         </div>

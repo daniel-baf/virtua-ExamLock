@@ -2,6 +2,8 @@ import { Link } from 'react-router-dom';
 import Metric from './Metric';
 
 export default function MonitorHeader({
+  session,
+  sessionLoading,
   connected,
   totals,
   captureAllBusy,
@@ -18,7 +20,7 @@ export default function MonitorHeader({
           <Link to="/dashboard" className="monitor-header__back">Volver</Link>
           <div className={`monitor-header__connection ${connected ? 'monitor-header__connection--online' : 'monitor-header__connection--offline'}`} />
           <div className="min-w-0">
-            <h1 className="monitor-header__heading">Monitor de examen</h1>
+            <h1 className="monitor-header__heading">{session?.name ?? 'Monitor de examen'}</h1>
             <p className="monitor-header__subheading">
               {connected ? 'Canal docente conectado' : 'Canal docente desconectado'}
             </p>
@@ -26,6 +28,12 @@ export default function MonitorHeader({
         </div>
 
         <div className="monitor-header__actions">
+          <div className="monitor-session-code" aria-label={`Codigo de sesion ${session?.code ?? ''}`}>
+            <span className="monitor-session-code__label">Codigo</span>
+            <code className="monitor-session-code__value">
+              {sessionLoading ? 'Cargando' : session?.code ?? 'No disponible'}
+            </code>
+          </div>
           <Metric label="Total" value={totals.all} />
           <Metric label="Activos" value={totals.active} tone="emerald" />
           <Metric label="Alertas" value={totals.alerts} tone="amber" />

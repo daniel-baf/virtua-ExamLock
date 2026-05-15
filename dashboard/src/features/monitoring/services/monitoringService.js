@@ -5,6 +5,10 @@ export function listStudents(sessionId) {
   return api.listStudents(sessionId);
 }
 
+export function getSessionSummary(sessionId) {
+  return api.getSessionSummary(sessionId);
+}
+
 export function requestAllScreenshots(sessionId) {
   return api.requestAllScreenshots(sessionId);
 }

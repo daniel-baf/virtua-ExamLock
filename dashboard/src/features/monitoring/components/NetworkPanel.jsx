@@ -14,7 +14,13 @@ export default function NetworkPanel({
         <div className="network-panel__header">
           <div>
             <h3 className="network-panel__title">Control de red</h3>
-            <p className="network-panel__copy">Aplica cambios a los alumnos conectados.</p>
+            <p className="network-panel__copy">
+              {blockInternet
+                ? domains.length > 0
+                  ? `${domains.length} dominio(s) permitido(s).`
+                  : 'Bloqueo total: no hay dominios permitidos.'
+                : 'La sesion tiene acceso libre a internet.'}
+            </p>
           </div>
           <button onClick={onToggleBlockInternet}
             className={`network-toggle ${blockInternet ? 'network-toggle--restricted' : 'network-toggle--open'}`}>

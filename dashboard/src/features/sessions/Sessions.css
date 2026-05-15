@@ -195,10 +195,38 @@
   font-weight: 500;
 }
 
+.session-code-panel {
+  background: #09090b;
+  border: 1px solid #164e63;
+  border-radius: 8px;
+  display: inline-grid;
+  gap: 2px;
+  margin-top: 12px;
+  min-width: min(100%, 18rem);
+  padding: 12px 16px;
+}
+
+.session-code-panel__label {
+  color: #67e8f9;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.session-code-panel__value {
+  color: #e0f2fe;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: clamp(28px, 7vw, 44px);
+  font-weight: 800;
+  line-height: 1;
+  overflow-wrap: anywhere;
+}
+
 .session-card__meta {
   color: #71717a;
   font-size: 14px;
-  margin-top: 2px;
+  margin-top: 10px;
 }
 
 .session-card__code {

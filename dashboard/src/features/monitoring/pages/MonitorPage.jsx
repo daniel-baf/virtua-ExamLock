@@ -17,6 +17,8 @@ export default function MonitorPage() {
   return (
     <div className="monitor-shell">
       <MonitorHeader
+        session={monitor.session}
+        sessionLoading={monitor.sessionLoading}
         connected={monitor.connected}
         totals={monitor.totals}
         captureAllBusy={monitor.captureAllBusy}
@@ -26,6 +28,8 @@ export default function MonitorPage() {
         onToggleNetwork={() => monitor.setShowWhitelist(value => !value)}
         onEndExam={monitor.endExam}
       />
+
+      {monitor.sessionError && <div className="monitor-alert">{monitor.sessionError}</div>}
 
       {monitor.showWhitelist && (
         <NetworkPanel
