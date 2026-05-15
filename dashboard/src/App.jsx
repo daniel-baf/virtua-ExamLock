@@ -1,20 +1,20 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import RequireAuth from './components/RequireAuth';
-import Login from './pages/Login';
-import Dashboard from './pages/Dashboard';
-import SessionNew from './pages/SessionNew';
-import Monitor from './pages/Monitor';
-import Results from './pages/Results';
+import RequireAuth from '@/features/auth/components/RequireAuth';
+import LoginPage from '@/features/auth/LoginPage';
+import SessionsPage from '@/features/sessions/pages/SessionsPage';
+import NewSessionPage from '@/features/sessions/pages/NewSessionPage';
+import MonitorPage from '@/features/monitoring/pages/MonitorPage';
+import AuditPage from '@/features/audit/pages/AuditPage';
 
 export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<Login />} />
-        <Route path="/dashboard" element={<RequireAuth><Dashboard /></RequireAuth>} />
-        <Route path="/session/new" element={<RequireAuth><SessionNew /></RequireAuth>} />
-        <Route path="/session/:id/monitor" element={<RequireAuth><Monitor /></RequireAuth>} />
-        <Route path="/session/:id/results" element={<RequireAuth><Results /></RequireAuth>} />
+        <Route path="/" element={<LoginPage />} />
+        <Route path="/dashboard" element={<RequireAuth><SessionsPage /></RequireAuth>} />
+        <Route path="/session/new" element={<RequireAuth><NewSessionPage /></RequireAuth>} />
+        <Route path="/session/:id/monitor" element={<RequireAuth><MonitorPage /></RequireAuth>} />
+        <Route path="/session/:id/audit" element={<RequireAuth><AuditPage /></RequireAuth>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>

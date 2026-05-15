@@ -2,9 +2,9 @@
   "name": "agent",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "daemon/index.js",
   "scripts": {
-    "start": "node index.js"
+    "start": "node daemon/index.js"
   },
   "keywords": [],
   "author": "",

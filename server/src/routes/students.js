@@ -1,45 +1,156 @@
 const { Router } = require('express');
-const { v4: uuidv4 } = require('uuid');
 const { db } = require('../firebase');
-const { requireTeacher } = require('../auth');
+const { storage } = require('../firebase');
+const { requireRole } = require('../auth');
+const { logEvent } = require('../events');
 
 const router = Router();
 
-// POST /api/student/:id/reactivate  — teacher generates one-time token
-router.post('/:id/reactivate', requireTeacher, async (req, res) => {
-  const ref = db().collection('students').doc(req.params.id);
-  const doc = await ref.get();
-  if (!doc.exists) return res.status(404).json({ error: 'not_found' });
+async function ownsStudent(teacherUid, uid) {
+  const doc = await db().collection('students').doc(uid).get();
+  if (!doc.exists) return null;
+  const sessionDoc = await db().collection('sessions').doc(doc.data().sessionId).get();
+  if (!sessionDoc.exists || sessionDoc.data().teacherId !== teacherUid) return null;
+  return doc;
+}
 
-  const token = uuidv4();
-  await ref.update({ reactivationToken: token, status: 'reactivating' });
+// POST /api/student/:uid/admit
+router.post('/:uid/admit', requireRole('teacher'), async (req, res) => {
+  const doc = await ownsStudent(req.user.uid, req.params.uid);
+  if (!doc) return res.status(404).json({ error: 'not_found' });
 
-  // Socket.IO instance injected by index.js
-  const io = req.app.get('io');
-  io.to(`student:${req.params.id}`).emit('server:reactivate', { token });
+  const session = await db().collection('sessions').doc(doc.data().sessionId).get();
+  const { whitelist = [], blockInternet = false } = session.data();
 
-  res.json({ token });
-});
+  await db().collection('students').doc(req.params.uid).update({
+    status: 'admitted',
+    admittedAt: Date.now(),
+  });
 
-// POST /api/student/:id/block-internet
-router.post('/:id/block-internet', requireTeacher, async (req, res) => {
-  await db().collection('students').doc(req.params.id).update({ internetBlocked: true });
-  req.app.get('io').to(`student:${req.params.id}`).emit('server:block-internet');
+  await logEvent(doc.data().sessionId, 'admit', { admittedBy: req.user.uid }, req.params.uid);
+
+  req.app.get('io').to(`student:${req.params.uid}`).emit('server:admitted', {
+    whitelist,
+    blockInternet,
+    endsAt: session.data().endsAt,
+    whitelistVersion: session.data().whitelistVersion ?? 0,
+  });
+
   res.json({ ok: true });
 });
 
-// POST /api/student/:id/unblock-internet
-router.post('/:id/unblock-internet', requireTeacher, async (req, res) => {
-  await db().collection('students').doc(req.params.id).update({ internetBlocked: false });
-  req.app.get('io').to(`student:${req.params.id}`).emit('server:unblock-internet');
+// POST /api/student/:uid/kick
+router.post('/:uid/kick', requireRole('teacher'), async (req, res) => {
+  const { reason = 'expelled' } = req.body;
+  const doc = await ownsStudent(req.user.uid, req.params.uid);
+  if (!doc) return res.status(404).json({ error: 'not_found' });
+
+  await db().collection('students').doc(req.params.uid).update({
+    status: 'kicked',
+    kickedAt: Date.now(),
+  });
+
+  await logEvent(doc.data().sessionId, 'kick', { reason, kickedBy: req.user.uid }, req.params.uid);
+
+  req.app.get('io').to(`student:${req.params.uid}`).emit('server:kicked', { reason });
   res.json({ ok: true });
 });
 
-// POST /api/student/:id/message
-router.post('/:id/message', requireTeacher, async (req, res) => {
+// POST /api/student/:uid/readmit
+router.post('/:uid/readmit', requireRole('teacher'), async (req, res) => {
+  const doc = await ownsStudent(req.user.uid, req.params.uid);
+  if (!doc) return res.status(404).json({ error: 'not_found' });
+
+  const session = await db().collection('sessions').doc(doc.data().sessionId).get();
+  const { whitelist = [], blockInternet = false } = session.data();
+
+  const attempts = (doc.data().attempts ?? 0) + 1;
+  await db().collection('students').doc(req.params.uid).update({
+    status: 'admitted',
+    admittedAt: Date.now(),
+    attempts,
+  });
+
+  await logEvent(doc.data().sessionId, 'readmit', { attempt: attempts, by: req.user.uid }, req.params.uid);
+
+  req.app.get('io').to(`student:${req.params.uid}`).emit('server:admitted', {
+    whitelist,
+    blockInternet,
+    endsAt: session.data().endsAt,
+    whitelistVersion: session.data().whitelistVersion ?? 0,
+  });
+
+  res.json({ ok: true, attempts });
+});
+
+// POST /api/student/:uid/screenshot  — request on-demand capture
+router.post('/:uid/screenshot', requireRole('teacher'), async (req, res) => {
+  const doc = await ownsStudent(req.user.uid, req.params.uid);
+  if (!doc) return res.status(404).json({ error: 'not_found' });
+
+  const requestId = Date.now().toString();
+  await logEvent(doc.data().sessionId, 'screenshot-requested', { requestId }, req.params.uid);
+  req.app.get('io').to(`student:${req.params.uid}`).emit('server:capture-now', { requestId });
+
+  res.json({ ok: true, requestId });
+});
+
+// GET /api/student/:uid/screenshots  — latest screenshots for live monitor
+router.get('/:uid/screenshots', requireRole('teacher'), async (req, res) => {
+  try {
+    const doc = await ownsStudent(req.user.uid, req.params.uid);
+    if (!doc) return res.status(404).json({ error: 'not_found' });
+
+    const sessionId = doc.data().sessionId;
+    const snap = await db()
+      .collection('screenshots')
+      .where('studentId', '==', req.params.uid)
+      .get();
+
+    const screenshots = snap.docs
+      .map(d => ({ id: d.id, ...d.data() }))
+      .filter(sc => sc.sessionId === sessionId)
+      .sort((a, b) => (b.takenAt ?? 0) - (a.takenAt ?? 0))
+      .slice(0, 100);
+
+    res.json({ screenshots });
+  } catch (err) {
+    console.error('[screenshots] failed:', err.message);
+    res.status(500).json({ error: 'screenshots_failed' });
+  }
+});
+
+// GET /api/student/:uid/screenshot-image?path=... — authenticated image proxy
+router.get('/:uid/screenshot-image', requireRole('teacher'), async (req, res) => {
+  const doc = await ownsStudent(req.user.uid, req.params.uid);
+  if (!doc) return res.status(404).json({ error: 'not_found' });
+
+  const filePath = String(req.query.path ?? '');
+  const sessionId = doc.data().sessionId;
+  const expectedPrefix = `${sessionId}/${req.params.uid}/`;
+  if (!filePath.startsWith(expectedPrefix) || filePath.includes('..')) {
+    return res.status(403).json({ error: 'forbidden' });
+  }
+
+  try {
+    const [buf] = await storage().file(filePath).download();
+    res.setHeader('Content-Type', 'image/jpeg');
+    res.setHeader('Cache-Control', 'private, max-age=300');
+    res.send(buf);
+  } catch (err) {
+    console.error('[screenshot-image] failed:', err.message);
+    res.status(404).json({ error: 'image_not_found' });
+  }
+});
+
+// POST /api/student/:uid/message
+router.post('/:uid/message', requireRole('teacher'), async (req, res) => {
   const { text } = req.body;
   if (!text) return res.status(400).json({ error: 'text_required' });
-  req.app.get('io').to(`student:${req.params.id}`).emit('server:message', { text });
+  const doc = await ownsStudent(req.user.uid, req.params.uid);
+  if (!doc) return res.status(404).json({ error: 'not_found' });
+
+  req.app.get('io').to(`student:${req.params.uid}`).emit('server:message', { text });
   res.json({ ok: true });
 });
 

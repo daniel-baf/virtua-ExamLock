@@ -1,30 +1,52 @@
-const jwt = require('jsonwebtoken');
-const { db, storage } = require('./firebase');
+const { db, storage, auth } = require('./firebase');
+const { logEvent } = require('./events');
 
-const HEARTBEAT_TIMEOUT_MS = 30_000; // declare offline after 30s missed
+const HEARTBEAT_TIMEOUT_MS = 30_000;
 
 module.exports = function registerSocket(io) {
-  // Per-student timeout handles
   const heartbeatTimers = new Map();
 
-  io.use((socket, next) => {
+  io.use(async (socket, next) => {
     const token = socket.handshake.auth?.token;
     if (!token) return next(new Error('missing_token'));
     try {
-      const payload = jwt.verify(token, process.env.JWT_SECRET);
-      socket.session = payload;
-      next();
-    } catch {
+      const decoded = await auth().verifyIdToken(token);
+      if (!decoded.role) return next(new Error('no_role'));
+      socket.user = decoded;
+      return next();
+    } catch (err) {
+      console.error('[socket] auth failed:', err.message);
       next(new Error('invalid_token'));
     }
   });
 
-  io.on('connection', socket => {
-    const { type, sessionId, studentId } = socket.session ?? {};
+  io.on('connection', async socket => {
+    const { role, uid } = socket.user;
 
-    if (type === 'container') {
-      handleStudent(socket, sessionId, studentId, io, heartbeatTimers);
-    } else if (type === 'teacher') {
+    if (role === 'student') {
+      const sessionCode = socket.handshake.query?.sessionCode;
+      if (!sessionCode) return socket.disconnect(true);
+
+      const snap = await db().collection('sessions')
+        .where('code', '==', sessionCode)
+        .where('active', '==', true)
+        .limit(1)
+        .get();
+      if (snap.empty) return socket.disconnect(true);
+
+      const sessionId = snap.docs[0].id;
+      const studentDoc = await db().collection('students').doc(uid).get();
+      if (!studentDoc.exists || studentDoc.data().sessionId !== sessionId) {
+        return socket.disconnect(true);
+      }
+      if (studentDoc.data().status === 'kicked') return socket.disconnect(true);
+
+      handleStudent(socket, sessionId, uid, io, heartbeatTimers);
+    } else if (role === 'teacher') {
+      const sessionId = socket.handshake.query?.sessionId;
+      if (!sessionId) return socket.disconnect(true);
+      const sessionDoc = await db().collection('sessions').doc(sessionId).get();
+      if (!sessionDoc.exists || sessionDoc.data().teacherId !== uid) return socket.disconnect(true);
       handleTeacher(socket, sessionId, io);
     } else {
       socket.disconnect(true);
@@ -32,98 +54,173 @@ module.exports = function registerSocket(io) {
   });
 };
 
-// ── Student (container) ──────────────────────────────────────────────────────
-
-function handleStudent(socket, sessionId, studentId, io, timers) {
-  socket.join(`student:${studentId}`);
+async function handleStudent(socket, sessionId, uid, io, timers) {
+  socket.join(`student:${uid}`);
   socket.join(`session:${sessionId}`);
+  let closedByStudent = false;
 
-  resetHeartbeat(studentId, sessionId, io, timers);
+  resetHeartbeat(uid, sessionId, io, timers);
 
-  db().collection('students').doc(studentId).update({
-    status: 'active',
-    connectedAt: Date.now(),
-    lastHeartbeat: Date.now(),
+  const [sessSnap, stuSnap] = await Promise.all([
+    db().collection('sessions').doc(sessionId).get(),
+    db().collection('students').doc(uid).get(),
+  ]);
+  const session = sessSnap.data() ?? {};
+  const student = stuSnap.data() ?? {};
+
+  await db().collection('students').doc(uid).update({ lastHeartbeat: Date.now() });
+
+  io.to(`teachers:${sessionId}`).emit('monitor:student-joined', {
+    uid,
+    name: student.email ?? uid.slice(0, 8),
+    status: student.status,
   });
 
-  io.to(`teachers:${sessionId}`).emit('monitor:student-joined', { studentId });
+  // Always push current whitelist so the agent can apply it (covers first-connect and reconnects)
+  socket.emit('server:admitted', {
+    whitelist: session.whitelist ?? [],
+    blockInternet: session.blockInternet ?? false,
+    endsAt: session.endsAt,
+    whitelistVersion: session.whitelistVersion ?? 0,
+  });
 
   socket.on('student:heartbeat', () => {
-    db().collection('students').doc(studentId).update({ lastHeartbeat: Date.now() });
-    resetHeartbeat(studentId, sessionId, io, timers);
+    db().collection('students').doc(uid).update({ lastHeartbeat: Date.now() });
+    resetHeartbeat(uid, sessionId, io, timers);
   });
 
-  socket.on('student:screenshot', async ({ imageBase64 }) => {
-    const url = await uploadImage(imageBase64, `${sessionId}/${studentId}/screen_${Date.now()}.jpg`);
-    if (!url) return;
-    await db().collection('screenshots').add({ studentId, sessionId, url, takenAt: Date.now(), type: 'screen' });
-    io.to(`teachers:${sessionId}`).emit('monitor:screenshot-update', { studentId, url });
+  socket.on('student:screenshot', async ({ jpegB64, requestId }) => {
+    const url = await uploadImage(jpegB64, `${sessionId}/${uid}/screen_${Date.now()}.jpg`);
+    if (!url) {
+      await logEvent(sessionId, 'screenshot-error', { requestId, error: 'upload_failed' }, uid);
+      io.to(`teachers:${sessionId}`).emit('monitor:screenshot-error', { uid, error: 'upload_failed' });
+      return;
+    }
+    await db().collection('students').doc(uid).update({ screenUrl: url, lastScreenshotAt: Date.now() });
+    await db().collection('screenshots').add({ studentId: uid, sessionId, url, takenAt: Date.now(), type: 'screen' });
+    await logEvent(sessionId, 'screenshot-received', { requestId, url }, uid);
+    io.to(`teachers:${sessionId}`).emit('monitor:screenshot-update', { uid, url });
   });
 
-  socket.on('student:camera', async ({ imageBase64 }) => {
-    const url = await uploadImage(imageBase64, `${sessionId}/${studentId}/cam_${Date.now()}.jpg`);
-    if (!url) return;
-    await db().collection('screenshots').add({ studentId, sessionId, url, takenAt: Date.now(), type: 'camera' });
-    io.to(`teachers:${sessionId}`).emit('monitor:camera-update', { studentId, url });
+  socket.on('student:screenshot-error', async ({ requestId, error }) => {
+    const message = String(error ?? 'unknown_capture_error').slice(0, 500);
+    await logEvent(sessionId, 'screenshot-error', { requestId, error: message }, uid);
+    io.to(`teachers:${sessionId}`).emit('monitor:screenshot-error', { uid, error: message });
+  });
+
+  socket.on('student:stream-ready', async () => {
+    await db().collection('students').doc(uid).update({ streamReady: true, streamReadyAt: Date.now() });
+    io.to(`teachers:${sessionId}`).emit('monitor:stream-ready', { uid });
+  });
+
+  socket.on('student:stream-started', ({ viewerId }) => {
+    if (!viewerId) return;
+    io.to(viewerId).emit('monitor:stream-started', { uid });
+  });
+
+  socket.on('student:stream-frame', ({ viewerId, jpegB64, takenAt }) => {
+    if (!viewerId || !jpegB64) return;
+    io.to(viewerId).emit('monitor:stream-frame', { uid, jpegB64, takenAt: takenAt ?? Date.now() });
+  });
+
+  socket.on('student:stream-error', async ({ viewerId, error }) => {
+    const message = String(error ?? 'unknown_stream_error').slice(0, 500);
+    await logEvent(sessionId, 'stream-error', { viewerId, error: message }, uid);
+    if (viewerId) io.to(viewerId).emit('monitor:stream-error', { uid, error: message });
+    io.to(`teachers:${sessionId}`).emit('monitor:stream-status', { uid, status: 'error', error: message });
+  });
+
+  socket.on('student:stream-stopped', ({ viewerId }) => {
+    if (viewerId) io.to(viewerId).emit('monitor:stream-stopped', { uid });
+    io.to(`teachers:${sessionId}`).emit('monitor:stream-status', { uid, status: 'ready' });
   });
 
   socket.on('student:closed', async ({ reason }) => {
-    clearTimer(studentId, timers);
-    await db().collection('students').doc(studentId).update({
+    closedByStudent = true;
+    clearTimer(uid, timers);
+    await db().collection('students').doc(uid).update({
       status: 'closed',
       closedAt: Date.now(),
       closeReason: reason ?? 'unknown',
     });
-    io.to(`teachers:${sessionId}`).emit('monitor:student-closed', { studentId, reason });
+    await logEvent(sessionId, 'closed', { reason }, uid);
+    io.to(`teachers:${sessionId}`).emit('monitor:student-closed', { uid, reason });
   });
 
-  socket.on('disconnect', () => {
-    clearTimer(studentId, timers);
-    db().collection('students').doc(studentId).update({ status: 'offline' });
-    io.to(`teachers:${sessionId}`).emit('monitor:student-offline', { studentId });
+  socket.on('disconnect', async () => {
+    clearTimer(uid, timers);
+    if (closedByStudent) return;
+    const current = await db().collection('students').doc(uid).get();
+    const status = current.data()?.status;
+    if (status === 'closed' || status === 'kicked') return;
+    await db().collection('students').doc(uid).update({ status: 'offline', streamReady: false });
+    await logEvent(sessionId, 'offline', {}, uid);
+    io.to(`teachers:${sessionId}`).emit('monitor:student-offline', { uid });
   });
 }
-
-// ── Teacher ──────────────────────────────────────────────────────────────────
 
 function handleTeacher(socket, sessionId, io) {
   socket.join(`teachers:${sessionId}`);
 
   socket.on('teacher:end-exam', async () => {
     await db().collection('sessions').doc(sessionId).update({ active: false });
+    await logEvent(sessionId, 'exam-ended', {});
     io.to(`session:${sessionId}`).emit('server:exam-ended');
   });
 
-  // block/unblock/reactivate/message handled via REST (routes/students.js)
+  socket.on('teacher:stream-start', async ({ uid }) => {
+    if (!uid) return;
+    const studentDoc = await db().collection('students').doc(uid).get();
+    if (!studentDoc.exists || studentDoc.data().sessionId !== sessionId) {
+      socket.emit('monitor:stream-error', { uid, error: 'student_not_found' });
+      return;
+    }
+    if (studentDoc.data().status !== 'admitted') {
+      socket.emit('monitor:stream-error', { uid, error: 'student_not_active' });
+      return;
+    }
+    await logEvent(sessionId, 'stream-start-requested', { viewerId: socket.id }, uid);
+    io.to(`student:${uid}`).emit('server:stream-start', { viewerId: socket.id });
+    io.to(`teachers:${sessionId}`).emit('monitor:stream-status', { uid, status: 'connecting' });
+  });
+
+  socket.on('teacher:stream-stop', async ({ uid }) => {
+    if (!uid) return;
+    await logEvent(sessionId, 'stream-stop-requested', { viewerId: socket.id }, uid);
+    io.to(`student:${uid}`).emit('server:stream-stop', { viewerId: socket.id });
+    io.to(`teachers:${sessionId}`).emit('monitor:stream-status', { uid, status: 'ready' });
+  });
+
+  socket.on('disconnect', () => {
+    io.to(`session:${sessionId}`).emit('server:stream-stop', { viewerId: socket.id });
+  });
 }
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
-
-function resetHeartbeat(studentId, sessionId, io, timers) {
-  clearTimer(studentId, timers);
+function resetHeartbeat(uid, sessionId, io, timers) {
+  clearTimer(uid, timers);
   const t = setTimeout(() => {
-    db().collection('students').doc(studentId).update({ status: 'offline' });
-    io.to(`teachers:${sessionId}`).emit('monitor:student-offline', { studentId });
+    db().collection('students').doc(uid).update({ status: 'offline', streamReady: false });
+    logEvent(sessionId, 'offline', {}, uid);
+    io.to(`teachers:${sessionId}`).emit('monitor:student-offline', { uid });
   }, HEARTBEAT_TIMEOUT_MS);
-  timers.set(studentId, t);
+  timers.set(uid, t);
 }
 
-function clearTimer(studentId, timers) {
-  if (timers.has(studentId)) {
-    clearTimeout(timers.get(studentId));
-    timers.delete(studentId);
+function clearTimer(uid, timers) {
+  if (timers.has(uid)) {
+    clearTimeout(timers.get(uid));
+    timers.delete(uid);
   }
 }
 
-async function uploadImage(imageBase64, path) {
+async function uploadImage(jpegB64, filePath) {
   try {
-    const buf = Buffer.from(imageBase64, 'base64');
-    const file = storage().file(path);
+    const buf = Buffer.from(jpegB64, 'base64');
+    const file = storage().file(filePath);
     await file.save(buf, { contentType: 'image/jpeg', resumable: false });
-    await file.makePublic();
-    return `https://storage.googleapis.com/${process.env.GCS_BUCKET}/${path}`;
+    return `https://storage.googleapis.com/${process.env.GCS_BUCKET}/${filePath}`;
   } catch (err) {
-    console.error('upload failed:', err.message);
+    console.error('[upload] failed:', err.message);
     return null;
   }
 }

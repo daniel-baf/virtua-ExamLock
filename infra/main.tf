@@ -1,3 +1,31 @@
+# ── Import existing resources (Terraform 1.5+) ───────────────────────────────
+# Si Firestore ya existe en el proyecto, este bloque lo adopta sin recrearlo.
+
+import {
+  id = "projects/copper-axiom-496204-b2/databases/(default)"
+  to = google_firestore_database.default
+}
+
+import {
+  id = "projects/copper-axiom-496204-b2/locations/global/workloadIdentityPools/github-pool/providers/github-provider"
+  to = google_iam_workload_identity_pool_provider.github
+}
+
+import {
+  id = "projects/copper-axiom-496204-b2/locations/us-central1/triggers/36bb99b7-5301-4467-8352-74b1b0ce3d11"
+  to = google_cloudbuild_trigger.deploy_dev
+}
+
+import {
+  id = "us-central1/copper-axiom-496204-b2/exam-server"
+  to = google_cloud_run_service.server
+}
+
+import {
+  id = "projects/copper-axiom-496204-b2/locations/global/workloadIdentityPools/github-pool"
+  to = google_iam_workload_identity_pool.github
+}
+
 # ── APIs ─────────────────────────────────────────────────────────────────────
 
 resource "google_project_service" "apis" {
@@ -10,6 +38,8 @@ resource "google_project_service" "apis" {
     "iamcredentials.googleapis.com",
     "cloudresourcemanager.googleapis.com",
     "secretmanager.googleapis.com",
+    "cloudbuild.googleapis.com",
+    "domains.googleapis.com",
   ])
   service            = each.key
   disable_on_destroy = false
@@ -51,13 +81,13 @@ resource "google_storage_bucket" "screenshots" {
 
 # Permite lectura pública (URLs de screenshots sirven directo al dashboard)
 resource "google_storage_bucket_iam_member" "screenshots_public" {
+  count  = var.public_access ? 1 : 0
   bucket = google_storage_bucket.screenshots.name
   role   = "roles/storage.objectViewer"
   member = "allUsers"
 }
 
-# ── Firestore (base de datos default — ya existe en el proyecto) ──────────────
-# Importar con: terraform import google_firestore_database.default projects/PROJECT/databases/(default)
+# ── Firestore (se importa si ya existe, se crea si no) ───────────────────────
 
 resource "google_firestore_database" "default" {
   name        = "(default)"
@@ -67,7 +97,9 @@ resource "google_firestore_database" "default" {
   depends_on = [google_project_service.apis]
 
   lifecycle {
-    prevent_destroy = true  # nunca destruir la DB con terraform destroy
+    prevent_destroy = true
+    # Ignora location_id en imports — Firestore existente puede tener region distinta
+    ignore_changes = [location_id]
   }
 }
 
@@ -90,101 +122,135 @@ resource "google_project_iam_member" "server_storage" {
   member  = "serviceAccount:${google_service_account.server.email}"
 }
 
-# ── Secret Manager: JWT_SECRET ───────────────────────────────────────────────
+# ── Cloud Run: servidor (API v1 para soporte de invoker-iam-disabled) ─────────
 
-resource "google_secret_manager_secret" "jwt_secret" {
-  secret_id = "examlock-jwt-secret"
-  replication {
-    auto {}
-  }
-  depends_on = [google_project_service.apis]
-}
-
-resource "google_secret_manager_secret_version" "jwt_secret" {
-  secret      = google_secret_manager_secret.jwt_secret.id
-  secret_data = var.jwt_secret
-}
-
-resource "google_secret_manager_secret_iam_member" "server_jwt" {
-  secret_id = google_secret_manager_secret.jwt_secret.secret_id
-  role      = "roles/secretmanager.secretAccessor"
-  member    = "serviceAccount:${google_service_account.server.email}"
-}
-
-# ── Cloud Run: servidor ───────────────────────────────────────────────────────
-
-resource "google_cloud_run_v2_service" "server" {
+resource "google_cloud_run_service" "server" {
   name     = "exam-server"
   location = var.region
-  ingress  = "INGRESS_TRAFFIC_ALL"
+
+  metadata {
+    annotations = {
+      "run.googleapis.com/ingress"              = "all"
+      "run.googleapis.com/invoker-iam-disabled" = "true"
+    }
+  }
 
   template {
-    service_account = google_service_account.server.email
-
-    scaling {
-      min_instance_count = 1
-      max_instance_count = 10
+    metadata {
+      annotations = {
+        "autoscaling.knative.dev/minScale" = "1"
+        "autoscaling.knative.dev/maxScale" = "10"
+      }
     }
 
-    containers {
-      image = var.server_image
+    spec {
+      service_account_name = google_service_account.server.email
 
-      ports {
-        container_port = 8080
-      }
+      containers {
+        image = var.server_image
 
-      resources {
-        limits = {
-          cpu    = "1"
-          memory = "512Mi"
+        ports {
+          container_port = 8080
+        }
+
+        resources {
+          limits = {
+            cpu    = "1000m"
+            memory = "512Mi"
+          }
+        }
+
+        env {
+          name  = "NODE_ENV"
+          value = "production"
+        }
+        env {
+          name  = "GCP_PROJECT_ID"
+          value = var.project_id
+        }
+        env {
+          name  = "GCS_BUCKET"
+          value = google_storage_bucket.screenshots.name
+        }
+        env {
+          name  = "CORS_ORIGINS"
+          value = var.cors_origins
         }
       }
+    }
+  }
 
-      env {
-        name  = "NODE_ENV"
-        value = "production"
+  depends_on = [google_project_service.apis]
+
+  lifecycle {
+    ignore_changes = [
+      template[0].spec[0].containers[0].image,
+      metadata[0].annotations["client.knative.dev/user-image"],
+      metadata[0].annotations["run.googleapis.com/client-name"],
+      metadata[0].annotations["run.googleapis.com/client-version"],
+      metadata[0].annotations["run.googleapis.com/operation-id"],
+      metadata[0].annotations["run.googleapis.com/urls"],
+      template[0].metadata[0].annotations["client.knative.dev/user-image"],
+      template[0].metadata[0].annotations["run.googleapis.com/client-name"],
+      template[0].metadata[0].annotations["run.googleapis.com/client-version"],
+    ]
+  }
+}
+
+# ── Cloud Run: dashboard ──────────────────────────────────────────────────────
+
+resource "google_cloud_run_service" "dashboard" {
+  name     = "exam-dashboard"
+  location = var.region
+
+  metadata {
+    annotations = {
+      "run.googleapis.com/ingress"              = "all"
+      "run.googleapis.com/invoker-iam-disabled" = "true"
+    }
+  }
+
+  template {
+    metadata {
+      annotations = {
+        "autoscaling.knative.dev/minScale" = "0"
+        "autoscaling.knative.dev/maxScale" = "3"
       }
-      env {
-        name  = "GCP_PROJECT_ID"
-        value = var.project_id
-      }
-      env {
-        name  = "GCS_BUCKET"
-        value = google_storage_bucket.screenshots.name
-      }
-      env {
-        name  = "CORS_ORIGINS"
-        value = var.cors_origins
-      }
-      env {
-        name = "JWT_SECRET"
-        value_source {
-          secret_key_ref {
-            secret  = google_secret_manager_secret.jwt_secret.secret_id
-            version = "latest"
+    }
+
+    spec {
+      containers {
+        image = var.dashboard_image
+
+        ports {
+          container_port = 8080
+        }
+
+        resources {
+          limits = {
+            cpu    = "1000m"
+            memory = "256Mi"
           }
         }
       }
     }
   }
 
-  depends_on = [
-    google_project_service.apis,
-    google_secret_manager_secret_version.jwt_secret,
-  ]
+  depends_on = [google_project_service.apis]
 
   lifecycle {
-    # image se actualiza por el workflow, no por terraform plan local
-    ignore_changes = [template[0].containers[0].image]
+    ignore_changes = [
+      template[0].spec[0].containers[0].image,
+      metadata[0].annotations["client.knative.dev/user-image"],
+      metadata[0].annotations["run.googleapis.com/client-name"],
+      metadata[0].annotations["run.googleapis.com/client-version"],
+      metadata[0].annotations["run.googleapis.com/operation-id"],
+      metadata[0].annotations["run.googleapis.com/urls"],
+      template[0].metadata[0].annotations["client.knative.dev/user-image"],
+      template[0].metadata[0].annotations["run.googleapis.com/client-name"],
+      template[0].metadata[0].annotations["run.googleapis.com/client-version"],
+    ]
   }
-}
-
-# Cloud Run público (el dashboard y el container se conectan desde internet)
-resource "google_cloud_run_v2_service_iam_member" "server_public" {
-  name     = google_cloud_run_v2_service.server.name
-  location = var.region
-  role     = "roles/run.invoker"
-  member   = "allUsers"
 }
 
 # ── Workload Identity Federation (GitHub Actions sin JSON keys) ───────────────
@@ -233,7 +299,7 @@ locals {
     "roles/storage.admin",
     "roles/iam.serviceAccountUser",
     "roles/firebase.admin",
-    "roles/secretmanager.admin",
+    "roles/logging.logWriter",
   ]
 }
 
@@ -243,3 +309,60 @@ resource "google_project_iam_member" "github_sa_roles" {
   role     = each.key
   member   = "serviceAccount:${google_service_account.github_actions.email}"
 }
+
+# ── Cloud Build trigger — push to deploy/dev ─────────────────────────────────
+# Prerequisito: conectar el repo GitHub en la consola:
+#   Cloud Build → Repositories → Connect repository → GitHub → elegir repo
+# Una vez conectado, el trigger se gestiona desde aquí.
+
+resource "google_cloudbuild_trigger" "deploy_dev" {
+  name        = "deploy-exam-lock"
+  description = "Build y deploy de server + dashboard al push en deploy/dev"
+  location    = var.region
+
+  github {
+    owner = var.github_owner
+    name  = var.github_repo_name
+    push {
+      branch = "^deploy/dev$"
+    }
+  }
+
+  filename = "cloudbuild.yaml"
+
+  substitutions = {
+    _REGION                         = var.region
+    _SERVER_URL                     = google_cloud_run_service.server.status[0].url
+    _VITE_FIREBASE_API_KEY          = var.firebase_api_key
+    _VITE_FIREBASE_AUTH_DOMAIN      = var.firebase_auth_domain
+    _VITE_FIREBASE_PROJECT_ID       = var.project_id
+    _VITE_FIREBASE_STORAGE_BUCKET   = "${var.project_id}.appspot.com"
+    _VITE_FIREBASE_MESSAGING_SENDER_ID = var.firebase_messaging_sender_id
+    _VITE_FIREBASE_APP_ID           = var.firebase_app_id
+  }
+
+  service_account = "projects/${var.project_id}/serviceAccounts/${google_service_account.github_actions.email}"
+
+  depends_on = [google_project_service.apis]
+}
+
+# ── Custom domain mapping (Cloud Run v1 domain mapping) ───────────────────────
+# Requires domain ownership verified in Google Search Console first.
+# After apply, point your DNS CNAME/A to the value shown in `terraform output server_domain_target`.
+
+resource "google_cloud_run_domain_mapping" "server" {
+  count    = var.server_domain != "" ? 1 : 0
+  location = var.region
+  name     = var.server_domain
+
+  metadata {
+    namespace = var.project_id
+  }
+
+  spec {
+    route_name = google_cloud_run_service.server.name
+  }
+
+  depends_on = [google_cloud_run_service.server]
+}
+

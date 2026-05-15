@@ -1,6 +1,11 @@
 output "server_url" {
   description = "Cloud Run server URL"
-  value       = google_cloud_run_v2_service.server.uri
+  value       = google_cloud_run_service.server.status[0].url
+}
+
+output "dashboard_url" {
+  description = "Cloud Run dashboard URL"
+  value       = google_cloud_run_service.dashboard.status[0].url
 }
 
 output "screenshots_bucket" {
@@ -21,4 +26,9 @@ output "workload_identity_provider" {
 output "github_actions_sa" {
   description = "GitHub Actions service account email — paste into GitHub Actions secret WIF_SA_EMAIL"
   value       = google_service_account.github_actions.email
+}
+
+output "server_domain" {
+  description = "Custom domain (if configured)"
+  value       = var.server_domain != "" ? "https://${var.server_domain}" : "(not configured — use server_url)"
 }

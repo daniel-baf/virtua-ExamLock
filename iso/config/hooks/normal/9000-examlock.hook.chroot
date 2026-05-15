@@ -1,0 +1,118 @@
+#!/bin/bash
+# Configure ExamLock for the live default user
+
+set -e
+
+# Install Node.js LTS
+curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+apt-get install -y nodejs
+
+# Enable daemon + base firewall
+systemctl enable examlock-daemon.service
+systemctl enable nftables.service
+
+# XFCE autostart: launch Chromium in a normal window pointing to daemon
+# /etc/xdg/autostart applies to all users — no dependency on home dir
+mkdir -p /etc/xdg/autostart
+cat > /etc/xdg/autostart/examlock.desktop <<'EOF'
+[Desktop Entry]
+Type=Application
+Name=ExamLock
+Exec=bash -c "until curl -sf http://127.0.0.1:7878/api/state >/dev/null 2>&1; do sleep 0.5; done; chromium --noerrdialogs --disable-pinch --no-first-run --disable-features=TranslateUI --disable-background-networking --disable-background-mode --disable-sync --no-default-browser-check --window-size=1280,800 --window-position=40,40 http://127.0.0.1:7878"
+Hidden=false
+NoDisplay=false
+X-GNOME-Autostart-enabled=true
+EOF
+
+# XFCE config via /etc/skel — live-config copies skel to /home/user on boot
+# Disable desktop context menu, but keep a minimal panel for desktop workflows.
+mkdir -p /etc/skel/.config/xfce4/xfconf/xfce-perchannel-xml
+cat > /etc/skel/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-panel.xml <<'EOF'
+<?xml version="1.0" encoding="UTF-8"?>
+<channel name="xfce4-panel" version="1.0">
+  <property name="panels" type="array">
+    <value type="int" value="1"/>
+    <property name="panel-1" type="empty">
+      <property name="position" type="string" value="p=6;x=0;y=0"/>
+      <property name="length" type="uint" value="100"/>
+      <property name="size" type="uint" value="32"/>
+      <property name="plugin-ids" type="array">
+        <value type="int" value="1"/>
+        <value type="int" value="2"/>
+        <value type="int" value="3"/>
+      </property>
+    </property>
+  </property>
+  <property name="plugins" type="empty">
+    <property name="plugin-1" type="string" value="applicationsmenu"/>
+    <property name="plugin-2" type="string" value="tasklist"/>
+    <property name="plugin-3" type="string" value="clock"/>
+  </property>
+</channel>
+EOF
+
+cat > /etc/skel/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-keyboard-shortcuts.xml <<'EOF'
+<?xml version="1.0" encoding="UTF-8"?>
+<channel name="xfce4-keyboard-shortcuts" version="1.0">
+</channel>
+EOF
+
+cat > /etc/skel/.config/xfce4/xfconf/xfce-perchannel-xml/xfdesktop.xml <<'EOF'
+<?xml version="1.0" encoding="UTF-8"?>
+<channel name="xfdesktop" version="1.0">
+  <property name="desktop-menu" type="empty">
+    <property name="show" type="bool" value="false"/>
+  </property>
+  <property name="windowlist-menu" type="empty">
+    <property name="show" type="bool" value="false"/>
+  </property>
+</channel>
+EOF
+
+# Block TTY switching — student can't Ctrl+Alt+F2 to drop to console
+cat > /etc/systemd/system/disable-tty-switching.service <<'EOF'
+[Unit]
+Description=Disable TTY switching for kiosk
+After=getty.target
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash -c "for i in 2 3 4 5 6; do systemctl stop getty@tty$i.service; done"
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
+EOF
+systemctl enable disable-tty-switching.service
+
+# Base nftables ruleset — only loopback until daemon applies whitelist
+cat > /etc/nftables.conf <<'EOF'
+flush ruleset
+table inet examlock_boot {
+  chain output {
+    type filter hook output priority 0; policy drop;
+    oifname "lo" accept
+    ct state established,related accept
+  }
+}
+EOF
+
+# SSH for dev access — key-based root login
+# WARNING: solo para desarrollo/testing, no para producción
+mkdir -p /etc/ssh/sshd_config.d
+cat > /etc/ssh/sshd_config.d/50-examlock-dev.conf <<'EOF'
+PermitRootLogin yes
+PasswordAuthentication no
+PubkeyAuthentication yes
+EOF
+mkdir -p /root/.ssh
+chmod 700 /root/.ssh
+cat > /root/.ssh/authorized_keys <<'EOF'
+ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOHgDqzFwD8Vng8oYprpsU0I3lqDz/SZcJU9NSUcQn+N examlock-dev
+EOF
+chmod 600 /root/.ssh/authorized_keys
+systemctl enable ssh
+
+# Disable unnecessary services
+systemctl disable bluetooth 2>/dev/null || true
+systemctl disable cups 2>/dev/null || true

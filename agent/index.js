@@ -5,7 +5,7 @@ const heartbeat = require('./heartbeat');
 const answers = require('./answers');
 
 const SERVER_URL = process.env.SERVER_URL;
-const PORT = process.env.AGENT_PORT ?? 3000;
+const PORT = process.env.AGENT_PORT ?? 7878;
 
 // Session state — populated after student joins
 let state = {
@@ -104,6 +104,17 @@ app.post('/api/answer', async (req, res) => {
   }
 
   res.json({ queued: true });
+});
+
+// ── Submit exam ──────────────────────────────────────────────────────────────
+
+app.post('/api/submit', async (req, res) => {
+  if (!state.token) return res.status(401).json({ error: 'not_joined' });
+  await answers.flush(state.sessionId, state.token, SERVER_URL);
+  socketClient.emit('student:closed', { studentId: state.studentId, reason: 'submitted' });
+  state.status = 'ended';
+  broadcastEvent('exam-ended', {});
+  res.json({ ok: true });
 });
 
 // ── Proctor upload (from host script) ───────────────────────────────────────

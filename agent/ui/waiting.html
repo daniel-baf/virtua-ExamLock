@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ExamLock — Sala de espera</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: system-ui, sans-serif;
+    background: #0a0a0f;
+    color: #e5e7eb;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+  }
+  .card {
+    background: #111118;
+    border: 1px solid #1f2030;
+    border-radius: 16px;
+    padding: 2.5rem 2rem;
+    width: 100%;
+    max-width: 400px;
+    text-align: center;
+  }
+  .spinner {
+    width: 48px; height: 48px;
+    border: 3px solid #2d2d3d;
+    border-top-color: #7c3aed;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 1.5rem;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  h1 { font-size: 1.25rem; margin-bottom: .5rem; }
+  .sub { color: #6b7280; font-size: .875rem; line-height: 1.5; }
+  .msg-box {
+    background: #1a1a2e;
+    border: 1px solid #7c3aed40;
+    border-radius: 10px;
+    padding: .75rem 1rem;
+    margin-top: 1.5rem;
+    font-size: .875rem;
+    color: #a78bfa;
+    display: none;
+  }
+  .alert-toast {
+    position: fixed;
+    top: 1rem; right: 1rem;
+    background: #1a2e1a;
+    border: 1px solid #22c55e60;
+    color: #86efac;
+    padding: .75rem 1rem;
+    border-radius: 10px;
+    font-size: .8rem;
+    max-width: 320px;
+    display: none;
+    z-index: 100;
+  }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="spinner"></div>
+  <h1>Conectando al examen…</h1>
+  <p class="sub">Estableciendo conexión segura.<br>No cierres esta ventana.</p>
+  <div class="msg-box" id="msg"></div>
+</div>
+<div class="alert-toast" id="alert-toast"></div>
+
+<script>
+const es = new EventSource('/api/events');
+
+es.addEventListener('admitted', () => {
+  window.location.href = '/exam';
+});
+
+es.addEventListener('kicked', () => {
+  window.location.href = '/ended';
+});
+
+es.addEventListener('exam-ended', () => {
+  window.location.href = '/ended';
+});
+
+es.addEventListener('message', e => {
+  const { text } = JSON.parse(e.data);
+  const box = document.getElementById('msg');
+  box.textContent = `Mensaje del docente: ${text}`;
+  box.style.display = 'block';
+});
+
+es.addEventListener('alert', e => {
+  const { text } = JSON.parse(e.data);
+  const el = document.getElementById('alert-toast');
+  el.textContent = text;
+  el.style.display = 'block';
+  setTimeout(() => { el.style.display = 'none'; }, 6000);
+});
+
+// Redirect if somehow we're here but already admitted
+fetch('/api/state').then(r => r.json()).then(({ status }) => {
+  if (status === 'admitted') window.location.href = '/exam';
+  if (status === 'kicked' || status === 'ended') window.location.href = '/ended';
+  if (status === 'idle') window.location.href = '/';
+});
+</script>
+</body>
+</html>

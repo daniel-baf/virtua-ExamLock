@@ -3,123 +3,178 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ExamLock — Ingreso</title>
+<title>ExamLock - Ingreso</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    color-scheme: dark;
+    --bg: #090a0c;
+    --panel: #101216;
+    --panel-2: #151820;
+    --line: #272b35;
+    --text: #f4f4f5;
+    --muted: #8b919e;
+    --soft: #525a68;
+    --accent: #38bdf8;
+    --danger: #fda4af;
+  }
   body {
-    font-family: system-ui, sans-serif;
-    background: #0a0a0f;
-    color: #e5e7eb;
+    font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background:
+      radial-gradient(circle at 20% 10%, rgba(56, 189, 248, .11), transparent 28rem),
+      linear-gradient(140deg, #090a0c 0%, #0f1115 55%, #090a0c 100%);
+    color: var(--text);
     min-height: 100vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 1rem;
+    display: grid;
+    place-items: center;
+    padding: 1.25rem;
     user-select: none;
   }
-  .card {
-    background: #111118;
-    border: 1px solid #1f2030;
-    border-radius: 16px;
+  .shell {
+    width: min(920px, 100%);
+    display: grid;
+    grid-template-columns: 1fr 390px;
+    border: 1px solid rgba(255,255,255,.08);
+    border-radius: 14px;
+    overflow: hidden;
+    background: rgba(16,18,22,.86);
+    box-shadow: 0 24px 80px rgba(0,0,0,.45);
+  }
+  .brief {
     padding: 2rem;
-    width: 100%;
-    max-width: 380px;
+    border-right: 1px solid rgba(255,255,255,.08);
+    min-height: 520px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
   }
-  .logo {
-    width: 48px; height: 48px;
-    background: #7c3aed;
-    border-radius: 12px;
-    display: flex; align-items: center; justify-content: center;
-    margin: 0 auto 1rem;
-    font-size: 1.5rem;
-  }
-  h1 { text-align: center; font-size: 1.25rem; margin-bottom: .25rem; }
-  .sub { text-align: center; color: #6b7280; font-size: .875rem; margin-bottom: 1.5rem; }
-  label { display: block; font-size: .8rem; color: #9ca3af; margin-bottom: .4rem; }
+  .brand { display: flex; align-items: center; gap: .75rem; font-weight: 700; letter-spacing: .02em; }
+  .mark { width: 34px; height: 34px; border: 1px solid var(--line); border-radius: 9px; display: grid; place-items: center; background: #0b0d11; }
+  .mark::after { content: ""; width: 11px; height: 11px; border-radius: 999px; background: #34d399; box-shadow: 0 0 24px #34d39999; }
+  .headline p:first-child { color: var(--soft); font-size: .72rem; letter-spacing: .22em; text-transform: uppercase; margin-bottom: 1rem; }
+  .headline h1 { font-size: clamp(2rem, 5vw, 3.8rem); line-height: .98; letter-spacing: -.04em; max-width: 460px; }
+  .headline p:last-child { margin-top: 1.25rem; color: var(--muted); max-width: 420px; font-size: .92rem; line-height: 1.7; }
+  .checks { display: grid; grid-template-columns: repeat(3, 1fr); gap: .75rem; }
+  .check { border: 1px solid rgba(255,255,255,.07); border-radius: 8px; padding: .8rem; background: rgba(0,0,0,.18); }
+  .check b { display: block; font-size: .78rem; margin-bottom: .25rem; }
+  .check span { color: var(--soft); font-size: .72rem; }
+  .panel { padding: 2rem; display: flex; align-items: center; }
+  .card { width: 100%; }
+  .eyebrow { color: var(--soft); font-size: .72rem; letter-spacing: .22em; text-transform: uppercase; margin-bottom: .75rem; }
+  h2 { font-size: 1.45rem; margin-bottom: .35rem; }
+  .sub { color: var(--muted); font-size: .86rem; margin-bottom: 1.5rem; line-height: 1.5; }
+  label { display: block; font-size: .76rem; color: var(--muted); margin-bottom: .45rem; }
   input {
     width: 100%;
-    background: #1a1a24;
-    border: 1px solid #2d2d3d;
+    height: 44px;
+    background: #090b0f;
+    border: 1px solid var(--line);
     border-radius: 8px;
-    padding: .65rem .75rem;
-    color: #e5e7eb;
-    font-size: .9rem;
+    padding: 0 .8rem;
+    color: var(--text);
+    font-size: .92rem;
     outline: none;
     margin-bottom: 1rem;
-    transition: border-color .15s;
+    transition: border-color .15s, box-shadow .15s;
   }
-  input:focus { border-color: #7c3aed; }
+  input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(56,189,248,.12); }
+  #code { text-transform: uppercase; letter-spacing: .12em; font-weight: 700; }
   button {
     width: 100%;
-    background: #7c3aed;
-    color: #fff;
+    height: 44px;
+    background: #f4f4f5;
+    color: #090a0c;
     border: none;
     border-radius: 8px;
-    padding: .75rem;
     font-size: .9rem;
-    font-weight: 500;
+    font-weight: 800;
     cursor: pointer;
-    transition: background .15s;
+    transition: transform .12s, background .15s;
   }
-  button:hover:not(:disabled) { background: #6d28d9; }
-  button:disabled { opacity: .5; cursor: not-allowed; }
+  button:hover:not(:disabled) { background: #fff; transform: translateY(-1px); }
+  button:disabled { opacity: .55; cursor: not-allowed; }
   .error {
-    background: #2d0a0a;
-    border: 1px solid #7f1d1d;
-    color: #fca5a5;
+    background: #3b1118;
+    border: 1px solid #7f1d2d;
+    color: var(--danger);
     border-radius: 8px;
-    padding: .65rem .75rem;
-    font-size: .85rem;
+    padding: .7rem .8rem;
+    font-size: .84rem;
     margin-bottom: 1rem;
     display: none;
+  }
+  @media (max-width: 820px) {
+    .shell { grid-template-columns: 1fr; }
+    .brief { display: none; }
+    .panel { padding: 1.5rem; min-height: 100vh; }
   }
 </style>
 </head>
 <body>
-<div class="card">
-  <div class="logo">🔒</div>
-  <h1>ExamLock</h1>
-  <p class="sub">Ingresa tus datos para comenzar</p>
+<main class="shell">
+  <section class="brief">
+    <div class="brand"><div class="mark"></div><span>ExamLock</span></div>
+    <div class="headline">
+      <p>Sesion supervisada</p>
+      <h1>Entorno listo para examen.</h1>
+      <p>Inicia sesion para activar monitoreo, politicas de red y capturas de evidencia durante la prueba.</p>
+    </div>
+    <div class="checks">
+      <div class="check"><b>Red</b><span>Controlada por sesion</span></div>
+      <div class="check"><b>Pantalla</b><span>Capturas periodicas</span></div>
+      <div class="check"><b>Estado</b><span>Docente conectado</span></div>
+    </div>
+  </section>
 
-  <div class="error" id="error"></div>
+  <section class="panel">
+    <div class="card">
+      <p class="eyebrow">Acceso alumno</p>
+      <h2>Ingresa al examen</h2>
+      <p class="sub">Usa tus credenciales institucionales y el codigo entregado por el docente.</p>
 
-  <label for="name">Nombre completo</label>
-  <input id="name" type="text" placeholder="Juan Pérez" autocomplete="off" autofocus>
+      <div class="error" id="error"></div>
 
-  <label for="code">Código de sesión</label>
-  <input id="code" type="text" placeholder="CALC-B7X2" autocomplete="off"
-    style="text-transform:uppercase; letter-spacing:.1em;">
+      <label for="email">Correo institucional</label>
+      <input id="email" type="email" placeholder="alumno@universidad.edu" autocomplete="off" autofocus>
 
-  <button id="btn" onclick="login()">Ingresar al examen</button>
-</div>
+      <label for="password">Contrasena</label>
+      <input id="password" type="password" placeholder="********" autocomplete="off">
+
+      <label for="code">Codigo de examen</label>
+      <input id="code" type="text" placeholder="CALC-B7X2" autocomplete="off">
+
+      <button id="btn" onclick="login()">Entrar</button>
+    </div>
+  </section>
+</main>
 
 <script>
 async function login() {
-  const name = document.getElementById('name').value.trim();
-  const code = document.getElementById('code').value.trim().toUpperCase();
-  const btn  = document.getElementById('btn');
-  const err  = document.getElementById('error');
+  const email    = document.getElementById('email').value.trim();
+  const password = document.getElementById('password').value;
+  const code     = document.getElementById('code').value.trim().toUpperCase();
+  const btn      = document.getElementById('btn');
 
-  err.style.display = 'none';
-  if (!name || !code) { showError('Completa todos los campos.'); return; }
+  hideError();
+  if (!email || !password || !code) { showError('Completa todos los campos.'); return; }
 
   btn.disabled = true;
-  btn.textContent = 'Conectando…';
+  btn.textContent = 'Conectando...';
 
   try {
     const res = await fetch('/api/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ studentName: name, sessionCode: code }),
+      body: JSON.stringify({ email, password, code }),
     });
     const data = await res.json();
     if (!res.ok) { showError(friendlyError(data.error)); return; }
-    window.location.href = '/exam';
+    window.location.href = '/waiting';
   } catch {
-    showError('No se pudo conectar con el servidor.');
+    showError('No se pudo conectar con el servidor local.');
   } finally {
     btn.disabled = false;
-    btn.textContent = 'Ingresar al examen';
+    btn.textContent = 'Entrar';
   }
 }
 
@@ -128,19 +183,29 @@ function showError(msg) {
   el.textContent = msg;
   el.style.display = 'block';
 }
+function hideError() {
+  document.getElementById('error').style.display = 'none';
+}
 
 function friendlyError(code) {
   const map = {
-    session_not_found: 'Código de sesión incorrecto.',
-    session_expired: 'La sesión ha terminado.',
+    invalid_credentials: 'Correo o contrasena incorrectos.',
+    session_not_found: 'Codigo de examen incorrecto o inactivo.',
+    session_expired: 'La sesion ha terminado.',
+    kicked: 'Fuiste expulsado de este examen.',
+    wrong_role: 'Esta cuenta no es de estudiante.',
     server_unreachable: 'No se puede conectar al servidor.',
   };
-  return map[code] ?? 'Error al ingresar.';
+  return map[code] ?? `Error: ${code}`;
 }
 
-document.addEventListener('keydown', e => {
-  if (e.key === 'Enter') login();
-});
+document.addEventListener('keydown', e => { if (e.key === 'Enter') login(); });
+
+fetch('/api/state').then(r => r.json()).then(({ status }) => {
+  if (status === 'admitted') window.location.href = '/exam';
+  else if (status === 'waiting') window.location.href = '/waiting';
+  else if (status === 'ended' || status === 'kicked') window.location.href = '/ended';
+}).catch(() => {});
 </script>
 </body>
 </html>

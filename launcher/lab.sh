@@ -9,7 +9,7 @@ set -euo pipefail
 SESSION_CODE="${1:-}"
 SERVER_URL="${EXAMLOCK_SERVER_URL:-https://exam-server-xxxx-uc.a.run.app}"
 IMAGE="${EXAMLOCK_IMAGE:-examlock/agent:latest}"
-AGENT_URL="http://localhost:3000"
+AGENT_URL="http://localhost:7878"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROCTOR_DIR="$(cd "$SCRIPT_DIR/../proctor" && pwd)"
 
@@ -66,7 +66,7 @@ docker run -d \
   --security-opt no-new-privileges \
   --read-only \
   --tmpfs /tmp:noexec,size=64m \
-  -p 127.0.0.1:3000:3000 \
+  -p 127.0.0.1:7878:7878 \
   -e SESSION_CODE="$SESSION_CODE" \
   -e SERVER_URL="$SERVER_URL" \
   "$IMAGE"

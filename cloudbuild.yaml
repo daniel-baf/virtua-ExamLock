@@ -1,0 +1,105 @@
+substitutions:
+  _REGION: us-central1
+  _REGISTRY: ${_REGION}-docker.pkg.dev/${PROJECT_ID}/examlock
+  # Set in Cloud Build trigger substitutions:
+  #   _SERVER_URL           — Cloud Run server URL (exam-server-xxx-uc.a.run.app)
+  #   _VITE_FIREBASE_API_KEY
+  #   _VITE_FIREBASE_AUTH_DOMAIN
+  #   _VITE_FIREBASE_PROJECT_ID
+  #   _VITE_FIREBASE_STORAGE_BUCKET
+  #   _VITE_FIREBASE_MESSAGING_SENDER_ID
+  #   _VITE_FIREBASE_APP_ID
+  _SERVER_URL: ""
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+  machineType: E2_MEDIUM
+
+steps:
+  # ── Build server image ────────────────────────────────────────────────────
+  - id: build-server
+    name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - -t
+      - ${_REGISTRY}/server:${SHORT_SHA}
+      - -t
+      - ${_REGISTRY}/server:latest
+      - ./server
+
+  # ── Build dashboard image (Vite vars baked at build time) ─────────────────
+  - id: build-dashboard
+    name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - -t
+      - ${_REGISTRY}/dashboard:${SHORT_SHA}
+      - -t
+      - ${_REGISTRY}/dashboard:latest
+      - --build-arg
+      - VITE_SERVER_URL=${_SERVER_URL}
+      - --build-arg
+      - VITE_FIREBASE_API_KEY=${_VITE_FIREBASE_API_KEY}
+      - --build-arg
+      - VITE_FIREBASE_AUTH_DOMAIN=${_VITE_FIREBASE_AUTH_DOMAIN}
+      - --build-arg
+      - VITE_FIREBASE_PROJECT_ID=${_VITE_FIREBASE_PROJECT_ID}
+      - --build-arg
+      - VITE_FIREBASE_STORAGE_BUCKET=${_VITE_FIREBASE_STORAGE_BUCKET}
+      - --build-arg
+      - VITE_FIREBASE_MESSAGING_SENDER_ID=${_VITE_FIREBASE_MESSAGING_SENDER_ID}
+      - --build-arg
+      - VITE_FIREBASE_APP_ID=${_VITE_FIREBASE_APP_ID}
+      - ./dashboard
+    waitFor: ['-']
+
+  # ── Push images ───────────────────────────────────────────────────────────
+  - id: push-server
+    name: gcr.io/cloud-builders/docker
+    args:
+      - push
+      - --all-tags
+      - ${_REGISTRY}/server
+    waitFor: [build-server]
+
+  - id: push-dashboard
+    name: gcr.io/cloud-builders/docker
+    args:
+      - push
+      - --all-tags
+      - ${_REGISTRY}/dashboard
+    waitFor: [build-dashboard]
+
+  # ── Deploy server to Cloud Run ────────────────────────────────────────────
+  - id: deploy-server
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    entrypoint: gcloud
+    args:
+      - run
+      - services
+      - update
+      - exam-server
+      - --image=${_REGISTRY}/server:${SHORT_SHA}
+      - --region=${_REGION}
+      - --platform=managed
+    waitFor: [push-server]
+
+  # ── Deploy dashboard to Cloud Run ─────────────────────────────────────────
+  - id: deploy-dashboard
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    entrypoint: gcloud
+    args:
+      - run
+      - services
+      - update
+      - exam-dashboard
+      - --image=${_REGISTRY}/dashboard:${SHORT_SHA}
+      - --region=${_REGION}
+      - --platform=managed
+    waitFor: [push-dashboard]
+
+images:
+  - ${_REGISTRY}/server:${SHORT_SHA}
+  - ${_REGISTRY}/server:latest
+  - ${_REGISTRY}/dashboard:${SHORT_SHA}
+  - ${_REGISTRY}/dashboard:latest
