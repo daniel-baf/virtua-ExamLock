@@ -34,6 +34,26 @@
   .dot { width: 8px; height: 8px; border-radius: 50%; background: #22c55e; flex-shrink: 0; }
   .dot.offline { background: #f59e0b; }
   header h1 { font-size: 1rem; flex: 1; }
+  .timer {
+    background: #0a0a0f;
+    border: 1px solid #2d2d3d;
+    border-radius: 8px;
+    color: #e5e7eb;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: .9rem;
+    font-weight: 700;
+    min-width: 96px;
+    padding: .45rem .7rem;
+    text-align: center;
+  }
+  .timer.warning {
+    border-color: #92400e;
+    color: #fbbf24;
+  }
+  .timer.danger {
+    border-color: #7f1d1d;
+    color: #fca5a5;
+  }
   main {
     flex: 1;
     display: flex;
@@ -110,6 +130,7 @@
 <header>
   <div class="dot" id="dot"></div>
   <h1>ExamLock — Examen en curso</h1>
+  <div class="timer" id="timer">--:--</div>
 </header>
 
 <main>
@@ -130,10 +151,18 @@
 
 <script>
 const es = new EventSource('/api/events');
+let endsAt = null;
+let timerId = null;
 
 es.addEventListener('admitted', e => {
   const data = JSON.parse(e.data);
+  setEndsAt(data.endsAt);
   updateWhitelist(data.whitelist, data.blockInternet);
+});
+
+es.addEventListener('state', e => {
+  const data = JSON.parse(e.data);
+  setEndsAt(data.endsAt);
 });
 
 es.addEventListener('whitelist', e => {
@@ -180,11 +209,38 @@ function showToast(text) {
   setTimeout(() => { el.style.display = 'none'; }, 8000);
 }
 
-fetch('/api/state').then(r => r.json()).then(({ status }) => {
+fetch('/api/state').then(r => r.json()).then(({ status, endsAt: stateEndsAt }) => {
+  setEndsAt(stateEndsAt);
   if (status === 'waiting') window.location.href = '/waiting';
   if (status === 'idle') window.location.href = '/';
   if (status === 'kicked' || status === 'ended') window.location.href = '/ended';
 });
+
+function setEndsAt(value) {
+  if (!value) return;
+  endsAt = Number(value);
+  renderTimer();
+  if (!timerId) timerId = setInterval(renderTimer, 1000);
+}
+
+function renderTimer() {
+  const el = document.getElementById('timer');
+  if (!endsAt || Number.isNaN(endsAt)) {
+    el.textContent = '--:--';
+    return;
+  }
+
+  const remaining = Math.max(0, endsAt - Date.now());
+  const totalSeconds = Math.ceil(remaining / 1000);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  el.textContent = hours > 0
+    ? `${hours}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
+    : `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+  el.classList.toggle('warning', remaining <= 10 * 60 * 1000 && remaining > 2 * 60 * 1000);
+  el.classList.toggle('danger', remaining <= 2 * 60 * 1000);
+}
 
 async function finishExam() {
   if (!confirm('¿Seguro que deseas finalizar el examen? No podrás volver a ingresar.')) return;

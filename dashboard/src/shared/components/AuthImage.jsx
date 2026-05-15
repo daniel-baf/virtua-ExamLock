@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { api } from '../lib/api';
+import { api } from '@/shared/lib/api';
 
 export default function AuthImage({ uid, src, alt, className }) {
   const [blobUrl, setBlobUrl] = useState('');
