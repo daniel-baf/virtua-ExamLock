@@ -4,8 +4,10 @@
 # Uso:
 #   ./scripts/dev-vm.sh           # arranca VM + watcher
 #   ./scripts/dev-vm.sh --dev     # arranca VM con iso/examlock-dev.iso
+#   ./scripts/dev-vm.sh --local   # apunta la VM al server local sin rebuild
 #   ./scripts/dev-vm.sh --push    # solo empuja archivos a VM ya corriendo
 #   ./scripts/dev-vm.sh --logs    # solo muestra logs del agente en VM
+#   ./scripts/dev-vm.sh --configure-local  # solo configura SERVER_URL local
 #
 # Requisitos: qemu-system-x86_64, openssh, entr (o inotify-tools)
 #   Arch: sudo pacman -S qemu-full openssh entr
@@ -19,6 +21,7 @@ VM_PORT=2222
 VM_MEM=2048
 ISO_PROFILE="full"
 MODE=""
+LOCAL_MODE=0
 
 DEV_KEY="$SCRIPT_DIR/dev-key"
 SSH_OPTS="-p $VM_PORT -i $DEV_KEY -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR -o IdentitiesOnly=yes"
@@ -37,7 +40,10 @@ for arg in "$@"; do
     --dev)
       ISO_PROFILE="dev"
       ;;
-    --push|--logs|--shell)
+    --local)
+      LOCAL_MODE=1
+      ;;
+    --push|--logs|--shell|--configure-local)
       MODE="$arg"
       ;;
     *)
@@ -57,6 +63,17 @@ ISO="${ISO_PATH:-$ISO_DEFAULT}"
 
 vm_up() {
   ssh $SSH_OPTS root@127.0.0.1 true 2>/dev/null
+}
+
+local_server_url() {
+  if [[ -n "${LOCAL_SERVER_URL:-}" ]]; then
+    echo "$LOCAL_SERVER_URL"
+    return
+  fi
+
+  local port="${LOCAL_SERVER_PORT:-8080}"
+  # QEMU user networking exposes the host to the guest at 10.0.2.2.
+  echo "http://10.0.2.2:${port}"
 }
 
 wait_ssh() {
@@ -90,6 +107,31 @@ push_files() {
   log "Reiniciando daemon..."
   ssh $SSH_OPTS root@127.0.0.1 systemctl restart examlock-daemon.service
   ok "Agente actualizado"
+}
+
+configure_local_server() {
+  local url
+  url="$(local_server_url)"
+  log "Configurando VM para usar server local: $url"
+
+  ssh $SSH_OPTS root@127.0.0.1 "SERVER_URL='$url' bash -s" <<'REMOTE'
+set -euo pipefail
+
+CONF=/etc/examlock.conf
+TMP=$(mktemp)
+
+if [[ -f "$CONF" ]]; then
+  grep -v '^SERVER_URL=' "$CONF" > "$TMP" || true
+fi
+
+printf 'SERVER_URL=%s\n' "$SERVER_URL" > "$CONF"
+cat "$TMP" >> "$CONF"
+rm -f "$TMP"
+
+systemctl restart examlock-daemon.service
+REMOTE
+
+  ok "VM apuntando a $url"
 }
 
 start_watcher() {
@@ -130,7 +172,16 @@ start_watcher() {
 
 if [[ "$MODE" == "--push" ]]; then
   vm_up || { err "VM no accesible en :$VM_PORT"; exit 1; }
+  if [[ "$LOCAL_MODE" == "1" ]]; then
+    configure_local_server
+  fi
   push_files
+  exit 0
+fi
+
+if [[ "$MODE" == "--configure-local" ]]; then
+  vm_up || { err "VM no accesible en :$VM_PORT"; exit 1; }
+  configure_local_server
   exit 0
 fi
 
@@ -158,6 +209,9 @@ fi
 # Si la VM ya está corriendo, solo lanzar watcher
 if vm_up 2>/dev/null; then
   warn "VM ya corriendo en :$VM_PORT"
+  if [[ "$LOCAL_MODE" == "1" ]]; then
+    configure_local_server
+  fi
   push_files
   start_watcher
   exit 0
@@ -183,6 +237,9 @@ QEMU_PID=$!
 trap "kill $QEMU_PID 2>/dev/null; exit" INT TERM
 
 wait_ssh
+if [[ "$LOCAL_MODE" == "1" ]]; then
+  configure_local_server
+fi
 push_files
 
 echo ""
@@ -190,6 +247,7 @@ ok "VM lista. Comandos útiles:"
 echo "  Logs:  ./scripts/dev-vm.sh --logs"
 echo "  Shell: ./scripts/dev-vm.sh --shell"
 echo "  Push:  ./scripts/dev-vm.sh --push"
+echo "  Local: ./scripts/dev-vm.sh --configure-local"
 echo ""
 ok "Watching agent/daemon/ y agent/ui/ — hot-reload al guardar..."
 echo ""

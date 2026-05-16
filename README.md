@@ -28,7 +28,33 @@ La documentación operativa vive en `docs/`:
 | [docs/byod-setup.md](docs/byod-setup.md) | Guía corta para alumnos usando VM BYOD. |
 | [docs/pentest/](docs/pentest/) | Pruebas de seguridad y checklist de pentest. |
 
-## Arranque local mínimo
+## Arranque local con Docker + VM
+
+Este es el flujo recomendado para desarrollo: levanta `server` y `dashboard` en Docker, y configura la VM para hablar con el server local sin reconstruir ISO.
+
+```bash
+cp server/.env.example server/.env
+cp dashboard/.env.example dashboard/.env
+gcloud auth application-default login
+
+./scripts/dev-local.sh --dev
+```
+
+URLs locales:
+
+- Dashboard docente: `http://localhost:5173`
+- Server API: `http://localhost:8080`
+- Server visto desde QEMU: `http://10.0.2.2:8080`
+
+Comandos útiles:
+
+```bash
+./scripts/dev-local.sh --logs
+./scripts/dev-local.sh --down
+./scripts/dev-local.sh --dev --no-vm
+```
+
+## Arranque local manual
 
 Backend:
 
