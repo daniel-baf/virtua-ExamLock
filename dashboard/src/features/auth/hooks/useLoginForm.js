@@ -14,8 +14,9 @@ export default function useLoginForm() {
     setError('');
     setLoading(true);
     try {
-      await signInTeacher(email, password);
-      navigate('/dashboard');
+      const cred = await signInTeacher(email, password);
+      const { claims } = await cred.user.getIdTokenResult(true);
+      navigate(claims.role === 'admin' ? '/admin/users' : '/dashboard');
     } catch (err) {
       setError(friendlyError(err.code));
     } finally {
@@ -23,23 +24,15 @@ export default function useLoginForm() {
     }
   }
 
-  return {
-    email,
-    password,
-    error,
-    loading,
-    setEmail,
-    setPassword,
-    submit,
-  };
+  return { email, password, error, loading, setEmail, setPassword, submit };
 }
 
 function friendlyError(code) {
   const map = {
     'auth/user-not-found': 'Usuario no encontrado.',
-    'auth/wrong-password': 'Contrasena incorrecta.',
-    'auth/invalid-credential': 'Credenciales invalidas.',
-    'auth/too-many-requests': 'Demasiados intentos. Intenta mas tarde.',
+    'auth/wrong-password': 'Contraseña incorrecta.',
+    'auth/invalid-credential': 'Credenciales inválidas.',
+    'auth/too-many-requests': 'Demasiados intentos. Intenta más tarde.',
   };
-  return map[code] ?? 'Error al iniciar sesion.';
+  return map[code] ?? 'Error al iniciar sesión.';
 }

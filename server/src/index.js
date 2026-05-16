@@ -8,6 +8,7 @@ const sessionRoutes = require('./routes/sessions');
 const studentRoutes = require('./routes/students');
 const examRoutes = require('./routes/exams');
 const devRoutes = require('./routes/dev');
+const userRoutes = require('./routes/users');
 const registerSocket = require('./socket');
 
 const app = express();
@@ -30,7 +31,7 @@ app.use((req, res, next) => {
   if (allowedOrigins.includes('*') || allowedOrigins.includes(origin)) {
     res.setHeader('Access-Control-Allow-Origin', origin ?? '*');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,OPTIONS');
+    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
   }
   if (req.method === 'OPTIONS') return res.sendStatus(204);
   next();
@@ -42,6 +43,7 @@ app.use('/api/session', sessionRoutes);
 app.use('/api/student', studentRoutes);
 app.use('/api/exam', examRoutes);
 app.use('/api/dev', devRoutes);
+app.use('/api/users', userRoutes);
 
 registerSocket(io);
 

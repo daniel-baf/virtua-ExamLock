@@ -122,6 +122,12 @@ resource "google_project_iam_member" "server_storage" {
   member  = "serviceAccount:${google_service_account.server.email}"
 }
 
+resource "google_project_iam_member" "server_firebase_admin" {
+  project = var.project_id
+  role    = "roles/firebase.admin"
+  member  = "serviceAccount:${google_service_account.server.email}"
+}
+
 # ── Cloud Run: servidor (API v1 para soporte de invoker-iam-disabled) ─────────
 
 resource "google_cloud_run_service" "server" {
@@ -139,7 +145,7 @@ resource "google_cloud_run_service" "server" {
     metadata {
       annotations = {
         "autoscaling.knative.dev/minScale" = "0"
-        "autoscaling.knative.dev/maxScale" = "10"
+        "autoscaling.knative.dev/maxScale" = "2"
       }
     }
 

@@ -72,4 +72,10 @@ export const api = {
 
   // Dev
   resetDb: () => req('POST', '/api/dev/reset'),
+
+  // Users (admin)
+  listUsers:   (pageToken) => req('GET', `/api/users${pageToken ? `?pageToken=${pageToken}` : ''}`),
+  createUser:  (body)      => req('POST',   '/api/users', body),
+  updateUser:  (uid, body) => req('PATCH',  `/api/users/${uid}`, body),
+  deleteUser:  (uid)       => req('DELETE', `/api/users/${uid}`),
 };

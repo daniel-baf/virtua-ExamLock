@@ -16,6 +16,13 @@ service cloud.firestore {
       // writes go through server (Admin SDK bypasses rules)
     }
 
+    // Admins can read all user profiles; users can read their own
+    match /users/{uid} {
+      allow read: if request.auth != null
+        && (request.auth.token.role == 'admin' || request.auth.uid == uid);
+      // Writes go through server (Admin SDK bypasses rules)
+    }
+
     // No direct client access to events or screenshots — server only
     match /events/{id} {
       allow read, write: if false;
