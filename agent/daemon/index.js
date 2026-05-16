@@ -17,6 +17,7 @@ const {
 // ── Config ────────────────────────────────────────────────────────────────────
 
 const BROWSER_PROCESS_PATTERN = '(chromium|chromium-browser|google-chrome)';
+const HEARTBEAT_INTERVAL_MS = 15_000;
 
 // ── State ─────────────────────────────────────────────────────────────────────
 
@@ -263,7 +264,7 @@ function connectSocket(sessionCode) {
   // Heartbeat
   setInterval(() => {
     if (socket.connected) socket.emit('student:heartbeat');
-  }, 10_000);
+  }, HEARTBEAT_INTERVAL_MS);
 }
 
 async function sendScreenshot(requestId) {

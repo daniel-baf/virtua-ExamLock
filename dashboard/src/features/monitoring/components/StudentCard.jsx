@@ -27,6 +27,8 @@ export default function StudentCard({ student, tab, onKick, onReadmit, onScreens
         <div>
           <p className="student-card__name" title={label}>{label}</p>
           <p className="student-card__meta">Ultima captura: {fmtTime(student.lastScreenshotAt)}</p>
+          {student.lastHeartbeat && <p className="student-card__meta">Ultimo heartbeat: {fmtTime(student.lastHeartbeat)}</p>}
+          {status === 'offline' && student.offlineAt && <p className="student-card__warning">Offline desde {fmtTime(student.offlineAt)}</p>}
           {student.attempts > 0 && <p className="student-card__warning">{student.attempts} reingreso(s)</p>}
           {status === 'closed' && closeLabel && <p className="student-card__meta">{closeLabel}</p>}
           {student.screenshotError && <p className="student-card__error" title={student.screenshotError}>Error de captura</p>}

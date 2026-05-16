@@ -2,7 +2,8 @@ const { db, storage, auth } = require('./firebase');
 const { logEvent } = require('./events');
 const { activeDomains } = require('./networkDefaults');
 
-const HEARTBEAT_TIMEOUT_MS = 30_000;
+const HEARTBEAT_INTERVAL_MS = 15_000;
+const HEARTBEAT_TIMEOUT_MS = HEARTBEAT_INTERVAL_MS * 3;
 
 module.exports = function registerSocket(io) {
   const heartbeatTimers = new Map();
@@ -40,7 +41,7 @@ module.exports = function registerSocket(io) {
       if (!studentDoc.exists || studentDoc.data().sessionId !== sessionId) {
         return socket.disconnect(true);
       }
-      if (studentDoc.data().status === 'kicked') return socket.disconnect(true);
+      if (['closed', 'kicked'].includes(studentDoc.data().status)) return socket.disconnect(true);
 
       handleStudent(socket, sessionId, uid, io, heartbeatTimers);
     } else if (role === 'teacher') {
@@ -58,9 +59,8 @@ module.exports = function registerSocket(io) {
 async function handleStudent(socket, sessionId, uid, io, timers) {
   socket.join(`student:${uid}`);
   socket.join(`session:${sessionId}`);
-  let closedByStudent = false;
 
-  resetHeartbeat(uid, sessionId, io, timers);
+  resetHeartbeat(uid, sessionId, io, timers, socket.id, { replace: true });
 
   const [sessSnap, stuSnap] = await Promise.all([
     db().collection('sessions').doc(sessionId).get(),
@@ -69,12 +69,19 @@ async function handleStudent(socket, sessionId, uid, io, timers) {
   const session = sessSnap.data() ?? {};
   const student = stuSnap.data() ?? {};
 
-  await db().collection('students').doc(uid).update({ lastHeartbeat: Date.now() });
+  const now = Date.now();
+  await db().collection('students').doc(uid).update({
+    status: 'admitted',
+    lastHeartbeat: now,
+    offlineAt: null,
+  });
 
   io.to(`teachers:${sessionId}`).emit('monitor:student-joined', {
     uid,
     name: student.email ?? uid.slice(0, 8),
-    status: student.status,
+    status: 'admitted',
+    lastHeartbeat: now,
+    offlineAt: null,
   });
 
   // Always push current whitelist so the agent can apply it (covers first-connect and reconnects)
@@ -86,8 +93,13 @@ async function handleStudent(socket, sessionId, uid, io, timers) {
   });
 
   socket.on('student:heartbeat', () => {
-    db().collection('students').doc(uid).update({ lastHeartbeat: Date.now() });
-    resetHeartbeat(uid, sessionId, io, timers);
+    if (!resetHeartbeat(uid, sessionId, io, timers, socket.id)) return;
+    const heartbeatAt = Date.now();
+    db().collection('students').doc(uid).update({
+      status: 'admitted',
+      lastHeartbeat: heartbeatAt,
+      offlineAt: null,
+    });
   });
 
   socket.on('student:screenshot', async ({ jpegB64, requestId }) => {
@@ -137,7 +149,8 @@ async function handleStudent(socket, sessionId, uid, io, timers) {
   });
 
   socket.on('student:closed', async ({ reason }) => {
-    closedByStudent = true;
+    const current = timers.get(uid);
+    if (current && current.socketId !== socket.id) return;
     clearTimer(uid, timers);
     await db().collection('students').doc(uid).update({
       status: 'closed',
@@ -146,17 +159,6 @@ async function handleStudent(socket, sessionId, uid, io, timers) {
     });
     await logEvent(sessionId, 'closed', { reason }, uid);
     io.to(`teachers:${sessionId}`).emit('monitor:student-closed', { uid, reason });
-  });
-
-  socket.on('disconnect', async () => {
-    clearTimer(uid, timers);
-    if (closedByStudent) return;
-    const current = await db().collection('students').doc(uid).get();
-    const status = current.data()?.status;
-    if (status === 'closed' || status === 'kicked') return;
-    await db().collection('students').doc(uid).update({ status: 'offline', streamReady: false });
-    await logEvent(sessionId, 'offline', {}, uid);
-    io.to(`teachers:${sessionId}`).emit('monitor:student-offline', { uid });
   });
 }
 
@@ -197,21 +199,42 @@ function handleTeacher(socket, sessionId, io) {
   });
 }
 
-function resetHeartbeat(uid, sessionId, io, timers) {
+function resetHeartbeat(uid, sessionId, io, timers, socketId, { replace = false } = {}) {
+  const current = timers.get(uid);
+  if (current && current.socketId !== socketId && !replace) return false;
   clearTimer(uid, timers);
   const t = setTimeout(() => {
-    db().collection('students').doc(uid).update({ status: 'offline', streamReady: false });
-    logEvent(sessionId, 'offline', {}, uid);
-    io.to(`teachers:${sessionId}`).emit('monitor:student-offline', { uid });
+    const current = timers.get(uid);
+    if (!current || current.socketId !== socketId) return;
+    timers.delete(uid);
+    markStudentOffline(uid, sessionId, io);
   }, HEARTBEAT_TIMEOUT_MS);
-  timers.set(uid, t);
+  timers.set(uid, { timer: t, socketId });
+  return true;
 }
 
-function clearTimer(uid, timers) {
-  if (timers.has(uid)) {
-    clearTimeout(timers.get(uid));
-    timers.delete(uid);
-  }
+function clearTimer(uid, timers, socketId = null) {
+  const current = timers.get(uid);
+  if (!current) return false;
+  if (socketId && current.socketId !== socketId) return false;
+  clearTimeout(current.timer);
+  timers.delete(uid);
+  return true;
+}
+
+async function markStudentOffline(uid, sessionId, io) {
+  const current = await db().collection('students').doc(uid).get();
+  const status = current.data()?.status;
+  if (status === 'closed' || status === 'kicked' || status === 'offline') return;
+
+  const offlineAt = Date.now();
+  await db().collection('students').doc(uid).update({
+    status: 'offline',
+    streamReady: false,
+    offlineAt,
+  });
+  await logEvent(sessionId, 'offline', { offlineAt }, uid);
+  io.to(`teachers:${sessionId}`).emit('monitor:student-offline', { uid, offlineAt });
 }
 
 async function uploadImage(jpegB64, filePath) {

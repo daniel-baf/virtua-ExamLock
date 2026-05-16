@@ -82,7 +82,9 @@ export default function useMonitorSession(sessionId) {
 
       socket.on('connect', () => setConnected(true));
       socket.on('disconnect', () => setConnected(false));
-      socket.on('monitor:student-joined', ({ uid, name, status }) => patch(uid, { name, status: status ?? 'waiting' }));
+      socket.on('monitor:student-joined', ({ uid, name, status, lastHeartbeat, offlineAt }) => {
+        patch(uid, { name, status: status ?? 'waiting', lastHeartbeat, offlineAt });
+      });
       socket.on('monitor:screenshot-update', ({ uid, url }) => {
         const takenAt = Date.now();
         patch(uid, { screenUrl: url, lastScreenshotAt: takenAt, screenshotError: null });
@@ -126,7 +128,9 @@ export default function useMonitorSession(sessionId) {
         if (liveTargetRef.current?.uid === uid) setLiveStatus('stopped');
       });
       socket.on('monitor:student-closed', ({ uid, reason }) => patch(uid, { status: 'closed', closeReason: reason }));
-      socket.on('monitor:student-offline', ({ uid }) => patch(uid, { status: 'offline', streamReady: false, streamStatus: 'offline' }));
+      socket.on('monitor:student-offline', ({ uid, offlineAt }) => {
+        patch(uid, { status: 'offline', streamReady: false, streamStatus: 'offline', offlineAt: offlineAt ?? Date.now() });
+      });
       socket.on('server:exam-ended', () => setExamEnded(true));
     });
 

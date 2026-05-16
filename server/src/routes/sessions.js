@@ -6,6 +6,14 @@ const { logEvent } = require('../events');
 const { activeDomains, defaultWhitelist, normalizeWhitelist } = require('../networkDefaults');
 
 const router = Router();
+const HEARTBEAT_INTERVAL_MS = 15_000;
+const HEARTBEAT_TIMEOUT_MS = HEARTBEAT_INTERVAL_MS * 3;
+
+function isHeartbeatExpired(student, now = Date.now()) {
+  return student.status === 'admitted'
+    && Number.isFinite(student.lastHeartbeat)
+    && now - student.lastHeartbeat > HEARTBEAT_TIMEOUT_MS;
+}
 
 // POST /api/session/create
 router.post('/create', requireRole('teacher'), async (req, res) => {
@@ -126,26 +134,43 @@ router.post('/:code/join', requireRole('student'), async (req, res) => {
   }
 
   const existingDoc = await db().collection('students').doc(uid).get();
-  if (existingDoc.exists && existingDoc.data().status === 'kicked') {
+  const existing = existingDoc.exists ? existingDoc.data() : null;
+  const existingInSession = existing?.sessionId === sessionId;
+  if (existingInSession && existing?.status === 'kicked') {
     return res.status(403).json({ error: 'kicked' });
+  }
+  if (existingInSession && existing?.status === 'closed') {
+    return res.status(403).json({ error: 'closed' });
   }
 
   const now = Date.now();
   const isNew = !existingDoc.exists;
+  const reconnecting = existingInSession && (
+    existing?.status === 'offline'
+    || isHeartbeatExpired(existing, now)
+  );
+  const attempts = isNew || !existingInSession
+    ? 0
+    : (existing.attempts ?? 0) + (reconnecting ? 1 : 0);
 
   await db().collection('students').doc(uid).set({
     uid,
     email: req.user.email ?? '',
     sessionId,
     status: 'admitted',
-    joinedAt: now,
+    joinedAt: existingInSession ? (existing.joinedAt ?? now) : now,
     admittedAt: now,
     lastHeartbeat: now,
-    attempts: isNew ? 0 : (existingDoc.data().attempts ?? 0),
+    offlineAt: null,
+    closeReason: null,
+    attempts,
     internetBlocked: session.blockInternet ?? false,
   }, { merge: true });
 
-  await logEvent(sessionId, 'join', { email: req.user.email }, uid);
+  await logEvent(sessionId, reconnecting ? 'reconnected' : 'join', {
+    email: req.user.email,
+    attempt: attempts,
+  }, uid);
 
   res.json({ sessionId, status: 'admitted', endsAt: session.endsAt });
 });
@@ -158,7 +183,17 @@ router.get('/:id/students', requireRole('teacher'), async (req, res) => {
   if (sessionDoc.data().teacherId !== req.user.uid) return res.status(403).json({ error: 'forbidden' });
 
   const snap = await db().collection('students').where('sessionId', '==', sessionId).get();
-  const students = snap.docs.map(d => ({ uid: d.id, ...d.data() }));
+  const now = Date.now();
+  const updates = [];
+  const students = snap.docs.map(d => {
+    const student = { uid: d.id, ...d.data() };
+    if (!isHeartbeatExpired(student, now)) return student;
+
+    const offlineAt = now;
+    updates.push(d.ref.update({ status: 'offline', streamReady: false, offlineAt }));
+    return { ...student, status: 'offline', streamReady: false, offlineAt };
+  });
+  await Promise.all(updates);
   res.json({ students });
 });
 
