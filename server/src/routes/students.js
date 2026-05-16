@@ -3,6 +3,7 @@ const { db } = require('../firebase');
 const { storage } = require('../firebase');
 const { requireRole } = require('../auth');
 const { logEvent } = require('../events');
+const { activeDomains } = require('../networkDefaults');
 
 const router = Router();
 
@@ -30,7 +31,7 @@ router.post('/:uid/admit', requireRole('teacher'), async (req, res) => {
   await logEvent(doc.data().sessionId, 'admit', { admittedBy: req.user.uid }, req.params.uid);
 
   req.app.get('io').to(`student:${req.params.uid}`).emit('server:admitted', {
-    whitelist,
+    whitelist: activeDomains(whitelist),
     blockInternet,
     endsAt: session.data().endsAt,
     whitelistVersion: session.data().whitelistVersion ?? 0,
@@ -74,7 +75,7 @@ router.post('/:uid/readmit', requireRole('teacher'), async (req, res) => {
   await logEvent(doc.data().sessionId, 'readmit', { attempt: attempts, by: req.user.uid }, req.params.uid);
 
   req.app.get('io').to(`student:${req.params.uid}`).emit('server:admitted', {
-    whitelist,
+    whitelist: activeDomains(whitelist),
     blockInternet,
     endsAt: session.data().endsAt,
     whitelistVersion: session.data().whitelistVersion ?? 0,

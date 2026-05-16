@@ -5,7 +5,7 @@
 | Componente | Runtime | Dónde corre |
 |---|---|---|
 | **server** | Node.js + Express + Socket.io | Cloud Run |
-| **dashboard** | React + Vite (SPA) | Cloud Run |
+| **dashboard** | React + Vite (SPA) | Firebase Hosting |
 | **agent/daemon** | Node.js + Express | Máquina del alumno (ISO / BYOD / Lab) |
 | **Firestore** | Firebase | GCP (mismo proyecto) |
 | **Artifact Registry** | Docker | GCP |
@@ -16,9 +16,9 @@
 
 ```mermaid
 graph TB
-    subgraph GCP["GCP — copper-axiom-496204-b2"]
+    subgraph GCP["GCP / Firebase"]
         SERVER["server\nCloud Run :8080\nExpress + Socket.io"]
-        DASHBOARD["dashboard\nCloud Run\nReact SPA"]
+        DASHBOARD["dashboard\nFirebase Hosting\nReact SPA"]
         FS[("Firestore")]
         AR["Artifact Registry\nexamlock/server\nexamlock/dashboard\nexamlock/agent"]
         FB["Firebase Auth"]
@@ -62,7 +62,7 @@ sequenceDiagram
     Dashboard->>Server: POST /api/session
     Server->>Firestore: sessions/{id} {code, active:true}
     Server-->>Dashboard: {sessionId, code}
-    Dashboard-->>Docente: Código de sesión (ej: CALC-B7X2)
+    Dashboard-->>Docente: Código de sesión
 
     Note over Alumno,Daemon: Alumno arranca ISO/VM/Lab
     Alumno->>Daemon: Login en UI (email + pwd + código)
@@ -70,15 +70,11 @@ sequenceDiagram
     Firebase REST-->>Daemon: idToken
     Daemon->>Server: POST /api/session/{code}/join  [Bearer token]
     Server->>Firestore: Valida role=student, code activo
-    Server->>Firestore: students/{uid} {sessionId, status:waiting}
+    Server->>Firestore: students/{uid} {sessionId, status:admitted}
     Server-->>Daemon: {sessionId}
     Daemon->>Server: WS connect (auth: idToken, query: sessionCode)
     Server-->>Daemon: socket conectado
 
-    Note over Docente,Dashboard: Docente ve alumno en lista "esperando"
-    Docente->>Dashboard: Admitir alumno
-    Dashboard->>Server: POST /api/session/{id}/admit/{uid}
-    Server->>Firestore: students/{uid} status:admitted
     Server-->>Daemon: socket event server:admitted {whitelist, blockInternet}
     Daemon->>Daemon: applyWhitelist (iptables)
     Daemon-->>Browser: SSE event "admitted"
@@ -100,7 +96,7 @@ sequenceDiagram
     end
 
     Docente->>Dashboard: Finalizar examen
-    Dashboard->>Server: POST /api/session/{id}/end
+    Dashboard->>Server: socket teacher:end-exam
     Server->>Firestore: sessions/{id} active:false
     Server-->>Daemon: socket event server:exam-ended
     Daemon-->>Browser: SSE event "exam-ended"
@@ -187,7 +183,7 @@ graph LR
 ```
 
 ### ISO (kiosk dedicado)
-- Debian bookworm live, construido con `live-build` dentro de Docker
+- Debian live, construido con `live-build` dentro de Docker
 - Agente bakeado en `/opt/examlock/`, arranca como servicio systemd
 - Cage (Wayland) + Chromium kiosk apuntando a `localhost:7878`
 - `examuser` sin contraseña, autologin
@@ -204,24 +200,29 @@ graph LR
 
 ---
 
-## CI/CD — Cloud Build
+## CI/CD — GitHub Actions
 
 ```mermaid
 flowchart TD
-    PUSH["Push a deploy/dev"]
-    PUSH --> BS["build-server\ngcr.io/cloud-builders/docker build ./server"]
-    PUSH --> BD["build-dashboard\ndocker build ./dashboard\n(VITE_* vars bakeadas)"]
+    PUSH["Push / workflow manual"]
+    PUSH --> BS["build-server\ndocker build server/Dockerfile"]
+    PUSH --> BA["build-agent\ndocker build container/Dockerfile"]
+    PUSH --> BD["build-dashboard\nnpm ci + npm run build\n(VITE_* vars bakeadas)"]
+    PUSH --> TF["terraform\ninfra/"]
 
-    BS --> PS["push-server\n→ Artifact Registry :SHORT_SHA + :latest"]
-    BD --> PD["push-dashboard\n→ Artifact Registry :SHORT_SHA + :latest"]
+    BS --> PS["push server\nArtifact Registry :SHA + :latest"]
+    BA --> PA["push agent\nArtifact Registry :SHA + :latest"]
 
-    PS --> DS["deploy-server\ngcloud run deploy exam-server\n(imagen nueva)"]
-    PD --> DD["deploy-dashboard\ngcloud run deploy exam-dashboard\n(imagen nueva)"]
+    PS --> DS["deploy-server\nCloud Run exam-server"]
+    TF --> DS
+    BD --> DD["deploy-dashboard\nFirebase Hosting"]
 ```
 
-Variables de sustitución configuradas en el trigger de Cloud Build (no en YAML):
-- `_SERVER_URL` — URL del Cloud Run del server
-- `_VITE_FIREBASE_*` — credenciales Firebase para el dashboard
+Variables/secrets relevantes:
+- `WIF_PROVIDER`
+- `WIF_SA_EMAIL`
+- `JWT_SECRET`
+- `VITE_FIREBASE_*`
 
 ---
 

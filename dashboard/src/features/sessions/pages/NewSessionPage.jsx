@@ -52,7 +52,12 @@ export default function NewSessionPage() {
             <div>
               <div className="field">
                 <label>Dominios permitidos</label>
-                <DomainList domains={form.domains} onChange={form.setDomains} />
+                <DomainList
+                  domains={form.domains}
+                  onChange={form.setDomains}
+                  onLoadDefault={form.loadDefaultDomains}
+                  defaultLoading={form.defaultLoading}
+                />
               </div>
               <p className="form-help">DNS + localhost siempre permitidos.</p>
             </div>

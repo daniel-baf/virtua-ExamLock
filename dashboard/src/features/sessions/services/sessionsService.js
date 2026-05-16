@@ -8,6 +8,10 @@ export function createSession(payload) {
   return api.createSession(payload);
 }
 
+export function getNetworkDefaults() {
+  return api.getNetworkDefaults();
+}
+
 export function resetSessionsData() {
   return api.resetDb();
 }

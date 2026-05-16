@@ -5,8 +5,8 @@ require('dotenv').config({ path: require('path').join(__dirname, '../.env') });
 const admin = require('firebase-admin');
 
 const [email, role] = process.argv.slice(2);
-if (!email || !['teacher', 'student'].includes(role)) {
-  console.error('Usage: node set-role.js <email> <teacher|student>');
+if (!email || !['admin', 'teacher', 'student'].includes(role)) {
+  console.error('Usage: node set-role.js <email> <admin|teacher|student>');
   process.exit(1);
 }
 

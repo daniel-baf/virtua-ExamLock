@@ -4,8 +4,11 @@ export default function NetworkPanel({
   domains,
   blockInternet,
   saving,
+  defaultLoading,
+  activeCount,
   onDomainsChange,
   onToggleBlockInternet,
+  onLoadDefault,
   onApply,
 }) {
   return (
@@ -16,8 +19,8 @@ export default function NetworkPanel({
             <h3 className="network-panel__title">Control de red</h3>
             <p className="network-panel__copy">
               {blockInternet
-                ? domains.length > 0
-                  ? `${domains.length} dominio(s) permitido(s).`
+                ? activeCount > 0
+                  ? `${activeCount} dominio(s) activo(s).`
                   : 'Bloqueo total: no hay dominios permitidos.'
                 : 'La sesion tiene acceso libre a internet.'}
             </p>
@@ -27,7 +30,14 @@ export default function NetworkPanel({
             {blockInternet ? 'Internet restringido' : 'Internet libre'}
           </button>
         </div>
-        {blockInternet && <DomainList domains={domains} onChange={onDomainsChange} />}
+        {blockInternet && (
+          <DomainList
+            domains={domains}
+            onChange={onDomainsChange}
+            onLoadDefault={onLoadDefault}
+            defaultLoading={defaultLoading}
+          />
+        )}
         <button onClick={onApply} disabled={saving} className="toolbar-btn toolbar-btn--neutral">
           {saving ? 'Aplicando...' : 'Aplicar red'}
         </button>

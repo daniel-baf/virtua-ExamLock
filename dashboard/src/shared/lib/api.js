@@ -50,6 +50,7 @@ export const api = {
   // Sessions
   listSessions:   ()           => req('GET',  '/api/session'),
   createSession:  (body)       => req('POST', '/api/session/create', body),
+  getNetworkDefaults: ()       => req('GET',  '/api/session/network-defaults'),
   getSession:     (code)       => req('GET',  `/api/session/${code}`),
   getSessionSummary: (sessionId) =>
                                   req('GET',  `/api/session/id/${sessionId}`),
@@ -71,4 +72,10 @@ export const api = {
 
   // Dev
   resetDb: () => req('POST', '/api/dev/reset'),
+
+  // Users (admin)
+  listUsers:   (pageToken) => req('GET', `/api/users${pageToken ? `?pageToken=${pageToken}` : ''}`),
+  createUser:  (body)      => req('POST',   '/api/users', body),
+  updateUser:  (uid, body) => req('PATCH',  `/api/users/${uid}`, body),
+  deleteUser:  (uid)       => req('DELETE', `/api/users/${uid}`),
 };

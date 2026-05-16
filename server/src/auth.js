@@ -19,7 +19,8 @@ function requireRole(role) {
   };
 }
 
+const requireAdmin = requireRole('admin');
 const requireTeacher = requireRole('teacher');
 const requireContainer = requireRole('container');
 
-module.exports = { requireRole, requireTeacher, requireContainer };
+module.exports = { requireRole, requireAdmin, requireTeacher, requireContainer };

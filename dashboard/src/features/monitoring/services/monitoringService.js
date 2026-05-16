@@ -17,6 +17,10 @@ export function setWhitelist(sessionId, domains, blockInternet) {
   return api.setWhitelist(sessionId, domains, blockInternet);
 }
 
+export function getNetworkDefaults() {
+  return api.getNetworkDefaults();
+}
+
 export function kickStudent(uid, reason = 'expelled') {
   return api.kick(uid, reason);
 }
