@@ -1,6 +1,8 @@
+import styles from '@users/styles/Users.module.css';
+
 export default function UserStatusBadge({ disabled }) {
   return (
-    <span className={`user-badge ${disabled ? 'user-badge--danger' : 'user-badge--success'}`}>
+    <span className={`${styles.badge} ${disabled ? styles.badgeDanger : styles.badgeSuccess}`}>
       {disabled ? 'Deshabilitado' : 'Activo'}
     </span>
   );

@@ -1,4 +1,5 @@
-import { DomainList } from '@/domains/sessions';
+import { DomainList } from '@sessions';
+import styles from '@monitoring/components/NetworkPanel.module.css';
 
 export default function NetworkPanel({
   domains,
@@ -12,12 +13,12 @@ export default function NetworkPanel({
   onApply,
 }) {
   return (
-    <div className="network-panel">
-      <div className="network-panel__inner">
-        <div className="network-panel__header">
+    <div className={styles.panel}>
+      <div className={styles.inner}>
+        <div className={styles.header}>
           <div>
-            <h3 className="network-panel__title">Control de red</h3>
-            <p className="network-panel__copy">
+            <h3 className={styles.title}>Control de red</h3>
+            <p className={styles.copy}>
               {blockInternet
                 ? activeCount > 0
                   ? `${activeCount} dominio(s) activo(s).`
@@ -25,8 +26,10 @@ export default function NetworkPanel({
                 : 'La sesion tiene acceso libre a internet.'}
             </p>
           </div>
-          <button onClick={onToggleBlockInternet}
-            className={`network-toggle ${blockInternet ? 'network-toggle--restricted' : 'network-toggle--open'}`}>
+          <button
+            onClick={onToggleBlockInternet}
+            className={`${styles.toggle} ${blockInternet ? styles.restricted : styles.open}`}
+          >
             {blockInternet ? 'Internet restringido' : 'Internet libre'}
           </button>
         </div>
@@ -38,7 +41,7 @@ export default function NetworkPanel({
             defaultLoading={defaultLoading}
           />
         )}
-        <button onClick={onApply} disabled={saving} className="toolbar-btn toolbar-btn--neutral">
+        <button onClick={onApply} disabled={saving} className={styles.applyButton}>
           {saving ? 'Aplicando...' : 'Aplicar red'}
         </button>
       </div>

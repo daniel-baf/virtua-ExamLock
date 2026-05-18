@@ -1,0 +1,289 @@
+.card {
+  backdrop-filter: blur(18px);
+  background: var(--bg-card);
+  border: 1px solid var(--border-soft);
+  border-radius: 22px;
+  box-shadow: var(--shadow-soft);
+  overflow: hidden;
+}
+
+.attentionCard {
+  background:
+    linear-gradient(180deg, rgba(245, 158, 11, 0.08), rgba(245, 158, 11, 0.02)),
+    var(--bg-card);
+  border-color: rgba(245, 158, 11, 0.34);
+  box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.12), var(--shadow-soft);
+}
+
+.offlineCard {
+  background:
+    linear-gradient(180deg, rgba(244, 63, 94, 0.08), rgba(244, 63, 94, 0.03)),
+    var(--bg-card);
+  border-color: rgba(244, 63, 94, 0.34);
+  box-shadow: 0 0 0 1px rgba(244, 63, 94, 0.12), var(--shadow-soft);
+}
+
+.preview {
+  background: var(--bg-strong);
+}
+
+.imageFrame {
+  aspect-ratio: 16 / 9;
+  position: relative;
+}
+
+.previewButton {
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  inset: 0;
+  padding: 0;
+  position: absolute;
+}
+
+.imageContent {
+  align-items: center;
+  color: var(--text-muted);
+  display: grid;
+  font-size: 12px;
+  height: 100%;
+  object-fit: cover;
+  place-items: center;
+  width: 100%;
+}
+
+.status {
+  align-items: center;
+  backdrop-filter: blur(10px);
+  background: rgba(2, 6, 23, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  color: #f8fbff;
+  display: flex;
+  font-size: 11px;
+  font-weight: 700;
+  gap: 6px;
+  left: 10px;
+  padding: 5px 10px;
+  position: absolute;
+  top: 10px;
+  z-index: 2;
+}
+
+.streamBadge {
+  background: rgba(2, 132, 199, 0.82);
+  border: 1px solid rgba(186, 230, 253, 0.26);
+  border-radius: 999px;
+  bottom: 10px;
+  color: #f0f9ff;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 5px 8px;
+  position: absolute;
+  right: 10px;
+  z-index: 2;
+}
+
+.pinButton {
+  align-items: center;
+  background: var(--bg-card);
+  border: 1px solid var(--border-soft);
+  border-radius: 999px;
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 14px;
+  height: 38px;
+  justify-content: center;
+  width: 38px;
+}
+
+.overlayPin {
+  position: absolute;
+  right: 10px;
+  top: 10px;
+  z-index: 3;
+}
+
+.activePin {
+  background: var(--warning-soft);
+  border-color: rgba(245, 158, 11, 0.24);
+  color: var(--warning);
+}
+
+.statusDot {
+  border-radius: 999px;
+  height: 7px;
+  width: 7px;
+}
+
+.waiting {
+  background: var(--warning);
+}
+
+.admitted {
+  background: var(--success);
+}
+
+.offline {
+  background: var(--text-muted);
+}
+
+.kicked {
+  background: var(--danger);
+}
+
+.closed {
+  background: #94a3b8;
+}
+
+.pending {
+  align-items: center;
+  background: rgba(2, 6, 23, 0.52);
+  color: #f8fbff;
+  display: grid;
+  font-size: 12px;
+  font-weight: 700;
+  inset: 0;
+  place-items: center;
+  position: absolute;
+  z-index: 4;
+}
+
+.body {
+  display: grid;
+  gap: 14px;
+  padding: 14px;
+}
+
+.copy {
+  display: grid;
+  gap: 4px;
+}
+
+.headline {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.name {
+  color: var(--text-main);
+  font-size: 15px;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chip {
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 8px;
+}
+
+.warningChip {
+  background: var(--warning-soft);
+  color: var(--warning);
+}
+
+.attentionBanner {
+  align-items: start;
+  background: rgba(2, 6, 23, 0.28);
+  border: 1px solid rgba(245, 158, 11, 0.18);
+  border-radius: 14px;
+  display: grid;
+  gap: 2px;
+  margin: 6px 0 4px;
+  padding: 10px 12px;
+}
+
+.attentionBanner strong {
+  color: var(--warning);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.attentionBanner span {
+  color: var(--text-main);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.meta {
+  color: var(--text-soft);
+  font-size: 12px;
+}
+
+.warningText {
+  color: var(--warning);
+  font-size: 12px;
+}
+
+.errorText {
+  color: var(--danger);
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.actions {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.actionButton {
+  background: var(--bg-card);
+  border: 1px solid var(--border-soft);
+  border-radius: 14px;
+  color: var(--text-main);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+  min-height: 42px;
+  padding: 0 12px;
+}
+
+.actionButton:hover {
+  border-color: var(--border-strong);
+}
+
+.infoButton {
+  background: var(--accent-soft);
+  border-color: rgba(56, 189, 248, 0.24);
+  color: var(--accent);
+}
+
+.liveButton {
+  background: var(--success-soft);
+  border-color: rgba(16, 185, 129, 0.24);
+  color: var(--success);
+}
+
+.dangerButton {
+  background: var(--danger-soft);
+  border-color: rgba(244, 63, 94, 0.22);
+  color: var(--danger);
+  grid-column: span 2;
+}
+
+.wideButton {
+  grid-column: span 2;
+}
+
+@media (max-width: 767px) {
+  .actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .card {
+    border-radius: 18px;
+  }
+}

@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
-import { USER_ROLE_LABELS } from '../constants/userRoles';
+import { USER_ROLE_LABELS } from '@users/constants/userRoles';
 import {
   buildNewUserPayload,
   buildUserUpdates,
   createUserFormState,
   friendlyUserError,
-} from '../helpers/userFormModel';
-import UserFormField from './UserFormField';
+} from '@users/helpers/userFormModel';
+import UserFormField from '@users/components/UserFormField';
+import styles from '@users/styles/Users.module.css';
 
 export default function UserForm({ user, onSave, onCancel }) {
   const isNew = !user;
@@ -44,18 +45,18 @@ export default function UserForm({ user, onSave, onCancel }) {
   }
 
   return (
-    <div className="users-dialog-backdrop">
-      <div className="users-dialog">
-        <div className="users-dialog__header">
-          <h2 className="users-dialog__title">{isNew ? 'Crear usuario' : 'Editar usuario'}</h2>
-          <p className="users-dialog__copy">
+    <div className={styles.dialogBackdrop}>
+      <div className={styles.dialog}>
+        <div className={styles.dialogHeader}>
+          <h2 className={styles.dialogTitle}>{isNew ? 'Crear usuario' : 'Editar usuario'}</h2>
+          <p className={styles.dialogCopy}>
             {isNew
               ? 'Crea una cuenta nueva y asigna su rol desde aquí.'
               : 'Actualiza el nombre visible o cambia el rol del usuario.'}
           </p>
         </div>
 
-        <form onSubmit={submit} className="users-form">
+        <form onSubmit={submit} className={styles.form}>
           {isNew && (
             <UserFormField label="Correo electrónico" htmlFor="user-email">
               <input
@@ -64,7 +65,7 @@ export default function UserForm({ user, onSave, onCancel }) {
                 required
                 value={form.email}
                 onChange={set('email')}
-                className="app-control"
+                className={styles.control}
                 placeholder="usuario@ejemplo.com"
               />
             </UserFormField>
@@ -79,20 +80,20 @@ export default function UserForm({ user, onSave, onCancel }) {
                 minLength={6}
                 value={form.password}
                 onChange={set('password')}
-                className="app-control"
+                className={styles.control}
                 placeholder="Ingresa una contraseña segura"
               />
             </UserFormField>
           )}
 
-          <div className="users-form__grid">
+          <div className={styles.formGrid}>
             <UserFormField label="Nombre" htmlFor="user-display-name">
               <input
                 id="user-display-name"
                 type="text"
                 value={form.displayName}
                 onChange={set('displayName')}
-                className="app-control"
+                className={styles.control}
                 placeholder="Nombre completo"
               />
             </UserFormField>
@@ -102,7 +103,7 @@ export default function UserForm({ user, onSave, onCancel }) {
                 id="user-role"
                 value={form.role}
                 onChange={set('role')}
-                className="app-control app-control--select"
+                className={`${styles.control} ${styles.controlSelect}`}
               >
                 {Object.entries(USER_ROLE_LABELS).map(([value, label]) => (
                   <option key={value} value={value}>
@@ -113,9 +114,9 @@ export default function UserForm({ user, onSave, onCancel }) {
             </UserFormField>
           </div>
 
-          {error && <p className="users-form__error">{error}</p>}
+          {error && <p className={styles.formError}>{error}</p>}
 
-          <div className="users-form__actions">
+          <div className={styles.formActions}>
             <button type="button" onClick={onCancel} className="btn btn-ghost">
               Cancelar
             </button>

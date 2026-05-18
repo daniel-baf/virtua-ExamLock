@@ -1,7 +1,10 @@
-const socketClient = require('../../../socket');
-const heartbeat = require('../../../heartbeat');
-const answers = require('../../../answers');
-const { registerServerHandlers } = require('../../app/socket/registerServerHandlers');
+const { activateSession } = require('../session/sessionService');
+const { flushAnswers } = require('../answers/answerQueueService');
+const {
+  connectToServer,
+  registerServerHandlers,
+  startHeartbeat,
+} = require('../monitoring/serverCommandService');
 
 async function loginStudent({ studentName, sessionCode, serverUrl, state, sse }) {
   const joinRes = await fetch(`${serverUrl}/api/session/${sessionCode}/join`, {
@@ -18,12 +21,12 @@ async function loginStudent({ studentName, sessionCode, serverUrl, state, sse })
   }
 
   const data = await joinRes.json();
-  state.patch({ ...data, status: 'active' });
+  activateSession(state, data);
 
-  socketClient.connect(serverUrl, data.token);
-  heartbeat.start();
-  answers.flush(data.sessionId, data.token, serverUrl);
-  registerServerHandlers({ socket: socketClient, state, answers, heartbeat, sse, serverUrl });
+  connectToServer(serverUrl, data.token);
+  startHeartbeat();
+  await flushAnswers(state, serverUrl);
+  registerServerHandlers({ state, sse, serverUrl });
 
   return { ok: true, sessionId: data.sessionId, endsAt: data.endsAt };
 }

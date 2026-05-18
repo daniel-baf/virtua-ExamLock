@@ -1,0 +1,79 @@
+.backdrop {
+  align-items: center;
+  background: rgba(2, 6, 23, 0.72);
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  padding: 16px;
+  position: fixed;
+  z-index: 60;
+}
+
+.dialog {
+  backdrop-filter: blur(18px);
+  background: var(--bg-card);
+  border: 1px solid var(--border-soft);
+  border-radius: 22px;
+  box-shadow: var(--shadow-strong);
+  max-width: 24rem;
+  padding: 20px;
+  width: 100%;
+}
+
+.dialog h3 {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.textarea {
+  background: var(--bg-input);
+  border: 1px solid var(--border-soft);
+  border-radius: 16px;
+  color: var(--text-main);
+  font-size: 14px;
+  margin-top: 16px;
+  min-height: 110px;
+  outline: none;
+  padding: 12px 14px;
+  resize: none;
+  width: 100%;
+}
+
+.textarea:focus {
+  border-color: var(--accent-strong);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.actions button {
+  flex: 1;
+}
+
+.actionButton {
+  background: var(--bg-card);
+  border: 1px solid var(--border-soft);
+  border-radius: 14px;
+  color: var(--text-main);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+  min-height: 42px;
+  padding: 0 12px;
+}
+
+.infoButton {
+  background: var(--accent-soft);
+  border-color: rgba(56, 189, 248, 0.24);
+  color: var(--accent);
+}
+
+@media (max-width: 640px) {
+  .dialog {
+    border-radius: 18px;
+  }
+}

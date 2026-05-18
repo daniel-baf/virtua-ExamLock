@@ -1,30 +1,35 @@
+import styles from '@monitoring/components/AttentionAlerts.module.css';
+
 export default function AttentionAlerts({ alerts, onAcknowledge, onFocusStudent }) {
   if (!alerts.length) return null;
 
   return (
-    <section className="attention-alerts" aria-label="Alertas activas de supervision">
-      <div className="attention-alerts__header">
+    <section className={styles.section} aria-label="Alertas activas de supervision">
+      <div className={styles.header}>
         <div>
-          <p className="attention-alerts__kicker">Requiere atencion</p>
-          <h2 className="attention-alerts__title">{alerts.length} alerta(s) sin revisar</h2>
+          <p className={styles.kicker}>Requiere atencion</p>
+          <h2 className={styles.title}>{alerts.length} alerta(s) sin revisar</h2>
         </div>
-        <p className="attention-alerts__copy">Estas alertas siguen visibles hasta que el docente haga clic en "Marcar revisada".</p>
+        <p className={styles.copy}>Estas alertas siguen visibles hasta que el docente haga clic en "Marcar revisada".</p>
       </div>
 
-      <div className="attention-alerts__list">
+      <div className={styles.list}>
         {alerts.map(alert => (
-          <article key={alert.id} className={`attention-alert attention-alert--${alert.level ?? 'warning'}`}>
-            <div className="attention-alert__body">
-              <p className="attention-alert__student">{alert.studentLabel}</p>
-              <p className="attention-alert__message">{alert.message}</p>
-              {alert.meta && <p className="attention-alert__meta">{alert.meta}</p>}
+          <article
+            key={alert.id}
+            className={`${styles.alert} ${alert.level === 'danger' ? styles.danger : styles.warning}`}
+          >
+            <div className={styles.body}>
+              <p className={styles.student}>{alert.studentLabel}</p>
+              <p className={styles.message}>{alert.message}</p>
+              {alert.meta && <p className={styles.meta}>{alert.meta}</p>}
             </div>
 
-            <div className="attention-alert__actions">
+            <div className={styles.actions}>
               {alert.studentUid && (
                 <button
                   type="button"
-                  className="attention-alert__btn attention-alert__btn--ghost"
+                  className={`${styles.button} ${styles.ghostButton}`}
                   onClick={() => onFocusStudent(alert.studentUid)}
                 >
                   Ver alumno
@@ -32,7 +37,7 @@ export default function AttentionAlerts({ alerts, onAcknowledge, onFocusStudent 
               )}
               <button
                 type="button"
-                className="attention-alert__btn attention-alert__btn--primary"
+                className={`${styles.button} ${styles.primaryButton}`}
                 onClick={() => onAcknowledge(alert.id)}
               >
                 Marcar revisada

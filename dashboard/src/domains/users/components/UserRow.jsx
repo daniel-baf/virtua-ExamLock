@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import UserRoleBadge from './UserRoleBadge';
-import UserStatusBadge from './UserStatusBadge';
+import UserRoleBadge from '@users/components/UserRoleBadge';
+import UserStatusBadge from '@users/components/UserStatusBadge';
+import styles from '@users/styles/Users.module.css';
 
 export default function UserRow({ user, onEdit, onDelete, onToggleDisabled }) {
   const [confirming, setConfirming] = useState(false);
@@ -16,9 +17,9 @@ export default function UserRow({ user, onEdit, onDelete, onToggleDisabled }) {
   }
 
   return (
-    <tr className="users-row">
-      <td className="users-row__primary">{user.email}</td>
-      <td className="users-row__secondary">{user.displayName || '—'}</td>
+    <tr className={styles.row}>
+      <td className={styles.primary}>{user.email}</td>
+      <td className={styles.secondary}>{user.displayName || '—'}</td>
       <td>
         <UserRoleBadge role={user.role} />
       </td>
@@ -26,7 +27,7 @@ export default function UserRow({ user, onEdit, onDelete, onToggleDisabled }) {
         <UserStatusBadge disabled={user.disabled} />
       </td>
       <td>
-        <div className="users-row__actions">
+        <div className={styles.actions}>
           <button type="button" onClick={() => onEdit(user)} className="btn btn-ghost">
             Editar
           </button>

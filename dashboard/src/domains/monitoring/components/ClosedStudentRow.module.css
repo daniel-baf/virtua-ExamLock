@@ -1,0 +1,93 @@
+.row {
+  align-items: center;
+  backdrop-filter: blur(18px);
+  background: var(--bg-card);
+  border: 1px solid var(--border-soft);
+  border-radius: 20px;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1.4fr) auto;
+  padding: 14px 16px;
+}
+
+.highlight {
+  border-color: rgba(245, 158, 11, 0.22);
+}
+
+.main {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  min-width: 0;
+}
+
+.pinButton {
+  align-items: center;
+  background: var(--bg-card);
+  border: 1px solid var(--border-soft);
+  border-radius: 999px;
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 14px;
+  height: 38px;
+  justify-content: center;
+  width: 38px;
+}
+
+.pinActive {
+  background: var(--warning-soft);
+  border-color: rgba(245, 158, 11, 0.24);
+  color: var(--warning);
+}
+
+.identity,
+.details {
+  min-width: 0;
+}
+
+.name {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.meta,
+.details {
+  color: var(--text-soft);
+  font-size: 12px;
+}
+
+.details {
+  display: grid;
+  gap: 4px;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.actionButton {
+  background: var(--bg-card);
+  border: 1px solid var(--border-soft);
+  border-radius: 14px;
+  color: var(--text-main);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+  min-height: 42px;
+  padding: 0 12px;
+}
+
+.infoButton {
+  background: var(--accent-soft);
+  border-color: rgba(56, 189, 248, 0.24);
+  color: var(--accent);
+}
+
+@media (max-width: 1080px) {
+  .row {
+    grid-template-columns: 1fr;
+  }
+}

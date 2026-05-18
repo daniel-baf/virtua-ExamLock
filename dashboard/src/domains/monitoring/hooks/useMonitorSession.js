@@ -12,8 +12,8 @@ import {
   requestScreenshot,
   sendStudentMessage,
   setWhitelist,
-} from '../services/monitoringService';
-import { activeDomainCount, mergeDomainLists, normalizeDomainList } from '@/domains/sessions/domainModel';
+} from '@monitoring/services/monitoringService';
+import { activeDomainCount, mergeDomainLists, normalizeDomainList } from '@sessions/domainModel';
 
 export default function useMonitorSession(sessionId) {
   const [students, setStudents] = useState({});

@@ -3,6 +3,7 @@ const path = require('path');
 const { loginStudent } = require('../../domains/auth/loginStudent');
 const { getQuestions, queueAnswer, submitExam } = require('../../domains/exam/examService');
 const { uploadCapture } = require('../../domains/proctoring/uploadCapture');
+const { getPublicState } = require('../../domains/session/sessionService');
 
 function createAgentApp({ serverUrl, port, state, sse }) {
   const app = express();
@@ -59,8 +60,7 @@ function createAgentApp({ serverUrl, port, state, sse }) {
   app.get('/api/events', (req, res) => sse.attach(req, res));
 
   app.get('/api/state', (_req, res) => {
-    const current = state.getState();
-    res.json({ status: current.status, endsAt: current.endsAt ?? null });
+    res.json(getPublicState(state));
   });
 
   app.get('/', (_req, res) => res.sendFile(path.join(__dirname, '../../../ui', 'login.html')));

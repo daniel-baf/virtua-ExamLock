@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
-import { formatStreamConfig } from '@/domains/sessions';
-import Metric from './Metric';
+import { formatStreamConfig } from '@sessions';
+import Metric from '@monitoring/components/Metric';
+import styles from '@monitoring/components/MonitorHeader.module.css';
 
 export default function MonitorHeader({
   session,
@@ -15,45 +16,50 @@ export default function MonitorHeader({
   onEndExam,
 }) {
   return (
-    <header className="monitor-header">
-      <div className="monitor-header__inner">
-        <div className="monitor-header__title">
-          <Link to="/dashboard" className="monitor-header__back">Volver</Link>
-          <div className={`monitor-header__connection ${connected ? 'monitor-header__connection--online' : 'monitor-header__connection--offline'}`} />
-          <div className="min-w-0">
-            <h1 className="monitor-header__heading">{session?.name ?? 'Monitor de examen'}</h1>
-            <p className="monitor-header__subheading">
+    <header className={styles.header}>
+      <div className={styles.inner}>
+        <div className={styles.title}>
+          <Link to="/dashboard" className={styles.back}>Volver</Link>
+          <div className={`${styles.connection} ${connected ? styles.online : styles.offline}`} />
+          <div className={styles.copy}>
+            <h1 className={styles.heading}>{session?.name ?? 'Monitor de examen'}</h1>
+            <p className={styles.subheading}>
               {connected ? 'Canal docente conectado' : 'Canal docente desconectado'}
               {session?.streamConfig ? ` · Stream ${formatStreamConfig(session.streamConfig)}` : ''}
             </p>
           </div>
         </div>
 
-        <div className="monitor-header__actions">
-          <div className="monitor-session-code" aria-label={`Codigo de sesion ${session?.code ?? ''}`}>
-            <span className="monitor-session-code__label">Codigo</span>
-            <code className="monitor-session-code__value">
+        <div className={styles.actions}>
+          <div className={styles.sessionCode} aria-label={`Codigo de sesion ${session?.code ?? ''}`}>
+            <span className={styles.sessionCodeLabel}>Codigo</span>
+            <code className={styles.sessionCodeValue}>
               {sessionLoading ? 'Cargando' : session?.code ?? 'No disponible'}
             </code>
           </div>
           <Metric label="Total" value={totals.all} />
           <Metric label="Activos" value={totals.active} tone="emerald" />
           <Metric label="Alertas" value={totals.alerts} tone="amber" />
-          <button onClick={onCaptureAll} disabled={captureAllBusy || totals.active === 0}
-            className="toolbar-btn toolbar-btn--info">
+          <button
+            onClick={onCaptureAll}
+            disabled={captureAllBusy || totals.active === 0}
+            className={`${styles.actionButton} ${styles.infoButton}`}
+          >
             {captureAllBusy ? 'Solicitando...' : 'Capturar todos'}
           </button>
-          <button onClick={onToggleNetwork}
-            className="toolbar-btn toolbar-btn--neutral">
+          <button onClick={onToggleNetwork} className={`${styles.actionButton} ${styles.neutralButton}`}>
             Red
           </button>
-          <button onClick={onEndExam} disabled={examEnded}
-            className="toolbar-btn toolbar-btn--danger">
+          <button
+            onClick={onEndExam}
+            disabled={examEnded}
+            className={`${styles.actionButton} ${styles.dangerButton}`}
+          >
             {examEnded ? 'Terminado' : 'Terminar'}
           </button>
         </div>
       </div>
-      {captureAllNote && <p className="monitor-note">{captureAllNote}</p>}
+      {captureAllNote && <p className={styles.note}>{captureAllNote}</p>}
     </header>
   );
 }

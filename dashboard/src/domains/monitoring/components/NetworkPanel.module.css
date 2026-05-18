@@ -1,0 +1,72 @@
+.panel {
+  backdrop-filter: blur(18px);
+  background: rgba(255, 255, 255, 0.03);
+  border-bottom: 1px solid var(--border-soft);
+  padding: 16px 20px;
+}
+
+.inner {
+  display: grid;
+  gap: 14px;
+  margin: 0 auto;
+  max-width: 100rem;
+}
+
+.header {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  justify-content: space-between;
+}
+
+.title {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.copy {
+  color: var(--text-soft);
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+.toggle {
+  border-radius: 14px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+  min-height: 42px;
+  padding: 0 14px;
+}
+
+.restricted {
+  background: var(--warning-soft);
+  border: 1px solid rgba(245, 158, 11, 0.22);
+  color: var(--warning);
+}
+
+.open {
+  background: var(--success-soft);
+  border: 1px solid rgba(16, 185, 129, 0.22);
+  color: var(--success);
+}
+
+.applyButton {
+  background: var(--bg-card);
+  border: 1px solid var(--border-soft);
+  border-radius: 14px;
+  color: var(--text-main);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+  min-height: 44px;
+  padding: 0 14px;
+}
+
+@media (max-width: 640px) {
+  .panel {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+}

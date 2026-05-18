@@ -1,19 +1,23 @@
 import { useNavigate, useParams } from 'react-router-dom';
-import { useAuth } from '@/domains/auth';
-import HistoryPanel from '../components/HistoryPanel';
-import LiveStreamDialog from '../components/LiveStreamDialog';
-import MessageDialog from '../components/MessageDialog';
-import AttentionAlerts from '../components/AttentionAlerts';
-import ClosedStudentRow from '../components/ClosedStudentRow';
-import MonitorHeader from '../components/MonitorHeader';
-import MonitorToolbar from '../components/MonitorToolbar';
-import MonitorTabs from '../components/MonitorTabs';
-import NetworkPanel from '../components/NetworkPanel';
-import StudentCard from '../components/StudentCard';
-import useMonitorPreferences from '../hooks/useMonitorPreferences';
-import useMonitorSession from '../hooks/useMonitorSession';
-import { hasStudentAttention, matchesStudentFilter, matchesStudentSearch } from '../monitoringModel';
-import '../Monitoring.css';
+import { useAuth } from '@auth';
+import {
+  AttentionAlerts,
+  ClosedStudentRow,
+  hasStudentAttention,
+  HistoryPanel,
+  LiveStreamDialog,
+  matchesStudentFilter,
+  matchesStudentSearch,
+  MessageDialog,
+  MonitorHeader,
+  MonitorTabs,
+  MonitorToolbar,
+  NetworkPanel,
+  StudentCard,
+  useMonitorPreferences,
+  useMonitorSession,
+} from '@monitoring';
+import styles from '@monitoring/pages/MonitorPage.module.css';
 
 export default function MonitorPage() {
   const { id: sessionId } = useParams();
@@ -33,7 +37,7 @@ export default function MonitorPage() {
     .sort((left, right) => compareStudents(left, right, preferences.pinnedIds));
 
   return (
-    <div className="monitor-shell">
+    <div className={styles.shell}>
       <MonitorHeader
         session={monitor.session}
         sessionLoading={monitor.sessionLoading}
@@ -47,7 +51,7 @@ export default function MonitorPage() {
         onEndExam={monitor.endExam}
       />
 
-      {monitor.sessionError && <div className="monitor-alert">{monitor.sessionError}</div>}
+      {monitor.sessionError && <div className={styles.alert}>{monitor.sessionError}</div>}
 
       <AttentionAlerts
         alerts={monitor.alerts}
@@ -79,7 +83,7 @@ export default function MonitorPage() {
       )}
 
       {monitor.examEnded && (
-        <div className="exam-ended-banner">
+        <div className={styles.endedBanner}>
           Examen terminado.{' '}
           <button onClick={() => navigate(`/session/${sessionId}/audit`)}>
             Ver auditoria
@@ -104,11 +108,11 @@ export default function MonitorPage() {
         visibleCount={visibleStudents.length}
       />
 
-      <main className="monitor-main">
+      <main className={styles.main}>
         {visibleStudents.length === 0 ? (
-          <div className="monitor-empty">No hay alumnos para los filtros actuales.</div>
+          <div className={styles.empty}>No hay alumnos para los filtros actuales.</div>
         ) : preferences.tab === 'kicked' && preferences.closedView === 'list' ? (
-          <div className="closed-list">
+          <div className={styles.closedList}>
             {visibleStudents.map(student => (
               <ClosedStudentRow
                 key={student.uid}
@@ -122,7 +126,7 @@ export default function MonitorPage() {
             ))}
           </div>
         ) : (
-          <div className="monitor-grid" style={{ '--monitor-columns': preferences.columns }}>
+          <div className={styles.grid} style={{ '--monitor-columns': preferences.columns }}>
             {visibleStudents.map(student => (
               <StudentCard
                 key={student.uid}

@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import useLocalStorageState from '@/shared/hooks/useLocalStorageState';
+import useLocalStorageState from '@shared/hooks/useLocalStorageState';
 
 const DEFAULTS = {
   tab: 'admitted',

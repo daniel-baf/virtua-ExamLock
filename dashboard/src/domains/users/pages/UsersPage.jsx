@@ -1,11 +1,10 @@
 import { useState } from 'react';
-import AdminHeader from '@/domains/admin/components/AdminHeader';
-import useUsers from '../hooks/useUsers';
-import UserTable from '../components/UserTable';
-import UserForm from '../components/UserForm';
-import UsersToolbar from '../components/UsersToolbar';
-import '@/domains/sessions/Sessions.css';
-import '../styles/Users.css';
+import AdminHeader from '@admin/components/AdminHeader';
+import useUsers from '@users/hooks/useUsers';
+import UserTable from '@users/components/UserTable';
+import UserForm from '@users/components/UserForm';
+import UsersToolbar from '@users/components/UsersToolbar';
+import styles from '@users/styles/Users.module.css';
 
 export default function UsersPage() {
   const { users, loading, error, create, update, remove, refresh } = useUsers();
@@ -33,20 +32,20 @@ export default function UsersPage() {
   }
 
   return (
-    <div className="page-shell">
+    <div className={styles.pageShell}>
       <AdminHeader activeSection="users" loading={loading} onRefresh={refresh} />
 
-      <main className="content">
+      <main className={styles.content}>
         <UsersToolbar onCreate={openCreate} />
 
-        {error && <div className="alert-error">{error}</div>}
+        {error && <div className={styles.alertError}>{error}</div>}
 
         {loading ? (
-          <div className="loading-state"><p>Cargando usuarios…</p></div>
+          <div className={styles.loadingState}><p>Cargando usuarios…</p></div>
         ) : users.length === 0 ? (
-          <div className="empty-state">
-            <p className="text-lg">Sin usuarios aún.</p>
-            <p className="mt-1 text-sm">Crea uno para comenzar.</p>
+          <div className={styles.emptyState}>
+            <p className={styles.emptyTitle}>Sin usuarios aún.</p>
+            <p className={styles.emptyCopy}>Crea uno para comenzar.</p>
           </div>
         ) : (
           <UserTable

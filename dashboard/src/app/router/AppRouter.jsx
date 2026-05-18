@@ -1,5 +1,5 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
-import { AuditPage, LoginPage, MonitoringSettingsPage, MonitorPage, NewSessionPage, RequireAuth, SessionsPage, UsersPage } from '@/domains';
+import { AuditPage, LoginPage, MonitoringSettingsPage, MonitorPage, NewSessionPage, RequireAuth, SessionsPage, UsersPage } from '@domains';
 
 export default function AppRouter() {
   return (

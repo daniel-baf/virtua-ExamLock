@@ -1,10 +1,11 @@
-import UserRow from './UserRow';
+import UserRow from '@users/components/UserRow';
+import styles from '@users/styles/Users.module.css';
 
 export default function UserTable({ users, onEdit, onDelete, onToggleDisabled }) {
   return (
-    <section className="users-table-card">
-      <div className="users-table-scroll">
-        <table className="users-table">
+    <section className={styles.tableCard}>
+      <div className={styles.tableScroll}>
+        <table className={styles.table}>
           <thead>
             <tr>
               <th>Correo</th>

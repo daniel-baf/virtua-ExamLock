@@ -116,3 +116,11 @@ systemctl enable ssh
 # Disable unnecessary services
 systemctl disable bluetooth 2>/dev/null || true
 systemctl disable cups 2>/dev/null || true
+
+# Neutralize sudo — student cannot escalate privileges
+: > /etc/sudoers
+rm -f /etc/sudoers.d/*
+sed -i 's/^sudo:\(.*:\).*/sudo:\1/' /etc/group
+dpkg-divert --local --rename --add /usr/bin/sudo
+chmod 0000 /usr/bin/sudo.distrib 2>/dev/null || true
+passwd -l root || true

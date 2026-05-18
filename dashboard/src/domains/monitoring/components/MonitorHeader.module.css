@@ -1,0 +1,154 @@
+.header {
+  backdrop-filter: blur(20px);
+  background: var(--bg-elevated);
+  border-bottom: 1px solid var(--border-soft);
+  flex-shrink: 0;
+  padding: 16px 20px;
+}
+
+.inner {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.title,
+.actions {
+  align-items: center;
+  display: flex;
+  gap: 14px;
+}
+
+.title {
+  min-width: 0;
+}
+
+.actions {
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.back {
+  color: var(--text-soft);
+  font-size: 14px;
+  text-decoration: none;
+}
+
+.back:hover {
+  color: var(--text-main);
+}
+
+.connection {
+  border-radius: 999px;
+  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.03);
+  height: 10px;
+  width: 10px;
+}
+
+.online {
+  background: var(--success);
+}
+
+.offline {
+  background: var(--danger);
+}
+
+.copy {
+  min-width: 0;
+}
+
+.heading {
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.subheading {
+  color: var(--text-soft);
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sessionCode {
+  background: linear-gradient(135deg, var(--bg-strong), var(--bg-muted));
+  border: 1px solid var(--border-soft);
+  border-radius: 18px;
+  display: grid;
+  gap: 4px;
+  min-height: 58px;
+  min-width: min(100%, 16rem);
+  padding: 10px 14px;
+}
+
+.sessionCodeLabel {
+  color: var(--accent);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.sessionCodeValue {
+  color: var(--text-main);
+  font-family: var(--font-mono);
+  font-size: clamp(28px, 6vw, 40px);
+  font-weight: 800;
+  line-height: 1;
+  overflow-wrap: anywhere;
+}
+
+.note {
+  color: var(--text-soft);
+  font-size: 12px;
+  margin-top: 8px;
+  text-align: right;
+}
+
+.actionButton {
+  border-radius: 14px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+  min-height: 44px;
+  padding: 0 14px;
+}
+
+.actionButton:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+
+.infoButton {
+  background: var(--accent-soft);
+  border: 1px solid rgba(56, 189, 248, 0.24);
+  color: var(--accent);
+}
+
+.neutralButton {
+  background: var(--bg-card);
+  border: 1px solid var(--border-soft);
+  color: var(--text-main);
+}
+
+.dangerButton {
+  background: var(--danger-soft);
+  border: 1px solid rgba(244, 63, 94, 0.22);
+  color: var(--danger);
+}
+
+@media (min-width: 1280px) {
+  .inner {
+    align-items: center;
+    flex-direction: row;
+    justify-content: space-between;
+  }
+}
+
+@media (max-width: 640px) {
+  .header {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+}

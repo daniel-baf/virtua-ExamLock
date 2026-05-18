@@ -1,3 +1,5 @@
+import styles from '@monitoring/components/MonitorToolbar.module.css';
+
 const FILTERS = [
   { value: 'all', label: 'Mostrar: Todos' },
   { value: 'attention', label: 'Mostrar: Atención' },
@@ -21,20 +23,20 @@ export default function MonitorToolbar({
   visibleCount,
 }) {
   return (
-    <section className="monitor-toolbar">
-      <div className="monitor-toolbar__row">
-        <label className="monitor-search" style={{ flex: 1, minWidth: '280px', marginBottom: 0 }}>
+    <section className={styles.toolbar}>
+      <div className={styles.row}>
+        <label className={styles.search}>
           <input
             value={search}
             onChange={event => onSearchChange(event.target.value)}
             placeholder="Buscar alumno por nombre, correo o ID..."
-            style={{ width: '100%' }}
+            className={styles.searchInput}
           />
         </label>
 
-        <div className="monitor-toolbar__controls" style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
-          <label className="monitor-select" style={{ marginBottom: 0 }}>
-            <select value={filter} onChange={event => onFilterChange(event.target.value)}>
+        <div className={styles.controls}>
+          <label className={styles.select}>
+            <select value={filter} onChange={event => onFilterChange(event.target.value)} className={styles.selectInput}>
               {FILTERS.map(option => (
                 <option key={option.value} value={option.value}>
                   {option.label}
@@ -43,12 +45,12 @@ export default function MonitorToolbar({
             </select>
           </label>
 
-          <div className="monitor-toolbar__toggle-group">
+          <div className={styles.toggleGroup}>
             {[3, 4, 5].map(value => (
               <button
                 key={value}
                 type="button"
-                className={`segmented-btn ${columns === value ? 'segmented-btn--active' : ''}`}
+                className={`${styles.segmentedButton} ${columns === value ? styles.segmentedButtonActive : ''}`}
                 onClick={() => onColumnsChange(value)}
               >
                 {value} col
@@ -57,12 +59,12 @@ export default function MonitorToolbar({
           </div>
 
           {activeTab === 'kicked' && (
-            <div className="monitor-toolbar__toggle-group">
+            <div className={styles.toggleGroup}>
               {['list', 'cards'].map(value => (
                 <button
                   key={value}
                   type="button"
-                  className={`segmented-btn ${closedView === value ? 'segmented-btn--active' : ''}`}
+                  className={`${styles.segmentedButton} ${closedView === value ? styles.segmentedButtonActive : ''}`}
                   onClick={() => onClosedViewChange(value)}
                 >
                   {value === 'list' ? 'Lista' : 'Cards'}
@@ -73,7 +75,7 @@ export default function MonitorToolbar({
 
           <button
             type="button"
-            className={`toolbar-btn ${showPinnedOnly ? 'toolbar-btn--info' : 'toolbar-btn--neutral'}`}
+            className={`${styles.actionButton} ${showPinnedOnly ? styles.infoButton : styles.neutralButton}`}
             onClick={onTogglePinnedOnly}
           >
             {showPinnedOnly ? 'Solo pineados' : 'Ver pineados'}
@@ -81,7 +83,7 @@ export default function MonitorToolbar({
         </div>
       </div>
 
-      <p className="monitor-toolbar__summary">
+      <p className={styles.summary}>
         {visibleCount} alumno(s) visibles en esta vista.
       </p>
     </section>

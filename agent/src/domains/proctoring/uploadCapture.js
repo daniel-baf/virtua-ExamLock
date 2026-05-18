@@ -1,4 +1,4 @@
-const socketClient = require('../../../socket');
+const { emitCapture } = require('../monitoring/serverCommandService');
 
 function uploadCapture({ type, imageBase64, state }) {
   if (!imageBase64) {
@@ -8,8 +8,7 @@ function uploadCapture({ type, imageBase64, state }) {
   }
 
   const current = state.getState();
-  const event = type === 'camera' ? 'student:camera' : 'student:screenshot';
-  socketClient.emit(event, { studentId: current.studentId, imageBase64 });
+  emitCapture(type, current.studentId, imageBase64);
   return { ok: true };
 }
 

@@ -1,14 +1,13 @@
-const socketClient = require('../../../socket');
-const heartbeat = require('../../../heartbeat');
-const answers = require('../../../answers');
+const { requireActiveSession, cacheQuestions, endSession } = require('../session/sessionService');
+const { enqueueAnswer, flushAnswers } = require('../answers/answerQueueService');
+const {
+  emitClosed,
+  isConnected,
+  stopHeartbeat,
+} = require('../monitoring/serverCommandService');
 
 async function getQuestions({ serverUrl, state }) {
-  const current = state.getState();
-  if (!current.token) {
-    const error = new Error('not_joined');
-    error.statusCode = 401;
-    throw error;
-  }
+  const current = requireActiveSession(state);
 
   if (current.questions.length > 0) return { questions: current.questions };
 
@@ -16,7 +15,7 @@ async function getQuestions({ serverUrl, state }) {
     headers: { Authorization: `Bearer ${current.token}` },
   });
   const data = await response.json();
-  state.replaceQuestions(data.questions ?? []);
+  cacheQuestions(state, data.questions);
   return { questions: state.getState().questions };
 }
 
@@ -27,27 +26,21 @@ async function queueAnswer({ questionId, answer, serverUrl, state }) {
     throw error;
   }
 
-  answers.enqueue(questionId, answer);
-  if (socketClient.isConnected()) {
-    const current = state.getState();
-    await answers.flush(current.sessionId, current.token, serverUrl);
+  enqueueAnswer(questionId, answer);
+  if (isConnected()) {
+    await flushAnswers(state, serverUrl);
   }
 
   return { queued: true };
 }
 
 async function submitExam({ serverUrl, state, sse }) {
-  const current = state.getState();
-  if (!current.token) {
-    const error = new Error('not_joined');
-    error.statusCode = 401;
-    throw error;
-  }
+  const current = requireActiveSession(state);
 
-  await answers.flush(current.sessionId, current.token, serverUrl);
-  socketClient.emit('student:closed', { studentId: current.studentId, reason: 'submitted' });
-  heartbeat.stop();
-  state.patch({ status: 'ended' });
+  await flushAnswers(state, serverUrl);
+  emitClosed(current.studentId, 'submitted');
+  stopHeartbeat();
+  endSession(state);
   sse.broadcast('exam-ended', {});
   return { ok: true };
 }

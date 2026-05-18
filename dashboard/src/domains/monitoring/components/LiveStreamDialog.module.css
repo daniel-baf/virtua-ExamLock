@@ -1,0 +1,122 @@
+.backdrop {
+  background: rgba(2, 6, 23, 0.72);
+  display: grid;
+  inset: 0;
+  padding: 16px;
+  place-items: center;
+  position: fixed;
+  z-index: 60;
+}
+
+.panel {
+  backdrop-filter: blur(18px);
+  background: var(--bg-card);
+  border: 1px solid var(--border-soft);
+  border-radius: 22px;
+  box-shadow: var(--shadow-strong);
+  display: grid;
+  gap: 12px;
+  max-height: calc(100vh - 32px);
+  max-width: 72rem;
+  padding: 14px;
+  width: min(100%, 72rem);
+}
+
+.header {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  min-width: 0;
+}
+
+.title {
+  color: var(--text-main);
+  font-size: 16px;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.subtitle {
+  color: var(--text-soft);
+  font-size: 12px;
+}
+
+.actions {
+  display: flex;
+  flex-shrink: 0;
+  gap: 8px;
+}
+
+.actionButton,
+.closeButton {
+  background: var(--bg-card);
+  border: 1px solid var(--border-soft);
+  border-radius: 14px;
+  color: var(--text-main);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+  min-height: 42px;
+  padding: 0 12px;
+}
+
+.infoButton {
+  background: var(--accent-soft);
+  border-color: rgba(56, 189, 248, 0.24);
+  color: var(--accent);
+}
+
+.view {
+  align-items: center;
+  aspect-ratio: 16 / 9;
+  background: #000;
+  border-radius: 16px;
+  display: grid;
+  overflow: hidden;
+  position: relative;
+}
+
+.image {
+  display: block;
+  height: 100%;
+  object-fit: contain;
+  width: 100%;
+}
+
+.placeholder {
+  color: #94a3b8;
+  font-size: 14px;
+  place-self: center;
+}
+
+.error {
+  background: rgba(127, 29, 29, 0.88);
+  border: 1px solid rgba(244, 63, 94, 0.32);
+  border-radius: 14px;
+  bottom: 12px;
+  color: #fecdd3;
+  font-size: 12px;
+  left: 12px;
+  max-width: calc(100% - 24px);
+  overflow: hidden;
+  padding: 8px 10px;
+  position: absolute;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 767px) {
+  .header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 640px) {
+  .panel {
+    border-radius: 18px;
+  }
+}

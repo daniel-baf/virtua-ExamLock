@@ -1,10 +1,74 @@
-.users-section-copy {
+.pageShell {
+  color: var(--text-main);
+  min-height: 100vh;
+}
+
+.content {
+  margin: 0 auto;
+  max-width: 72rem;
+  padding: 32px 20px 64px;
+}
+
+.sectionTitle {
+  align-items: center;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.sectionTitle h2 {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.sectionCopy {
   color: var(--text-soft);
   font-size: 14px;
   margin-top: 6px;
 }
 
-.users-table-card {
+.alertError {
+  background: var(--danger-soft);
+  border: 1px solid rgba(244, 63, 94, 0.28);
+  border-radius: 16px;
+  color: var(--danger);
+  font-size: 14px;
+  margin-bottom: 16px;
+  padding: 14px 16px;
+}
+
+.loadingState,
+.emptyState {
+  color: var(--text-soft);
+  padding: 92px 0;
+  text-align: center;
+}
+
+.emptyState p:first-child {
+  color: var(--text-main);
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.emptyState p:last-child {
+  font-size: 14px;
+  margin-top: 6px;
+}
+
+.emptyTitle {
+  color: var(--text-main);
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.emptyCopy {
+  font-size: 14px;
+  margin-top: 6px;
+}
+
+.tableCard {
   backdrop-filter: blur(18px);
   background: var(--bg-card);
   border: 1px solid var(--border-soft);
@@ -13,25 +77,25 @@
   overflow: hidden;
 }
 
-.users-table-scroll {
+.tableScroll {
   overflow-x: auto;
 }
 
-.users-table {
+.table {
   border-collapse: collapse;
   min-width: 880px;
   width: 100%;
 }
 
-.users-table th,
-.users-table td {
+.table th,
+.table td {
   border-bottom: 1px solid var(--border-soft);
   padding: 16px 18px;
   text-align: left;
   vertical-align: middle;
 }
 
-.users-table th {
+.table th {
   color: var(--text-soft);
   font-size: 12px;
   font-weight: 700;
@@ -39,28 +103,28 @@
   text-transform: uppercase;
 }
 
-.users-row:hover {
+.row:hover {
   background: rgba(255, 255, 255, 0.03);
 }
 
-.users-row__primary {
+.primary {
   color: var(--text-main);
   font-size: 14px;
   font-weight: 600;
 }
 
-.users-row__secondary {
+.secondary {
   color: var(--text-soft);
   font-size: 14px;
 }
 
-.users-row__actions {
+.actions {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
 }
 
-.user-badge {
+.badge {
   border-radius: 999px;
   display: inline-flex;
   font-size: 12px;
@@ -68,32 +132,32 @@
   padding: 5px 10px;
 }
 
-.user-badge--neutral {
+.badgeNeutral {
   background: var(--bg-strong);
   color: var(--text-soft);
 }
 
-.user-badge--info {
+.badgeInfo {
   background: var(--accent-soft);
   color: var(--accent);
 }
 
-.user-badge--success {
+.badgeSuccess {
   background: var(--success-soft);
   color: var(--success);
 }
 
-.user-badge--warning {
+.badgeWarning {
   background: var(--warning-soft);
   color: var(--warning);
 }
 
-.user-badge--danger {
+.badgeDanger {
   background: var(--danger-soft);
   color: var(--danger);
 }
 
-.users-dialog-backdrop {
+.dialogBackdrop {
   align-items: center;
   background: rgba(2, 6, 23, 0.72);
   display: flex;
@@ -104,7 +168,7 @@
   z-index: 80;
 }
 
-.users-dialog {
+.dialog {
   backdrop-filter: blur(18px);
   background: var(--bg-card);
   border: 1px solid var(--border-soft);
@@ -115,49 +179,49 @@
   width: 100%;
 }
 
-.users-dialog__header {
+.dialogHeader {
   margin-bottom: 18px;
 }
 
-.users-dialog__title {
+.dialogTitle {
   font-size: 24px;
   font-weight: 700;
   letter-spacing: -0.03em;
 }
 
-.users-dialog__copy {
+.dialogCopy {
   color: var(--text-soft);
   font-size: 14px;
   margin-top: 6px;
 }
 
-.users-form {
+.form {
   display: grid;
   gap: 16px;
 }
 
-.users-form__grid {
+.formGrid {
   display: grid;
   gap: 16px;
 }
 
-.app-field {
+.field {
   display: grid;
   gap: 8px;
 }
 
-.app-field__label {
+.fieldLabel {
   color: var(--text-soft);
   font-size: 13px;
   font-weight: 700;
 }
 
-.app-field__hint {
+.fieldHint {
   color: var(--text-muted);
   font-size: 12px;
 }
 
-.app-control {
+.control {
   appearance: none;
   background: var(--bg-input);
   border: 1px solid var(--border-soft);
@@ -169,16 +233,16 @@
   width: 100%;
 }
 
-.app-control::placeholder {
+.control::placeholder {
   color: var(--text-muted);
 }
 
-.app-control:focus {
+.control:focus {
   border-color: var(--accent-strong);
   box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
-.app-control--select {
+.controlSelect {
   background-image:
     linear-gradient(45deg, transparent 50%, var(--text-soft) 50%),
     linear-gradient(135deg, var(--text-soft) 50%, transparent 50%);
@@ -190,12 +254,12 @@
   padding-right: 42px;
 }
 
-.app-control--select option {
+.controlSelect option {
   background: var(--bg-input);
   color: var(--text-main);
 }
 
-.users-form__actions {
+.formActions {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
@@ -203,7 +267,7 @@
   margin-top: 4px;
 }
 
-.users-form__error {
+.formError {
   background: var(--danger-soft);
   border: 1px solid rgba(244, 63, 94, 0.28);
   border-radius: 16px;
@@ -213,16 +277,16 @@
 }
 
 @media (max-width: 720px) {
-  .users-dialog {
+  .dialog {
     border-radius: 20px;
     padding: 20px;
   }
 
-  .users-form__actions {
+  .formActions {
     justify-content: stretch;
   }
 
-  .users-form__actions .btn {
+  .formActions :global(.btn) {
     flex: 1;
   }
 }

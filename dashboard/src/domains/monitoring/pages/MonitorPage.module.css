@@ -1,0 +1,88 @@
+.shell {
+  color: var(--text-main);
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.main {
+  flex: 1;
+  overflow: auto;
+  padding: 18px 20px 64px;
+}
+
+.alert {
+  background: var(--danger-soft);
+  border-bottom: 1px solid rgba(244, 63, 94, 0.26);
+  color: var(--danger);
+  font-size: 14px;
+  padding: 12px 20px;
+}
+
+.endedBanner {
+  background: var(--warning-soft);
+  border-bottom: 1px solid rgba(245, 158, 11, 0.22);
+  color: var(--warning);
+  font-size: 14px;
+  padding: 10px 20px;
+  text-align: center;
+}
+
+.endedBanner button {
+  background: transparent;
+  border: 0;
+  color: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+}
+
+.closedList {
+  display: grid;
+  gap: 10px;
+}
+
+.empty {
+  color: var(--text-soft);
+  display: grid;
+  font-size: 14px;
+  height: 100%;
+  min-height: 18rem;
+  place-items: center;
+}
+
+@media (min-width: 700px) {
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1180px) {
+  .grid {
+    grid-template-columns: repeat(var(--monitor-columns, 4), minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1440px) {
+  .grid {
+    grid-template-columns: repeat(var(--monitor-columns, 4), minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .main {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .alert,
+  .endedBanner {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+}
