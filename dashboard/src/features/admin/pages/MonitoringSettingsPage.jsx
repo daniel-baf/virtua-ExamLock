@@ -1,37 +1,14 @@
-import { Link } from 'react-router-dom';
-import { auth } from '@/shared/lib/firebase';
+import AdminHeader from '../components/AdminHeader';
 import { formatStreamConfig } from '@/features/sessions/streamConfigModel';
 import useMonitoringSettings from '../hooks/useMonitoringSettings';
 import '@/features/sessions/Sessions.css';
 
 export default function MonitoringSettingsPage() {
   const settings = useMonitoringSettings();
-  const email = auth.currentUser?.email ?? '';
 
   return (
     <div className="page-shell">
-      <header className="topbar">
-        <div className="topbar__inner">
-          <div className="topbar__title">
-            <div className="brand-mark" />
-            <div>
-              <p className="brand-title">ExamLock</p>
-              <p className="brand-subtitle">Administración</p>
-            </div>
-          </div>
-          <div className="topbar__actions">
-            <Link to="/admin/users" className="btn btn-ghost">Usuarios</Link>
-            <Link to="/admin/monitoring" className="btn btn-primary">Monitoreo</Link>
-            <span className="topbar__email">{email}</span>
-            <button onClick={settings.refresh} disabled={settings.loading} className="btn btn-ghost">
-              {settings.loading ? 'Cargando...' : 'Actualizar'}
-            </button>
-            <button onClick={() => auth.signOut()} className="btn btn-link">
-              Cerrar sesión
-            </button>
-          </div>
-        </div>
-      </header>
+      <AdminHeader activeSection="monitoring" loading={settings.loading} onRefresh={settings.refresh} />
 
       <main className="content content--narrow">
         <div className="section-title">

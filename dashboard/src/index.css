@@ -84,6 +84,12 @@ textarea {
   font: inherit;
 }
 
+input,
+select,
+textarea {
+  color-scheme: inherit;
+}
+
 button {
   color: inherit;
 }
@@ -94,6 +100,11 @@ a {
 
 code {
   font-family: var(--font-mono);
+}
+
+select option {
+  background: var(--bg-input);
+  color: var(--text-main);
 }
 
 .theme-toggle {

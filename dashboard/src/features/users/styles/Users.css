@@ -1,0 +1,228 @@
+.users-section-copy {
+  color: var(--text-soft);
+  font-size: 14px;
+  margin-top: 6px;
+}
+
+.users-table-card {
+  backdrop-filter: blur(18px);
+  background: var(--bg-card);
+  border: 1px solid var(--border-soft);
+  border-radius: 24px;
+  box-shadow: var(--shadow-soft);
+  overflow: hidden;
+}
+
+.users-table-scroll {
+  overflow-x: auto;
+}
+
+.users-table {
+  border-collapse: collapse;
+  min-width: 880px;
+  width: 100%;
+}
+
+.users-table th,
+.users-table td {
+  border-bottom: 1px solid var(--border-soft);
+  padding: 16px 18px;
+  text-align: left;
+  vertical-align: middle;
+}
+
+.users-table th {
+  color: var(--text-soft);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.users-row:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.users-row__primary {
+  color: var(--text-main);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.users-row__secondary {
+  color: var(--text-soft);
+  font-size: 14px;
+}
+
+.users-row__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.user-badge {
+  border-radius: 999px;
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 5px 10px;
+}
+
+.user-badge--neutral {
+  background: var(--bg-strong);
+  color: var(--text-soft);
+}
+
+.user-badge--info {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.user-badge--success {
+  background: var(--success-soft);
+  color: var(--success);
+}
+
+.user-badge--warning {
+  background: var(--warning-soft);
+  color: var(--warning);
+}
+
+.user-badge--danger {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.users-dialog-backdrop {
+  align-items: center;
+  background: rgba(2, 6, 23, 0.72);
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  padding: 20px;
+  position: fixed;
+  z-index: 80;
+}
+
+.users-dialog {
+  backdrop-filter: blur(18px);
+  background: var(--bg-card);
+  border: 1px solid var(--border-soft);
+  border-radius: 24px;
+  box-shadow: var(--shadow-strong);
+  max-width: 34rem;
+  padding: 24px;
+  width: 100%;
+}
+
+.users-dialog__header {
+  margin-bottom: 18px;
+}
+
+.users-dialog__title {
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+
+.users-dialog__copy {
+  color: var(--text-soft);
+  font-size: 14px;
+  margin-top: 6px;
+}
+
+.users-form {
+  display: grid;
+  gap: 16px;
+}
+
+.users-form__grid {
+  display: grid;
+  gap: 16px;
+}
+
+.app-field {
+  display: grid;
+  gap: 8px;
+}
+
+.app-field__label {
+  color: var(--text-soft);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.app-field__hint {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.app-control {
+  appearance: none;
+  background: var(--bg-input);
+  border: 1px solid var(--border-soft);
+  border-radius: 16px;
+  color: var(--text-main);
+  min-height: 48px;
+  outline: none;
+  padding: 0 14px;
+  width: 100%;
+}
+
+.app-control::placeholder {
+  color: var(--text-muted);
+}
+
+.app-control:focus {
+  border-color: var(--accent-strong);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.app-control--select {
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--text-soft) 50%),
+    linear-gradient(135deg, var(--text-soft) 50%, transparent 50%);
+  background-position:
+    calc(100% - 22px) calc(50% - 3px),
+    calc(100% - 16px) calc(50% - 3px);
+  background-repeat: no-repeat;
+  background-size: 6px 6px, 6px 6px;
+  padding-right: 42px;
+}
+
+.app-control--select option {
+  background: var(--bg-input);
+  color: var(--text-main);
+}
+
+.users-form__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 4px;
+}
+
+.users-form__error {
+  background: var(--danger-soft);
+  border: 1px solid rgba(244, 63, 94, 0.28);
+  border-radius: 16px;
+  color: var(--danger);
+  font-size: 14px;
+  padding: 12px 14px;
+}
+
+@media (max-width: 720px) {
+  .users-dialog {
+    border-radius: 20px;
+    padding: 20px;
+  }
+
+  .users-form__actions {
+    justify-content: stretch;
+  }
+
+  .users-form__actions .btn {
+    flex: 1;
+  }
+}
