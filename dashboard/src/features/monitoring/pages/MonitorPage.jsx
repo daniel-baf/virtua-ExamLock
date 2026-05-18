@@ -1,19 +1,35 @@
 import { useNavigate, useParams } from 'react-router-dom';
+import { useAuth } from '@/features/auth/context/AuthContext';
 import HistoryPanel from '../components/HistoryPanel';
 import LiveStreamDialog from '../components/LiveStreamDialog';
 import MessageDialog from '../components/MessageDialog';
+import ClosedStudentRow from '../components/ClosedStudentRow';
 import MonitorHeader from '../components/MonitorHeader';
+import MonitorToolbar from '../components/MonitorToolbar';
 import MonitorTabs from '../components/MonitorTabs';
 import NetworkPanel from '../components/NetworkPanel';
 import StudentCard from '../components/StudentCard';
+import useMonitorPreferences from '../hooks/useMonitorPreferences';
 import useMonitorSession from '../hooks/useMonitorSession';
+import { hasStudentAttention, matchesStudentFilter, matchesStudentSearch } from '../monitoringModel';
 import '../Monitoring.css';
 
 export default function MonitorPage() {
   const { id: sessionId } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const monitor = useMonitorSession(sessionId);
-  const visibleStudents = monitor.studentsByTab[monitor.tab];
+  const preferences = useMonitorPreferences({
+    sessionId,
+    userKey: user?.uid ?? user?.email,
+  });
+
+  const baseStudents = monitor.studentsByTab[preferences.tab] ?? [];
+  const visibleStudents = [...baseStudents]
+    .filter(student => matchesStudentSearch(student, preferences.search))
+    .filter(student => matchesStudentFilter(student, preferences.filter))
+    .filter(student => (preferences.showPinnedOnly ? preferences.pinnedIds.has(student.uid) : true))
+    .sort((left, right) => compareStudents(left, right, preferences.pinnedIds));
 
   return (
     <div className="monitor-shell">
@@ -55,18 +71,49 @@ export default function MonitorPage() {
         </div>
       )}
 
-      <MonitorTabs activeTab={monitor.tab} studentsByTab={monitor.studentsByTab} onChange={monitor.setTab} />
+      <MonitorTabs activeTab={preferences.tab} studentsByTab={monitor.studentsByTab} onChange={preferences.setTab} />
+
+      <MonitorToolbar
+        search={preferences.search}
+        onSearchChange={preferences.setSearch}
+        filter={preferences.filter}
+        onFilterChange={preferences.setFilter}
+        columns={preferences.columns}
+        onColumnsChange={preferences.setColumns}
+        closedView={preferences.closedView}
+        onClosedViewChange={preferences.setClosedView}
+        showPinnedOnly={preferences.showPinnedOnly}
+        onTogglePinnedOnly={() => preferences.setShowPinnedOnly(value => !value)}
+        activeTab={preferences.tab}
+        visibleCount={visibleStudents.length}
+      />
 
       <main className="monitor-main">
         {visibleStudents.length === 0 ? (
-          <div className="monitor-empty">Sin alumnos en esta categoria.</div>
+          <div className="monitor-empty">No hay alumnos para los filtros actuales.</div>
+        ) : preferences.tab === 'kicked' && preferences.closedView === 'list' ? (
+          <div className="closed-list">
+            {visibleStudents.map(student => (
+              <ClosedStudentRow
+                key={student.uid}
+                student={student}
+                isPinned={preferences.pinnedIds.has(student.uid)}
+                isHighlighted={hasStudentAttention(student)}
+                onTogglePinned={preferences.togglePinned}
+                onHistory={() => monitor.openHistory(student)}
+                onReadmit={() => monitor.readmit(student.uid)}
+              />
+            ))}
+          </div>
         ) : (
-          <div className="monitor-grid">
+          <div className="monitor-grid" style={{ '--monitor-columns': preferences.columns }}>
             {visibleStudents.map(student => (
               <StudentCard
                 key={student.uid}
                 student={student}
-                tab={monitor.tab}
+                tab={preferences.tab}
+                isPinned={preferences.pinnedIds.has(student.uid)}
+                onTogglePinned={preferences.togglePinned}
                 onHistory={() => monitor.openHistory(student)}
                 onLive={() => monitor.openLive(student)}
                 onKick={() => monitor.kick(student.uid)}
@@ -111,4 +158,18 @@ export default function MonitorPage() {
       )}
     </div>
   );
+}
+
+function compareStudents(left, right, pinnedIds) {
+  const leftPinned = pinnedIds.has(left.uid);
+  const rightPinned = pinnedIds.has(right.uid);
+  if (leftPinned !== rightPinned) return leftPinned ? -1 : 1;
+
+  const leftAttention = hasStudentAttention(left);
+  const rightAttention = hasStudentAttention(right);
+  if (leftAttention !== rightAttention) return leftAttention ? -1 : 1;
+
+  const rightTimestamp = Math.max(right.lastHeartbeat ?? 0, right.lastScreenshotAt ?? 0, right.liveTakenAt ?? 0);
+  const leftTimestamp = Math.max(left.lastHeartbeat ?? 0, left.lastScreenshotAt ?? 0, left.liveTakenAt ?? 0);
+  return rightTimestamp - leftTimestamp;
 }

@@ -22,7 +22,6 @@ export default function useMonitorSession(sessionId) {
   const [sessionError, setSessionError] = useState('');
   const [connected, setConnected] = useState(false);
   const [examEnded, setExamEnded] = useState(false);
-  const [tab, setTab] = useState('admitted');
   const [messageTarget, setMessageTarget] = useState(null);
   const [messageText, setMessageText] = useState('');
   const [whitelistDomains, setWhitelistDomains] = useState([]);
@@ -248,7 +247,6 @@ export default function useMonitorSession(sessionId) {
     sessionError,
     connected,
     examEnded,
-    tab,
     messageTarget,
     messageText,
     whitelistDomains,
@@ -266,7 +264,6 @@ export default function useMonitorSession(sessionId) {
     totals,
     activeWhitelistCount: activeDomainCount(whitelistDomains),
     studentsByTab,
-    setTab,
     setMessageTarget,
     setMessageText,
     setWhitelistDomains,
