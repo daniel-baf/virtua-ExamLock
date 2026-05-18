@@ -291,16 +291,20 @@
 }
 
 .monitor-toolbar__row {
-  align-items: end;
-  display: grid;
-  gap: 12px;
-  grid-template-columns: minmax(16rem, 1.3fr) repeat(2, auto) auto;
+  align-items: center;
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  justify-content: space-between;
 }
 
-.monitor-search,
+.monitor-search {
+  /* Se maneja mediante flex: 1 en el componente JSX para que ocupe todo el espacio */
+  display: block;
+}
+
 .monitor-select {
-  display: grid;
-  gap: 8px;
+  display: block;
 }
 
 .monitor-search__label,
@@ -938,7 +942,6 @@
 }
 
 @media (max-width: 1080px) {
-  .monitor-toolbar__row,
   .closed-row {
     grid-template-columns: 1fr;
   }
