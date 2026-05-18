@@ -3,6 +3,7 @@ const { v4: uuidv4 } = require('uuid');
 const { db } = require('../firebase');
 const { requireRole } = require('../auth');
 const { logEvent } = require('../events');
+const { getMonitoringSettings, normalizeStreamConfig } = require('../monitoringConfig');
 const { activeDomains, defaultWhitelist, normalizeWhitelist } = require('../networkDefaults');
 
 const router = Router();
@@ -24,6 +25,7 @@ router.post('/create', requireRole('teacher'), async (req, res) => {
   const code = generateCode();
   const now = Date.now();
   const end = endsAt ? new Date(endsAt).getTime() : now + timeLimit * 60 * 1000;
+  const monitoringSettings = await getMonitoringSettings(db());
 
   const normalizedWhitelist = normalizeWhitelist(whitelist);
 
@@ -38,6 +40,7 @@ router.post('/create', requireRole('teacher'), async (req, res) => {
     whitelist: normalizedWhitelist,
     blockInternet,
     whitelistVersion: 0,
+    streamConfig: monitoringSettings.streamConfig,
   });
 
   res.json({ sessionId, code });
@@ -66,6 +69,7 @@ router.get('/', requireRole('teacher'), async (req, res) => {
       endsAt: data.endsAt,
       whitelist: normalizeWhitelist(data.whitelist ?? []),
       blockInternet: data.blockInternet ?? true,
+      streamConfig: normalizeStreamConfig(data.streamConfig),
     };
   });
 
@@ -91,6 +95,7 @@ router.get('/id/:id', requireRole('teacher'), async (req, res) => {
       endsAt: data.endsAt,
       whitelist: normalizeWhitelist(data.whitelist ?? []),
       blockInternet: data.blockInternet ?? true,
+      streamConfig: normalizeStreamConfig(data.streamConfig),
     },
   });
 });

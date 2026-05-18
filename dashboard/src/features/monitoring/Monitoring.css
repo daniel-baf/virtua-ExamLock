@@ -353,6 +353,19 @@
   top: 8px;
 }
 
+.student-card__stream-badge {
+  background: rgb(8 47 73 / 0.9);
+  border: 1px solid rgb(3 105 161 / 0.8);
+  border-radius: 999px;
+  bottom: 8px;
+  color: #e0f2fe;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 4px 8px;
+  position: absolute;
+  right: 8px;
+ }
+
 .status-dot {
   border-radius: 999px;
   height: 6px;
@@ -533,6 +546,12 @@
   gap: 12px;
   justify-content: space-between;
   min-width: 0;
+}
+
+.live-stream-actions {
+  display: flex;
+  flex-shrink: 0;
+  gap: 8px;
 }
 
 .live-stream-header h3 {
@@ -724,6 +743,22 @@
 @media (min-width: 1024px) {
   .monitor-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 767px) {
+  .student-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .student-action--danger {
+    grid-column: span 2;
+  }
+
+  .live-stream-header,
+  .history-drawer__header-row {
+    align-items: flex-start;
+    flex-direction: column;
   }
 }
 

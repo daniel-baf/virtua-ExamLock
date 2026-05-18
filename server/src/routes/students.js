@@ -3,6 +3,7 @@ const { db } = require('../firebase');
 const { storage } = require('../firebase');
 const { requireRole } = require('../auth');
 const { logEvent } = require('../events');
+const { normalizeStreamConfig } = require('../monitoringConfig');
 const { activeDomains } = require('../networkDefaults');
 
 const router = Router();
@@ -35,6 +36,7 @@ router.post('/:uid/admit', requireRole('teacher'), async (req, res) => {
     blockInternet,
     endsAt: session.data().endsAt,
     whitelistVersion: session.data().whitelistVersion ?? 0,
+    streamConfig: normalizeStreamConfig(session.data().streamConfig),
   });
 
   res.json({ ok: true });
@@ -79,6 +81,7 @@ router.post('/:uid/readmit', requireRole('teacher'), async (req, res) => {
     blockInternet,
     endsAt: session.data().endsAt,
     whitelistVersion: session.data().whitelistVersion ?? 0,
+    streamConfig: normalizeStreamConfig(session.data().streamConfig),
   });
 
   res.json({ ok: true, attempts });

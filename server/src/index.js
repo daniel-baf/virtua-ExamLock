@@ -9,6 +9,7 @@ const studentRoutes = require('./routes/students');
 const examRoutes = require('./routes/exams');
 const devRoutes = require('./routes/dev');
 const userRoutes = require('./routes/users');
+const adminRoutes = require('./routes/admin');
 const registerSocket = require('./socket');
 
 const app = express();
@@ -44,6 +45,7 @@ app.use('/api/student', studentRoutes);
 app.use('/api/exam', examRoutes);
 app.use('/api/dev', devRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/admin', adminRoutes);
 
 registerSocket(io);
 

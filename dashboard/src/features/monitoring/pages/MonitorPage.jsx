@@ -105,11 +105,8 @@ export default function MonitorPage() {
       {monitor.liveTarget && (
         <LiveStreamDialog
           student={monitor.liveTarget}
-          frameSrc={monitor.liveFrame}
-          status={monitor.liveStatus}
-          error={monitor.liveError}
-          takenAt={monitor.liveTakenAt}
           onClose={monitor.closeLive}
+          onCapture={() => monitor.capture(monitor.liveTarget.uid)}
         />
       )}
     </div>

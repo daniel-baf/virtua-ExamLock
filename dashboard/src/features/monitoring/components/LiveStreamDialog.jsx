@@ -1,12 +1,9 @@
-export default function LiveStreamDialog({ student, frameSrc, status, error, takenAt, onClose }) {
+import AuthImage from '@/shared/components/AuthImage';
+import { liveStatusLabel } from '../monitoringModel';
+
+export default function LiveStreamDialog({ student, onClose, onCapture }) {
   const label = student.email ?? student.name ?? student.uid.slice(0, 8);
-  const statusText = {
-    connecting: 'Conectando...',
-    live: 'En vivo',
-    ready: 'Preparado',
-    error: 'Error de stream',
-    stopped: 'Stream detenido',
-  }[status] ?? 'Conectando...';
+  const statusText = liveStatusLabel(student.streamStatus);
 
   return (
     <div className="live-stream-backdrop" role="dialog" aria-modal="true">
@@ -14,18 +11,23 @@ export default function LiveStreamDialog({ student, frameSrc, status, error, tak
         <header className="live-stream-header">
           <div>
             <h3>{label}</h3>
-            <p>{statusText}{takenAt ? ` · ${new Date(takenAt).toLocaleTimeString()}` : ''}</p>
+            <p>{statusText}{student.liveTakenAt ? ` · ${new Date(student.liveTakenAt).toLocaleTimeString()}` : ''}</p>
           </div>
-          <button onClick={onClose} className="live-stream-close">Cerrar</button>
+          <div className="live-stream-actions">
+            <button onClick={onCapture} className="student-action student-action--info">Capturar</button>
+            <button onClick={onClose} className="live-stream-close">Cerrar</button>
+          </div>
         </header>
 
         <div className="live-stream-view">
-          {frameSrc ? (
-            <img src={frameSrc} alt={`Pantalla en vivo de ${label}`} />
+          {student.liveFrame ? (
+            <img src={student.liveFrame} alt={`Pantalla en vivo de ${label}`} />
+          ) : student.screenUrl ? (
+            <AuthImage uid={student.uid} src={student.screenUrl} alt={`Pantalla en vivo de ${label}`} className="protected-image" />
           ) : (
-            <div className="live-stream-placeholder">{error || statusText}</div>
+            <div className="live-stream-placeholder">{student.streamError || statusText}</div>
           )}
-          {error && <div className="live-stream-error">{error}</div>}
+          {student.streamError && <div className="live-stream-error">{student.streamError}</div>}
         </div>
       </section>
     </div>

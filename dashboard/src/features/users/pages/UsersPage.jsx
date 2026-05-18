@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import useUsers from '../hooks/useUsers';
 import UserRow from '../components/UserRow';
 import UserForm from '../components/UserForm';
@@ -44,6 +45,8 @@ export default function UsersPage() {
             </div>
           </div>
           <div className="topbar__actions">
+            <Link to="/admin/users" className="btn btn-primary">Usuarios</Link>
+            <Link to="/admin/monitoring" className="btn btn-ghost">Monitoreo</Link>
             <span className="topbar__email">{email}</span>
             <button onClick={refresh} disabled={loading} className="btn btn-ghost">
               {loading ? 'Cargando...' : 'Actualizar'}

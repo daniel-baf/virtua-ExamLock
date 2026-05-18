@@ -7,6 +7,7 @@ import NewSessionPage from '@/features/sessions/pages/NewSessionPage';
 import MonitorPage from '@/features/monitoring/pages/MonitorPage';
 import AuditPage from '@/features/audit/pages/AuditPage';
 import UsersPage from '@/features/users/pages/UsersPage';
+import MonitoringSettingsPage from '@/features/admin/pages/MonitoringSettingsPage';
 
 export default function App() {
   return (
@@ -19,6 +20,7 @@ export default function App() {
           <Route path="/session/:id/monitor" element={<RequireAuth><MonitorPage /></RequireAuth>} />
           <Route path="/session/:id/audit" element={<RequireAuth><AuditPage /></RequireAuth>} />
           <Route path="/admin/users" element={<RequireAuth allow={['admin']}><UsersPage /></RequireAuth>} />
+          <Route path="/admin/monitoring" element={<RequireAuth allow={['admin']}><MonitoringSettingsPage /></RequireAuth>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AuthProvider>

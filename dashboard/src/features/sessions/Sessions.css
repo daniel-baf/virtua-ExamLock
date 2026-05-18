@@ -351,6 +351,7 @@
 }
 
 .field input,
+.field select,
 .domain-input {
   background: #09090b;
   border: 1px solid #3f3f46;
@@ -363,6 +364,7 @@
 }
 
 .field input:focus,
+.field select:focus,
 .domain-input:focus {
   border-color: #0284c7;
   box-shadow: 0 0 0 1px rgb(2 132 199 / 0.4);
@@ -370,6 +372,10 @@
 
 .field--short input {
   width: 8rem;
+}
+
+.field select {
+  appearance: none;
 }
 
 .network-row,
@@ -499,6 +505,42 @@
 .domain-row--disabled td:first-child {
   color: #71717a;
   text-decoration: line-through;
+}
+
+.admin-settings-card {
+  gap: 20px;
+}
+
+.admin-settings-summary {
+  background: rgb(9 9 11 / 0.55);
+  border: 1px solid #27272a;
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.admin-settings-summary__label {
+  color: #71717a;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.admin-settings-summary__value {
+  color: #f4f4f5;
+  font-size: 20px;
+  font-weight: 700;
+  margin-top: 4px;
+}
+
+.admin-settings-summary__help {
+  color: #a1a1aa;
+  font-size: 13px;
+  margin-top: 8px;
+}
+
+.admin-settings-actions {
+  display: flex;
+  justify-content: flex-end;
 }
 
 .domain-source {

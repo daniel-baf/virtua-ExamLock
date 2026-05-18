@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { formatStreamConfig } from '@/features/sessions/streamConfigModel';
 import Metric from './Metric';
 
 export default function MonitorHeader({
@@ -23,6 +24,7 @@ export default function MonitorHeader({
             <h1 className="monitor-header__heading">{session?.name ?? 'Monitor de examen'}</h1>
             <p className="monitor-header__subheading">
               {connected ? 'Canal docente conectado' : 'Canal docente desconectado'}
+              {session?.streamConfig ? ` · Stream ${formatStreamConfig(session.streamConfig)}` : ''}
             </p>
           </div>
         </div>

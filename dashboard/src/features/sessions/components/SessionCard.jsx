@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { formatStreamConfig } from '../streamConfigModel';
 import SessionWhitelistTable from './SessionWhitelistTable';
 
 export default function SessionCard({ session }) {
@@ -18,6 +19,7 @@ export default function SessionCard({ session }) {
           <p className="session-card__meta">
             {new Date(session.createdAt).toLocaleDateString('es', { dateStyle: 'medium' })}
           </p>
+          <p className="session-card__meta">Stream: {formatStreamConfig(session.streamConfig)}</p>
         </div>
 
         <div className="session-card__actions">

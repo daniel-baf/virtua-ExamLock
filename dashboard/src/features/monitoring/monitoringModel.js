@@ -21,3 +21,15 @@ export function closeReasonLabel(reason) {
   };
   return map[reason] ?? reason;
 }
+
+export function liveStatusLabel(status) {
+  const map = {
+    connecting: 'Conectando stream',
+    live: 'En vivo',
+    ready: 'Esperando frames',
+    error: 'Error de stream',
+    offline: 'Alumno offline',
+    stopped: 'Stream detenido',
+  };
+  return map[status] ?? 'Preparando stream';
+}

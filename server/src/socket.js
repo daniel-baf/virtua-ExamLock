@@ -1,5 +1,6 @@
 const { db, storage, auth } = require('./firebase');
 const { logEvent } = require('./events');
+const { normalizeStreamConfig } = require('./monitoringConfig');
 const { activeDomains } = require('./networkDefaults');
 
 const HEARTBEAT_INTERVAL_MS = 15_000;
@@ -90,7 +91,13 @@ async function handleStudent(socket, sessionId, uid, io, timers) {
     blockInternet: session.blockInternet ?? false,
     endsAt: session.endsAt,
     whitelistVersion: session.whitelistVersion ?? 0,
+    streamConfig: normalizeStreamConfig(session.streamConfig),
   });
+
+  if (teacherCount(io, sessionId) > 0) {
+    io.to(`student:${uid}`).emit('server:monitor-start');
+    io.to(`teachers:${sessionId}`).emit('monitor:stream-status', { uid, status: 'connecting' });
+  }
 
   socket.on('student:heartbeat', () => {
     if (!resetHeartbeat(uid, sessionId, io, timers, socket.id)) return;
@@ -126,25 +133,24 @@ async function handleStudent(socket, sessionId, uid, io, timers) {
     io.to(`teachers:${sessionId}`).emit('monitor:stream-ready', { uid });
   });
 
-  socket.on('student:stream-started', ({ viewerId }) => {
-    if (!viewerId) return;
-    io.to(viewerId).emit('monitor:stream-started', { uid });
+  socket.on('student:stream-started', () => {
+    io.to(`teachers:${sessionId}`).emit('monitor:stream-started', { uid });
   });
 
-  socket.on('student:stream-frame', ({ viewerId, jpegB64, takenAt }) => {
-    if (!viewerId || !jpegB64) return;
-    io.to(viewerId).emit('monitor:stream-frame', { uid, jpegB64, takenAt: takenAt ?? Date.now() });
+  socket.on('student:monitor-frame', ({ jpegB64, takenAt }) => {
+    if (!jpegB64) return;
+    io.to(`teachers:${sessionId}`).emit('monitor:stream-frame', { uid, jpegB64, takenAt: takenAt ?? Date.now() });
   });
 
-  socket.on('student:stream-error', async ({ viewerId, error }) => {
+  socket.on('student:stream-error', async ({ error }) => {
     const message = String(error ?? 'unknown_stream_error').slice(0, 500);
-    await logEvent(sessionId, 'stream-error', { viewerId, error: message }, uid);
-    if (viewerId) io.to(viewerId).emit('monitor:stream-error', { uid, error: message });
+    await logEvent(sessionId, 'stream-error', { error: message }, uid);
+    io.to(`teachers:${sessionId}`).emit('monitor:stream-error', { uid, error: message });
     io.to(`teachers:${sessionId}`).emit('monitor:stream-status', { uid, status: 'error', error: message });
   });
 
-  socket.on('student:stream-stopped', ({ viewerId }) => {
-    if (viewerId) io.to(viewerId).emit('monitor:stream-stopped', { uid });
+  socket.on('student:stream-stopped', () => {
+    io.to(`teachers:${sessionId}`).emit('monitor:stream-stopped', { uid });
     io.to(`teachers:${sessionId}`).emit('monitor:stream-status', { uid, status: 'ready' });
   });
 
@@ -165,37 +171,20 @@ async function handleStudent(socket, sessionId, uid, io, timers) {
 function handleTeacher(socket, sessionId, io) {
   socket.join(`teachers:${sessionId}`);
 
+  startSessionMonitor(io, sessionId).catch(err => {
+    console.error('[socket] monitor start failed:', err.message);
+  });
+
   socket.on('teacher:end-exam', async () => {
     await db().collection('sessions').doc(sessionId).update({ active: false });
     await logEvent(sessionId, 'exam-ended', {});
     io.to(`session:${sessionId}`).emit('server:exam-ended');
   });
 
-  socket.on('teacher:stream-start', async ({ uid }) => {
-    if (!uid) return;
-    const studentDoc = await db().collection('students').doc(uid).get();
-    if (!studentDoc.exists || studentDoc.data().sessionId !== sessionId) {
-      socket.emit('monitor:stream-error', { uid, error: 'student_not_found' });
-      return;
-    }
-    if (studentDoc.data().status !== 'admitted') {
-      socket.emit('monitor:stream-error', { uid, error: 'student_not_active' });
-      return;
-    }
-    await logEvent(sessionId, 'stream-start-requested', { viewerId: socket.id }, uid);
-    io.to(`student:${uid}`).emit('server:stream-start', { viewerId: socket.id });
-    io.to(`teachers:${sessionId}`).emit('monitor:stream-status', { uid, status: 'connecting' });
-  });
-
-  socket.on('teacher:stream-stop', async ({ uid }) => {
-    if (!uid) return;
-    await logEvent(sessionId, 'stream-stop-requested', { viewerId: socket.id }, uid);
-    io.to(`student:${uid}`).emit('server:stream-stop', { viewerId: socket.id });
-    io.to(`teachers:${sessionId}`).emit('monitor:stream-status', { uid, status: 'ready' });
-  });
-
   socket.on('disconnect', () => {
-    io.to(`session:${sessionId}`).emit('server:stream-stop', { viewerId: socket.id });
+    stopSessionMonitorIfIdle(io, sessionId).catch(err => {
+      console.error('[socket] monitor stop failed:', err.message);
+    });
   });
 }
 
@@ -235,6 +224,37 @@ async function markStudentOffline(uid, sessionId, io) {
   });
   await logEvent(sessionId, 'offline', { offlineAt }, uid);
   io.to(`teachers:${sessionId}`).emit('monitor:student-offline', { uid, offlineAt });
+  io.to(`student:${uid}`).emit('server:monitor-stop');
+}
+
+async function startSessionMonitor(io, sessionId) {
+  const snap = await db().collection('students')
+    .where('sessionId', '==', sessionId)
+    .where('status', '==', 'admitted')
+    .get();
+
+  snap.docs.forEach(doc => {
+    io.to(`student:${doc.id}`).emit('server:monitor-start');
+    io.to(`teachers:${sessionId}`).emit('monitor:stream-status', { uid: doc.id, status: 'connecting' });
+  });
+}
+
+async function stopSessionMonitorIfIdle(io, sessionId) {
+  if (teacherCount(io, sessionId) > 0) return;
+
+  const snap = await db().collection('students')
+    .where('sessionId', '==', sessionId)
+    .where('status', '==', 'admitted')
+    .get();
+
+  snap.docs.forEach(doc => {
+    io.to(`student:${doc.id}`).emit('server:monitor-stop');
+    io.to(`teachers:${sessionId}`).emit('monitor:stream-status', { uid: doc.id, status: 'ready' });
+  });
+}
+
+function teacherCount(io, sessionId) {
+  return io.sockets.adapter.rooms.get(`teachers:${sessionId}`)?.size ?? 0;
 }
 
 async function uploadImage(jpegB64, filePath) {
