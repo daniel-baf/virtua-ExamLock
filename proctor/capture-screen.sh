@@ -2,8 +2,14 @@
 # Captures one screenshot and POSTs it to the agent.
 # Wayland: uses grim. X11: uses scrot. Fallback: import (ImageMagick).
 
+set -euo pipefail
+
 AGENT_URL="${1:-http://localhost:7878}"
 TMP="/tmp/examlock_screen_$$.jpg"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+
+# shellcheck source=./lib/capture.sh
+source "$SCRIPT_DIR/lib/capture.sh"
 
 capture() {
   if command -v grim &>/dev/null; then
@@ -20,10 +26,4 @@ capture() {
 
 if ! capture; then exit 1; fi
 
-B64=$(base64 -w 0 "$TMP")
-rm -f "$TMP"
-
-curl -sf -X POST "$AGENT_URL/proctor/upload" \
-  -H "Content-Type: application/json" \
-  -d "{\"type\":\"screen\",\"imageBase64\":\"$B64\"}" \
-  > /dev/null || echo "[proctor:screen] upload failed" >&2
+upload_capture "$AGENT_URL" "screen" "$TMP" "proctor:screen"

@@ -154,6 +154,12 @@ router.post('/:uid/message', requireRole('teacher'), async (req, res) => {
   const doc = await ownsStudent(req.user.uid, req.params.uid);
   if (!doc) return res.status(404).json({ error: 'not_found' });
 
+  await logEvent(
+    doc.data().sessionId,
+    'message-sent',
+    { text: String(text).slice(0, 500), sentBy: req.user.uid },
+    req.params.uid,
+  );
   req.app.get('io').to(`student:${req.params.uid}`).emit('server:message', { text });
   res.json({ ok: true });
 });

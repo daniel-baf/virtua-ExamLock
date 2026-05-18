@@ -129,11 +129,14 @@ async function handleStudent(socket, sessionId, uid, io, timers) {
   });
 
   socket.on('student:stream-ready', async () => {
-    await db().collection('students').doc(uid).update({ streamReady: true, streamReadyAt: Date.now() });
+    const streamReadyAt = Date.now();
+    await db().collection('students').doc(uid).update({ streamReady: true, streamReadyAt });
+    await logEvent(sessionId, 'stream-ready', { streamReadyAt }, uid);
     io.to(`teachers:${sessionId}`).emit('monitor:stream-ready', { uid });
   });
 
-  socket.on('student:stream-started', () => {
+  socket.on('student:stream-started', async () => {
+    await logEvent(sessionId, 'stream-started', { startedAt: Date.now() }, uid);
     io.to(`teachers:${sessionId}`).emit('monitor:stream-started', { uid });
   });
 
@@ -149,7 +152,8 @@ async function handleStudent(socket, sessionId, uid, io, timers) {
     io.to(`teachers:${sessionId}`).emit('monitor:stream-status', { uid, status: 'error', error: message });
   });
 
-  socket.on('student:stream-stopped', () => {
+  socket.on('student:stream-stopped', async () => {
+    await logEvent(sessionId, 'stream-stopped', { stoppedAt: Date.now() }, uid);
     io.to(`teachers:${sessionId}`).emit('monitor:stream-stopped', { uid });
     io.to(`teachers:${sessionId}`).emit('monitor:stream-status', { uid, status: 'ready' });
   });

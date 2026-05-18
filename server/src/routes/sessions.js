@@ -1,307 +1,99 @@
 const { Router } = require('express');
-const { v4: uuidv4 } = require('uuid');
-const { db } = require('../firebase');
 const { requireRole } = require('../auth');
-const { logEvent } = require('../events');
-const { getMonitoringSettings, normalizeStreamConfig } = require('../monitoringConfig');
-const { activeDomains, defaultWhitelist, normalizeWhitelist } = require('../networkDefaults');
+const sessionService = require('../domains/sessions/application/sessionService');
 
 const router = Router();
-const HEARTBEAT_INTERVAL_MS = 15_000;
-const HEARTBEAT_TIMEOUT_MS = HEARTBEAT_INTERVAL_MS * 3;
-
-function isHeartbeatExpired(student, now = Date.now()) {
-  return student.status === 'admitted'
-    && Number.isFinite(student.lastHeartbeat)
-    && now - student.lastHeartbeat > HEARTBEAT_TIMEOUT_MS;
-}
 
 // POST /api/session/create
 router.post('/create', requireRole('teacher'), async (req, res) => {
-  const { name, timeLimit = 90, endsAt, whitelist = [], blockInternet = true } = req.body;
-  if (!name) return res.status(400).json({ error: 'name_required' });
-
-  const sessionId = uuidv4();
-  const code = generateCode();
-  const now = Date.now();
-  const end = endsAt ? new Date(endsAt).getTime() : now + timeLimit * 60 * 1000;
-  const monitoringSettings = await getMonitoringSettings(db());
-
-  const normalizedWhitelist = normalizeWhitelist(whitelist);
-
-  await db().collection('sessions').doc(sessionId).set({
-    name,
-    code,
-    teacherId: req.user.uid,
-    active: true,
-    timeLimit,
-    startedAt: now,
-    endsAt: end,
-    whitelist: normalizedWhitelist,
-    blockInternet,
-    whitelistVersion: 0,
-    streamConfig: monitoringSettings.streamConfig,
-  });
-
-  res.json({ sessionId, code });
+  try {
+    const result = await sessionService.createSession({
+      teacherId: req.user.uid,
+      ...req.body,
+    });
+    res.json(result);
+  } catch (error) {
+    res.status(error.statusCode ?? 500).json({ error: error.message });
+  }
 });
 
 // GET /api/session/network-defaults — institutional default whitelist
 router.get('/network-defaults', requireRole('teacher'), async (_req, res) => {
-  res.json({ whitelist: defaultWhitelist() });
+  res.json(sessionService.getNetworkDefaults());
 });
 
 // GET /api/session  — list sessions for authenticated teacher
 router.get('/', requireRole('teacher'), async (req, res) => {
-  const snap = await db()
-    .collection('sessions')
-    .where('teacherId', '==', req.user.uid)
-    .get();
-
-  const sessions = snap.docs.map(d => {
-    const data = d.data();
-    return {
-      sessionId: d.id,
-      name: data.name,
-      code: data.code,
-      active: data.active,
-      createdAt: data.startedAt,
-      endsAt: data.endsAt,
-      whitelist: normalizeWhitelist(data.whitelist ?? []),
-      blockInternet: data.blockInternet ?? true,
-      streamConfig: normalizeStreamConfig(data.streamConfig),
-    };
-  });
-
-  sessions.sort((a, b) => b.createdAt - a.createdAt);
-  res.json({ sessions });
+  res.json(await sessionService.listTeacherSessions(req.user.uid));
 });
 
 // GET /api/session/id/:id  — teacher session summary
 router.get('/id/:id', requireRole('teacher'), async (req, res) => {
-  const sessionDoc = await db().collection('sessions').doc(req.params.id).get();
-  if (!sessionDoc.exists) return res.status(404).json({ error: 'not_found' });
-
-  const data = sessionDoc.data();
-  if (data.teacherId !== req.user.uid) return res.status(403).json({ error: 'forbidden' });
-
-  res.json({
-    session: {
-      sessionId: sessionDoc.id,
-      name: data.name,
-      code: data.code,
-      active: data.active,
-      createdAt: data.startedAt,
-      endsAt: data.endsAt,
-      whitelist: normalizeWhitelist(data.whitelist ?? []),
-      blockInternet: data.blockInternet ?? true,
-      streamConfig: normalizeStreamConfig(data.streamConfig),
-    },
-  });
+  try {
+    res.json(await sessionService.getTeacherSessionSummary(req.params.id, req.user.uid));
+  } catch (error) {
+    res.status(error.statusCode ?? 500).json({ error: error.message });
+  }
 });
 
 // GET /api/session/:code  — validate code before join (public)
 router.get('/:code', async (req, res) => {
-  const snap = await db()
-    .collection('sessions')
-    .where('code', '==', req.params.code)
-    .where('active', '==', true)
-    .limit(1)
-    .get();
-
-  if (snap.empty) return res.status(404).json({ error: 'not_found' });
-
-  const doc = snap.docs[0];
-  const data = doc.data();
-  res.json({ sessionId: doc.id, name: data.name, endsAt: data.endsAt });
+  try {
+    res.json(await sessionService.getPublicSessionByCode(req.params.code));
+  } catch (error) {
+    const responseError = error.message === 'session_not_found' ? 'not_found' : error.message;
+    res.status(error.statusCode ?? 500).json({ error: responseError });
+  }
 });
 
 // POST /api/session/:code/join  — student joins (Firebase ID token required, role=student)
 router.post('/:code/join', requireRole('student'), async (req, res) => {
-  const uid = req.user.uid;
-  const code = req.params.code;
-
-  const snap = await db()
-    .collection('sessions')
-    .where('code', '==', code)
-    .where('active', '==', true)
-    .limit(1)
-    .get();
-
-  if (snap.empty) return res.status(404).json({ error: 'session_not_found' });
-
-  const sessionDoc = snap.docs[0];
-  const session = sessionDoc.data();
-  const sessionId = sessionDoc.id;
-
-  if (Date.now() > session.endsAt) {
-    return res.status(410).json({ error: 'session_expired' });
+  try {
+    res.json(await sessionService.joinSession({ code: req.params.code, user: req.user }));
+  } catch (error) {
+    res.status(error.statusCode ?? 500).json({ error: error.message });
   }
-
-  const existingDoc = await db().collection('students').doc(uid).get();
-  const existing = existingDoc.exists ? existingDoc.data() : null;
-  const existingInSession = existing?.sessionId === sessionId;
-  if (existingInSession && existing?.status === 'kicked') {
-    return res.status(403).json({ error: 'kicked' });
-  }
-  if (existingInSession && existing?.status === 'closed') {
-    return res.status(403).json({ error: 'closed' });
-  }
-
-  const now = Date.now();
-  const isNew = !existingDoc.exists;
-  const reconnecting = existingInSession && (
-    existing?.status === 'offline'
-    || isHeartbeatExpired(existing, now)
-  );
-  const attempts = isNew || !existingInSession
-    ? 0
-    : (existing.attempts ?? 0) + (reconnecting ? 1 : 0);
-
-  await db().collection('students').doc(uid).set({
-    uid,
-    email: req.user.email ?? '',
-    sessionId,
-    status: 'admitted',
-    joinedAt: existingInSession ? (existing.joinedAt ?? now) : now,
-    admittedAt: now,
-    lastHeartbeat: now,
-    offlineAt: null,
-    closeReason: null,
-    attempts,
-    internetBlocked: session.blockInternet ?? false,
-  }, { merge: true });
-
-  await logEvent(sessionId, reconnecting ? 'reconnected' : 'join', {
-    email: req.user.email,
-    attempt: attempts,
-  }, uid);
-
-  res.json({ sessionId, status: 'admitted', endsAt: session.endsAt });
 });
 
 // GET /api/session/:id/students  — teacher monitor
 router.get('/:id/students', requireRole('teacher'), async (req, res) => {
-  const sessionId = req.params.id;
-  const sessionDoc = await db().collection('sessions').doc(sessionId).get();
-  if (!sessionDoc.exists) return res.status(404).json({ error: 'not_found' });
-  if (sessionDoc.data().teacherId !== req.user.uid) return res.status(403).json({ error: 'forbidden' });
-
-  const snap = await db().collection('students').where('sessionId', '==', sessionId).get();
-  const now = Date.now();
-  const updates = [];
-  const students = snap.docs.map(d => {
-    const student = { uid: d.id, ...d.data() };
-    if (!isHeartbeatExpired(student, now)) return student;
-
-    const offlineAt = now;
-    updates.push(d.ref.update({ status: 'offline', streamReady: false, offlineAt }));
-    return { ...student, status: 'offline', streamReady: false, offlineAt };
-  });
-  await Promise.all(updates);
-  res.json({ students });
+  try {
+    res.json(await sessionService.listSessionStudents(req.params.id, req.user.uid));
+  } catch (error) {
+    res.status(error.statusCode ?? 500).json({ error: error.message });
+  }
 });
 
 // POST /api/session/:id/screenshot-all  — request screenshots from all active students
 router.post('/:id/screenshot-all', requireRole('teacher'), async (req, res) => {
-  const sessionId = req.params.id;
-  const sessionDoc = await db().collection('sessions').doc(sessionId).get();
-  if (!sessionDoc.exists) return res.status(404).json({ error: 'not_found' });
-  if (sessionDoc.data().teacherId !== req.user.uid) return res.status(403).json({ error: 'forbidden' });
-
-  const snap = await db().collection('students').where('sessionId', '==', sessionId).get();
-  const requestId = Date.now().toString();
-  const activeStatuses = new Set(['admitted']);
-  const students = snap.docs.map(d => ({ uid: d.id, ...d.data() }));
-  const targets = students.filter(s => activeStatuses.has(s.status));
-  const skipped = students.length - targets.length;
-
-  targets.forEach(s => {
-    req.app.get('io').to(`student:${s.uid}`).emit('server:capture-now', {
-      requestId: `${requestId}_${s.uid}`,
-    });
-  });
-
-  await logEvent(sessionId, 'screenshot-all-requested', {
-    requestId,
-    requested: targets.length,
-    skipped,
-  });
-
-  res.json({ ok: true, requestId, requested: targets.length, skipped });
+  try {
+    res.json(await sessionService.requestSessionScreenshots(req.params.id, req.user.uid, req.app.get('io')));
+  } catch (error) {
+    res.status(error.statusCode ?? 500).json({ error: error.message });
+  }
 });
 
 // PUT /api/session/:id/whitelist  — teacher updates whitelist, broadcasts to all students
 router.put('/:id/whitelist', requireRole('teacher'), async (req, res) => {
-  const { domains = [], blockInternet = false } = req.body;
-  const sessionRef = db().collection('sessions').doc(req.params.id);
-  const doc = await sessionRef.get();
-  if (!doc.exists) return res.status(404).json({ error: 'not_found' });
-  if (doc.data().teacherId !== req.user.uid) return res.status(403).json({ error: 'forbidden' });
-
-  const version = (doc.data().whitelistVersion ?? 0) + 1;
-  const whitelist = normalizeWhitelist(domains);
-  await sessionRef.update({ whitelist, blockInternet, whitelistVersion: version });
-
-  req.app.get('io').to(`session:${req.params.id}`).emit('server:whitelist', {
-    whitelist: activeDomains(whitelist),
-    blockInternet,
-    version,
-  });
-
-  await logEvent(req.params.id, 'whitelist-applied', {
-    domains: activeDomains(whitelist),
-    configuredDomains: whitelist,
-    blockInternet,
-  });
-  res.json({ ok: true, version });
+  try {
+    res.json(await sessionService.updateWhitelist({
+      sessionId: req.params.id,
+      teacherId: req.user.uid,
+      ...req.body,
+      io: req.app.get('io'),
+    }));
+  } catch (error) {
+    res.status(error.statusCode ?? 500).json({ error: error.message });
+  }
 });
 
 // GET /api/session/:id/audit  — post-exam audit data
 router.get('/:id/audit', requireRole('teacher'), async (req, res) => {
-  const sessionId = req.params.id;
-  const sessionDoc = await db().collection('sessions').doc(sessionId).get();
-  if (!sessionDoc.exists) return res.status(404).json({ error: 'not_found' });
-  if (sessionDoc.data().teacherId !== req.user.uid) return res.status(403).json({ error: 'forbidden' });
-
-  const [studentsSnap, eventsSnap, screenshotsSnap] = await Promise.all([
-    db().collection('students').where('sessionId', '==', sessionId).get(),
-    db().collection('events').where('sessionId', '==', sessionId).orderBy('ts').get(),
-    db().collection('screenshots').where('sessionId', '==', sessionId).orderBy('takenAt').get(),
-  ]);
-
-  const students = studentsSnap.docs.map(d => ({ uid: d.id, ...d.data() }));
-  const events = eventsSnap.docs.map(d => d.data());
-  const screenshots = screenshotsSnap.docs.map(d => d.data());
-
-  const studentMap = {};
-  students.forEach(s => {
-    studentMap[s.uid] = {
-      ...s,
-      timeline: events.filter(e => e.studentUid === s.uid),
-      screenshots: screenshots.filter(sc => sc.studentId === s.uid),
-    };
-  });
-
-  res.json({
-    session: {
-      name: sessionDoc.data().name,
-      startedAt: sessionDoc.data().startedAt,
-      endsAt: sessionDoc.data().endsAt,
-    },
-    totals: {
-      registered: students.length,
-      admitted: students.filter(s => s.admittedAt).length,
-      kicked: students.filter(s => s.status === 'kicked').length,
-      currentlyConnected: students.filter(s => s.status === 'admitted').length,
-    },
-    students: Object.values(studentMap),
-  });
+  try {
+    res.json(await sessionService.getSessionAudit(req.params.id, req.user.uid));
+  } catch (error) {
+    res.status(error.statusCode ?? 500).json({ error: error.message });
+  }
 });
-
-function generateCode() {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  return Array.from({ length: 8 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
-}
 
 module.exports = router;

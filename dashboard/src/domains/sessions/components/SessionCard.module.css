@@ -1,0 +1,161 @@
+.card {
+  backdrop-filter: blur(18px);
+  background: var(--bg-card);
+  border: 1px solid var(--border-soft);
+  border-radius: 24px;
+  box-shadow: var(--shadow-soft);
+  padding: 20px;
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  margin-bottom: 16px;
+}
+
+.title {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.name {
+  color: var(--text-main);
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.codePanel {
+  background: linear-gradient(135deg, var(--bg-strong), var(--bg-muted));
+  border: 1px solid var(--border-soft);
+  border-radius: 18px;
+  display: inline-grid;
+  gap: 4px;
+  margin-top: 14px;
+  min-width: min(100%, 18rem);
+  padding: 14px 16px;
+}
+
+.codeLabel {
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.codeValue {
+  color: var(--text-main);
+  font-family: var(--font-mono);
+  font-size: clamp(28px, 7vw, 44px);
+  font-weight: 800;
+  line-height: 1;
+  overflow-wrap: anywhere;
+}
+
+.meta {
+  color: var(--text-soft);
+  font-size: 14px;
+  margin-top: 10px;
+}
+
+.actions {
+  display: flex;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.badge {
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 10px;
+}
+
+.badgeOk {
+  background: var(--success-soft);
+  color: var(--success);
+}
+
+.badgeNeutral {
+  background: var(--bg-strong);
+  color: var(--text-soft);
+}
+
+.badgeWarning {
+  background: var(--warning-soft);
+  color: var(--warning);
+}
+
+.whitelistBox {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border-soft);
+  border-radius: 18px;
+  color: var(--text-soft);
+  overflow: hidden;
+}
+
+.whitelistSummary {
+  border-bottom: 1px solid var(--border-soft);
+  padding: 14px 16px;
+}
+
+.whitelistSummary p:first-child {
+  color: var(--text-main);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.whitelistMeta,
+.whitelistEmpty {
+  color: var(--text-soft);
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+.whitelistEmpty {
+  padding: 16px;
+}
+
+.whitelistTable {
+  border-collapse: collapse;
+  font-size: 14px;
+  width: 100%;
+}
+
+.whitelistTable th {
+  background: var(--bg-muted);
+  color: var(--text-soft);
+  font-weight: 600;
+  text-align: left;
+}
+
+.whitelistTable th,
+.whitelistTable td {
+  border-top: 1px solid var(--border-soft);
+  padding: 9px 16px;
+}
+
+.whitelistTable td:last-child {
+  color: var(--text-main);
+  font-family: var(--font-mono);
+  overflow-wrap: anywhere;
+}
+
+@media (min-width: 960px) {
+  .header {
+    align-items: flex-start;
+    flex-direction: row;
+    justify-content: space-between;
+  }
+}
+
+@media (max-width: 640px) {
+  .card {
+    border-radius: 20px;
+    padding: 18px;
+  }
+}
