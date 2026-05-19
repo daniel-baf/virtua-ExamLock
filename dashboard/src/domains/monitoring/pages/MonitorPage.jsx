@@ -86,9 +86,9 @@ export default function MonitorPage() {
       {monitor.examEnded && (
         <div className={styles.endedBanner}>
           Examen terminado.{' '}
-          <button onClick={() => navigate(`/session/${sessionId}/audit`)}>
-            Ver auditoria
-          </button>
+          <button onClick={() => navigate(`/session/${sessionId}/audit`)}>Ver auditoria</button>
+          {' · '}
+          <button onClick={monitor.downloadAudit}>Descargar auditoria (JSON)</button>
         </div>
       )}
 
@@ -145,7 +145,6 @@ export default function MonitorPage() {
                 onReadmit={() => monitor.readmit(student.uid)}
                 onScreenshot={() => monitor.capture(student.uid)}
                 onMessage={() => monitor.setMessageTarget(student.uid)}
-                onToggleKeylogger={active => monitor.toggleKeylogger(student.uid, active)}
               />
             ))}
           </div>
@@ -180,7 +179,6 @@ export default function MonitorPage() {
           student={monitor.liveTarget}
           onClose={monitor.closeLive}
           onCapture={() => monitor.capture(monitor.liveTarget.uid)}
-          onToggleKeylogger={active => monitor.toggleKeylogger(monitor.liveTarget.uid, active)}
         />
       )}
     </div>

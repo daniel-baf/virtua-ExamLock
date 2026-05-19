@@ -166,6 +166,8 @@ function buildSpawnArgs() {
 function start({ onKey }) {
   if (xinputProc) return;
 
+  killStaleXinput();
+
   keymapCache = loadKeymap();
   onKeyCallback = onKey;
   modState.shift = false;
@@ -187,7 +189,6 @@ function start({ onKey }) {
 
   let buf = '';
   let currentType = null;
-  let rawLineCount = 0; // debug: log first 20 raw lines to confirm format
 
   xinputProc.stdout.on('data', chunk => {
     buf += chunk.toString();
@@ -195,11 +196,6 @@ function start({ onKey }) {
     while ((nl = buf.indexOf('\n')) !== -1) {
       const line = buf.slice(0, nl).trimEnd();
       buf = buf.slice(nl + 1);
-
-      if (rawLineCount < 20) {
-        log('keylogger', 'raw:', JSON.stringify(line));
-        rawLineCount++;
-      }
 
       // Match "EVENT type N (Name)" — may have leading whitespace on some builds
       const evMatch = line.match(/EVENT type (\d+)/);
@@ -218,7 +214,6 @@ function start({ onKey }) {
           } else if (isPress) {
             const ev = keycodeToEvent(keycode);
             if (ev) {
-              log('keylogger', 'key:', JSON.stringify(ev));
               if (onKeyCallback) onKeyCallback({ ...ev, t: Date.now() });
             } else {
               log('keylogger', `unmapped keycode ${keycode}, syms:`, JSON.stringify((keymapCache ?? new Map()).get(keycode)));
@@ -252,12 +247,18 @@ function start({ onKey }) {
   log('keylogger', 'started');
 }
 
+function killStaleXinput() {
+  const user = EXAM_USER || process.env.USER;
+  try { execFileSync('pkill', ['-KILL', '-u', user, 'xinput'], { stdio: 'pipe' }); } catch {}
+}
+
 function stop() {
   if (!xinputProc) return;
-  try { xinputProc.kill('SIGTERM'); } catch {}
+  try { xinputProc.kill('SIGKILL'); } catch {}
   xinputProc = null;
   onKeyCallback = null;
   keymapCache = null;
+  killStaleXinput();
   log('keylogger', 'stopped');
 }
 

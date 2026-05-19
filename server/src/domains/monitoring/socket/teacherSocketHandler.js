@@ -14,36 +14,11 @@ async function handleTeacherSocket(socket, sessionId, io) {
     io.to(`session:${sessionId}`).emit('server:exam-ended');
   });
 
-  socket.on('teacher:keylogger-start', async ({ uid }) => {
-    const student = await getStudentInSession(uid, sessionId);
-    if (!student) return;
-    io.to(`student:${uid}`).emit('server:keylogger-start');
-  });
-
-  socket.on('teacher:keylogger-stop', async ({ uid }) => {
-    const student = await getStudentInSession(uid, sessionId);
-    if (!student) return;
-    io.to(`student:${uid}`).emit('server:keylogger-stop');
-  });
-
-  socket.on('teacher:request-keystroke-buffer', async ({ uid }) => {
-    const student = await getStudentInSession(uid, sessionId);
-    if (!student) return;
-    io.to(`student:${uid}`).emit('server:keystroke-buffer-request');
-  });
-
   socket.on('disconnect', () => {
     stopSessionMonitorIfIdle(io, sessionId).catch(err => {
       console.error('[socket] monitor stop failed:', err.message);
     });
   });
-}
-
-async function getStudentInSession(uid, sessionId) {
-  const snap = await db().collection('students').doc(uid).get();
-  if (!snap.exists) return null;
-  const data = snap.data();
-  return data?.sessionId === sessionId ? data : null;
 }
 
 async function startSessionMonitor(io, sessionId) {

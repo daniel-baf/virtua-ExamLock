@@ -1,9 +1,9 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import AuthImage from '@shared/components/AuthImage';
 import { liveStatusLabel } from '@monitoring/monitoringModel';
 import styles from '@monitoring/components/LiveStreamDialog.module.css';
 
-function KeystrokePanel({ keystrokes, keyloggerActive, onToggleKeylogger }) {
+function KeystrokePanel({ keystrokes }) {
   const bottomRef = useRef(null);
   const [localLog, setLocalLog] = useState(keystrokes ?? []);
 
@@ -17,9 +17,7 @@ function KeystrokePanel({ keystrokes, keyloggerActive, onToggleKeylogger }) {
 
   function renderEvent(ev, idx) {
     if (ev.type === 'special') {
-      return (
-        <span key={idx} className={styles.keyChip}>{ev.name}</span>
-      );
+      return <span key={idx} className={styles.keyChip}>{ev.name}</span>;
     }
     if (ev.type === 'char') {
       if (ev.ch === ' ') return <span key={idx} className={styles.keySpace}>·</span>;
@@ -32,13 +30,7 @@ function KeystrokePanel({ keystrokes, keyloggerActive, onToggleKeylogger }) {
     <div className={styles.keystrokePanel}>
       <div className={styles.keystrokeHeader}>
         <span className={styles.keystrokeTitle}>Teclas</span>
-        <button
-          type="button"
-          onClick={() => onToggleKeylogger?.(!keyloggerActive)}
-          className={`${styles.toggleButton} ${keyloggerActive ? styles.toggleOn : ''}`}
-        >
-          {keyloggerActive ? '⌨ Activo' : '⌨ Inactivo'}
-        </button>
+        <span className={`${styles.toggleButton} ${styles.toggleOn}`}>⌨ Activo</span>
         <button
           type="button"
           className={styles.clearButton}
@@ -50,9 +42,7 @@ function KeystrokePanel({ keystrokes, keyloggerActive, onToggleKeylogger }) {
       </div>
       <div className={styles.keystrokeBody}>
         {localLog.length === 0 ? (
-          <p className={styles.keystrokePlaceholder}>
-            {keyloggerActive ? 'Esperando teclas…' : 'Keylogger desactivado'}
-          </p>
+          <p className={styles.keystrokePlaceholder}>Esperando teclas…</p>
         ) : (
           <p className={styles.keystrokeText}>
             {localLog.map((ev, i) => renderEvent(ev, i))}
@@ -73,7 +63,7 @@ function LogPanel({ logs }) {
   return (
     <div className={styles.logPanel}>
       {!logs?.length ? (
-        <p className={styles.keystrokePlaceholder}>Sin logs aún — activa el daemon o el keylogger.</p>
+        <p className={styles.keystrokePlaceholder}>Sin logs del daemon aún.</p>
       ) : (
         logs.map((line, i) => (
           <div key={i} className={styles.logLine}>
@@ -87,7 +77,7 @@ function LogPanel({ logs }) {
   );
 }
 
-export default function LiveStreamDialog({ student, onClose, onCapture, onToggleKeylogger }) {
+export default function LiveStreamDialog({ student, onClose, onCapture }) {
   const label = student.email ?? student.name ?? student.uid.slice(0, 8);
   const statusText = liveStatusLabel(student.streamStatus);
   const [tab, setTab] = useState('screen'); // 'screen' | 'logs'
@@ -125,11 +115,7 @@ export default function LiveStreamDialog({ student, onClose, onCapture, onToggle
               {student.streamError && <div className={styles.error}>{student.streamError}</div>}
             </div>
 
-            <KeystrokePanel
-              keystrokes={student.keystrokes}
-              keyloggerActive={student.keyloggerActive}
-              onToggleKeylogger={onToggleKeylogger}
-            />
+            <KeystrokePanel keystrokes={student.keystrokes} />
           </div>
         ) : (
           <LogPanel logs={student.daemonLogs} />

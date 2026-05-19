@@ -31,7 +31,7 @@ function capture(options = {}) {
           },
           stdio: 'pipe',
         });
-        log('screenshot', 'captured via grim (wayland)');
+        // captured via grim
         return readCapture(tmpFile, normalizedOptions);
       } catch (err) {
         errors.push(`grim: ${err.stderr?.toString().trim() || err.message}`);
@@ -54,7 +54,7 @@ function capture(options = {}) {
     } else {
       execFileSync('scrot', ['-z', '-q', '70', tmpFile], { env: xEnv, stdio: 'pipe' });
     }
-    log('screenshot', 'captured via scrot (x11)');
+    // captured via scrot
     return readCapture(tmpFile, normalizedOptions);
   } catch (err) {
     errors.push(`scrot: ${err.stderr?.toString().trim() || err.message}`);

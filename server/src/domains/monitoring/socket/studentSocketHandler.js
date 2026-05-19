@@ -3,6 +3,7 @@ const { logEvent } = require('../../../events');
 const { normalizeStreamConfig } = require('../../../monitoringConfig');
 const { activeDomains } = require('../../../networkDefaults');
 const { resetHeartbeat, clearTimer } = require('./heartbeatService');
+const keystrokeAudit = require('../keystrokeAuditStore');
 
 async function handleStudentSocket(socket, sessionId, io, timers) {
   const uid = socket.user.uid;
@@ -102,14 +103,11 @@ async function handleStudentSocket(socket, sessionId, io, timers) {
     io.to(`teachers:${sessionId}`).emit('monitor:keystroke', { uid, events });
   });
 
-  socket.on('student:keystroke-buffer', ({ events }) => {
-    if (!Array.isArray(events)) return;
-    io.to(`teachers:${sessionId}`).emit('monitor:keystroke-buffer', { uid, events });
-  });
-
-  socket.on('student:keylogger-status', async ({ active, error }) => {
-    await db().collection('students').doc(uid).update({ keyloggerActive: active === true });
-    io.to(`teachers:${sessionId}`).emit('monitor:keylogger-status', { uid, active: active === true, error: error ?? null });
+  socket.on('student:keystroke-chunk', ({ text, startedAt, endedAt }) => {
+    if (!text) return;
+    const chunk = { text, startedAt, endedAt };
+    keystrokeAudit.appendChunk(sessionId, uid, chunk);
+    io.to(`teachers:${sessionId}`).emit('monitor:keystroke-chunk', { uid, chunk });
   });
 
   socket.on('student:stream-error', async ({ error }) => {

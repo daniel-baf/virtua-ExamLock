@@ -14,6 +14,9 @@ import {
   setWhitelist,
 } from '@monitoring/services/monitoringService';
 import { activeDomainCount, mergeDomainLists, normalizeDomainList } from '@sessions';
+import { auth } from '@shared/lib/firebase';
+
+const SERVER_URL = import.meta.env.VITE_SERVER_URL ?? '';
 
 export default function useMonitorSession(sessionId) {
   const [students, setStudents] = useState({});
@@ -140,11 +143,14 @@ export default function useMonitorSession(sessionId) {
           return next;
         });
       });
-      socket.on('monitor:keystroke-buffer', ({ uid, events }) => {
-        patch(uid, { keystrokes: events ?? [] });
-      });
-      socket.on('monitor:keylogger-status', ({ uid, active }) => {
-        patch(uid, { keyloggerActive: active });
+      socket.on('monitor:keystroke-chunk', ({ uid, chunk }) => {
+        setStudents(prev => {
+          const student = prev[uid] ?? { uid };
+          const existing = student.keystrokeChunks ?? [];
+          const next = { ...prev, [uid]: { ...student, keystrokeChunks: [...existing, chunk] } };
+          studentsRef.current = next;
+          return next;
+        });
       });
       socket.on('monitor:log', ({ uid, lines }) => {
         setStudents(prev => {
@@ -271,15 +277,25 @@ export default function useMonitorSession(sessionId) {
 
   function openLive(student) {
     setLiveTargetUid(student.uid);
-    socketRef.current?.emit('teacher:request-keystroke-buffer', { uid: student.uid });
-  }
-
-  function toggleKeylogger(uid, active) {
-    socketRef.current?.emit(active ? 'teacher:keylogger-start' : 'teacher:keylogger-stop', { uid });
   }
 
   function closeLive() {
     setLiveTargetUid(null);
+  }
+
+  async function downloadAudit() {
+    const token = await auth.currentUser?.getIdToken();
+    const res = await fetch(`${SERVER_URL}/api/session/${sessionId}/audit?download=1`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) throw new Error('download_failed');
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `audit-${sessionId}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
   }
 
   async function sendMessage() {
@@ -361,7 +377,7 @@ export default function useMonitorSession(sessionId) {
     closeHistory,
     openLive,
     closeLive,
-    toggleKeylogger,
+    downloadAudit,
     acknowledgeAlert,
     sendMessage,
     applyWhitelist,

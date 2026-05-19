@@ -1,6 +1,7 @@
 const { Router } = require('express');
 const { requireRole } = require('../auth');
 const sessionService = require('../domains/sessions/application/sessionService');
+const keystrokeAudit = require('../domains/monitoring/keystrokeAuditStore');
 
 const router = Router();
 
@@ -87,13 +88,103 @@ router.put('/:id/whitelist', requireRole('teacher'), async (req, res) => {
   }
 });
 
-// GET /api/session/:id/audit  — post-exam audit data
+// GET /api/session/:id/audit  — post-exam audit data (download)
 router.get('/:id/audit', requireRole('teacher'), async (req, res) => {
   try {
-    res.json(await sessionService.getSessionAudit(req.params.id, req.user.uid));
+    const audit = await sessionService.getSessionAudit(req.params.id, req.user.uid);
+    const keystrokeData = keystrokeAudit.getSession(req.params.id);
+    const chunkMap = new Map(keystrokeData.map(d => [d.uid, d.chunks]));
+    audit.students = audit.students.map(s => ({
+      ...s,
+      keystrokeChunks: chunkMap.get(s.uid) ?? [],
+    }));
+
+    const download = req.query.download === '1';
+    if (download) {
+      res.setHeader('Content-Disposition', `attachment; filename="audit-${req.params.id}.json"`);
+      res.setHeader('Content-Type', 'application/json');
+      const payload = buildDownloadPayload(audit);
+      return res.json(payload);
+    }
+
+    res.json(audit);
   } catch (error) {
     res.status(error.statusCode ?? 500).json({ error: error.message });
   }
 });
+
+function buildDownloadPayload(audit) {
+  const { session } = audit;
+  const domains = session.allowedDomains?.length
+    ? session.allowedDomains.join(', ')
+    : 'ninguno (internet bloqueado)';
+
+  const prompt = `Eres un asistente experto en integridad académica. Se te proporciona el registro completo \
+de un examen digital vigilado por la plataforma ExamLock. Contiene la actividad de teclado, \
+eventos de conexión/desconexión y configuración de red de cada alumno.
+
+CONTEXTO DEL EXAMEN
+- Sesión: ${session.name ?? 'sin nombre'}
+- Inicio: ${session.startedAt ? new Date(session.startedAt).toLocaleString('es') : '—'}
+- Fin programado: ${session.endsAt ? new Date(session.endsAt).toLocaleString('es') : '—'}
+- Internet: ${session.blockInternet ? 'bloqueado' : 'libre'}
+- Dominios permitidos: ${domains}
+
+DATOS DISPONIBLES POR ALUMNO (campo "students")
+Cada alumno tiene:
+- keystrokeChunks[]: bloques de texto capturado cada 60 s con hora de inicio y fin.
+  Los marcadores especiales son: [Ctrl+C] [Ctrl+V] [←] [→] [↑] [↓] [Delete] [Escape] etc.
+- timeline[]: eventos del sistema (admitido, desconectado, expulsado, etc.) con timestamp.
+- status: estado final (admitted / kicked / closed / offline).
+- admittedAt / lastHeartbeat: cuándo entró y última señal de vida.
+
+TU TAREA
+Analiza CADA alumno y genera un informe individual + un ranking final.
+
+CRITERIOS DE SOSPECHA
+1. Ctrl+C / Ctrl+V: frecuencia y contexto. ¿Ocurren justo al inicio? ¿En bloques largos sin errores previos?
+2. Texto que aparece de golpe sin correcciones (Backspace) → posible pegado.
+3. Desconexiones durante el examen: ¿cuándo ocurrieron? ¿Justo antes de un bloque sospechoso?
+4. Bloques vacíos prolongados: ¿el alumno dejó de escribir mucho tiempo?
+5. Dominios permitidos: ¿alguno podría facilitar copiar? (ej. traductores, docs compartidos)
+6. Texto idéntico o muy similar entre alumnos → coordinación.
+
+FORMATO DE RESPUESTA OBLIGATORIO
+
+---
+## [email o nombre del alumno]
+**Score de integridad: XX/100** (100 = sin sospechas, 0 = evidencia clara de trampa)
+**Veredicto:** Sin sospechas | Revisión recomendada | Alta sospecha
+
+**Eventos clave:**
+- HH:MM – descripción breve del evento sospechoso o relevante
+
+**Análisis:**
+Párrafo breve con el razonamiento. Cita fragmentos de keystrokeChunks si es relevante.
+
+---
+
+(repetir para cada alumno)
+
+---
+## RANKING FINAL
+De más a menos sospechoso:
+1. [email] — Score XX/100 — motivo principal
+2. ...
+
+---
+## RESUMEN EJECUTIVO
+2-3 oraciones para el docente sobre el estado general del grupo.
+
+IMPORTANTE: Basa todo análisis ÚNICAMENTE en los datos del JSON. No inventes ni asumas. \
+Si no hay datos de teclado de un alumno, indícalo explícitamente.
+
+--- FIN DE INSTRUCCIONES --- A continuación los datos del examen:`;
+
+  return {
+    _instrucciones: prompt,
+    ...audit,
+  };
+}
 
 module.exports = router;
