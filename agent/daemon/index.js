@@ -4,7 +4,8 @@ const { io: ioClient } = require('socket.io-client');
 const { applyWhitelist, initFirewall, getDebugState } = require('./firewall');
 const { capture } = require('./screenshot');
 const { execFileSync } = require('child_process');
-const { log } = require('./logger');
+const { log, setLogForwarder } = require('./logger');
+const keylogger = require('./keylogger');
 const {
   config,
   EXAM_USER,
@@ -41,6 +42,10 @@ let closingSession = false;
 let screenshotInFlight = false;
 let liveStreamTimer = null;
 let liveMonitorActive = false;
+let keyloggerActive = false;
+let keystrokeBatchTimer = null;
+const keystrokePending = [];
+const keyBuffer = [];
 
 // ── App ───────────────────────────────────────────────────────────────────────
 
@@ -184,6 +189,20 @@ function connectSocket(sessionCode) {
 
   state.socket = socket;
 
+  // Log forwarding to teacher dashboard
+  let logBatch = [];
+  let logBatchTimer = null;
+  function flushLogBatch() {
+    logBatchTimer = null;
+    if (logBatch.length === 0 || !socket.connected) return;
+    socket.emit('student:log', { lines: logBatch.splice(0) });
+  }
+  setLogForwarder((tag, msg) => {
+    logBatch.push({ ts: Date.now(), tag, msg });
+    if (logBatch.length > 50) logBatch.shift(); // drop oldest if flooding
+    if (!logBatchTimer) logBatchTimer = setTimeout(flushLogBatch, 300);
+  });
+
   socket.on('connect', () => {
     log('socket', 'connected, state:', state.status);
     broadcast('state', { status: state.status, endsAt: state.endsAt });
@@ -191,6 +210,7 @@ function connectSocket(sessionCode) {
 
   socket.on('disconnect', () => {
     log('socket', 'disconnected');
+    setLogForwarder(null);
     broadcast('state', { status: state.status, endsAt: state.endsAt });
   });
 
@@ -258,6 +278,18 @@ function connectSocket(sessionCode) {
     stopLiveStream();
   });
 
+  socket.on('server:keylogger-start', () => {
+    startKeylogger();
+  });
+
+  socket.on('server:keylogger-stop', () => {
+    stopKeylogger();
+  });
+
+  socket.on('server:keystroke-buffer-request', () => {
+    if (socket.connected) socket.emit('student:keystroke-buffer', { events: keyBuffer.slice() });
+  });
+
   // Message from teacher
   socket.on('server:message', ({ text }) => {
     broadcast('message', { text });
@@ -267,6 +299,7 @@ function connectSocket(sessionCode) {
   socket.on('server:kicked', ({ reason }) => {
     log('socket', 'server:kicked reason:', reason);
     stopLiveStream();
+    stopKeylogger();
     state.status = 'kicked';
     applyWhitelist([], false, false).catch(err => log('firewall', 'ERROR on kick lock:', err.message));
     broadcast('kicked', { reason });
@@ -277,6 +310,7 @@ function connectSocket(sessionCode) {
   socket.on('server:exam-ended', () => {
     log('socket', 'server:exam-ended');
     stopLiveStream();
+    stopKeylogger();
     state.status = 'ended';
     applyWhitelist([], false, false).catch(err => log('firewall', 'ERROR on end lock:', err.message));
     broadcast('exam-ended', {});
@@ -365,12 +399,63 @@ function stopLiveStream() {
   liveMonitorActive = false;
 }
 
+function startKeylogger() {
+  if (state.status !== 'admitted') return;
+  if (keyloggerActive) return;
+
+  keylogger.start({
+    onKey(ev) {
+      if (ev.type === 'error') {
+        keyloggerActive = false;
+        if (state.socket?.connected) {
+          state.socket.emit('student:keylogger-status', { active: false, error: ev.error });
+        }
+        return;
+      }
+
+      const now = Date.now();
+      keyBuffer.push(ev);
+      const cutoff = now - 180_000;
+      while (keyBuffer.length > 0 && keyBuffer[0].t < cutoff) keyBuffer.shift();
+
+      keystrokePending.push(ev);
+      if (!keystrokeBatchTimer) {
+        keystrokeBatchTimer = setTimeout(() => {
+          keystrokeBatchTimer = null;
+          if (keystrokePending.length > 0 && state.socket?.connected) {
+            state.socket.emit('student:keystroke', { events: keystrokePending.splice(0) });
+          } else {
+            keystrokePending.length = 0;
+          }
+        }, 250);
+      }
+    },
+  });
+
+  keyloggerActive = true;
+  if (state.socket?.connected) {
+    state.socket.emit('student:keylogger-status', { active: true });
+  }
+  log('keylogger', 'started by teacher');
+}
+
+function stopKeylogger() {
+  if (keystrokeBatchTimer) { clearTimeout(keystrokeBatchTimer); keystrokeBatchTimer = null; }
+  keystrokePending.length = 0;
+  keylogger.stop();
+  if (keyloggerActive && state.socket?.connected) {
+    state.socket.emit('student:keylogger-status', { active: false });
+  }
+  keyloggerActive = false;
+}
+
 async function closeSession(reason, { kill = true, killDelayMs = 2000 } = {}) {
   if (closingSession) return;
   closingSession = true;
 
   log('session', 'closing session:', reason);
   stopLiveStream();
+  stopKeylogger();
   if (state.socket?.connected) state.socket.emit('student:closed', { reason });
   state.status = 'ended';
   try {

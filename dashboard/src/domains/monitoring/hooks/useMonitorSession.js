@@ -127,6 +127,33 @@ export default function useMonitorSession(sessionId) {
           streamError: null,
         });
       });
+      socket.on('monitor:keystroke', ({ uid, events }) => {
+        setStudents(prev => {
+          const student = prev[uid] ?? { uid };
+          const existing = student.keystrokes ?? [];
+          const cutoff = Date.now() - 180_000;
+          const merged = [...existing, ...events].filter(ev => ev.t >= cutoff);
+          const next = { ...prev, [uid]: { ...student, keystrokes: merged } };
+          studentsRef.current = next;
+          return next;
+        });
+      });
+      socket.on('monitor:keystroke-buffer', ({ uid, events }) => {
+        patch(uid, { keystrokes: events ?? [] });
+      });
+      socket.on('monitor:keylogger-status', ({ uid, active }) => {
+        patch(uid, { keyloggerActive: active });
+      });
+      socket.on('monitor:log', ({ uid, lines }) => {
+        setStudents(prev => {
+          const student = prev[uid] ?? { uid };
+          const existing = student.daemonLogs ?? [];
+          const merged = [...existing, ...lines].slice(-300);
+          const next = { ...prev, [uid]: { ...student, daemonLogs: merged } };
+          studentsRef.current = next;
+          return next;
+        });
+      });
       socket.on('monitor:stream-error', ({ uid, error }) => {
         patch(uid, { streamStatus: 'error', streamError: error });
         pushAlert({
@@ -240,6 +267,11 @@ export default function useMonitorSession(sessionId) {
 
   function openLive(student) {
     setLiveTargetUid(student.uid);
+    socketRef.current?.emit('teacher:request-keystroke-buffer', { uid: student.uid });
+  }
+
+  function toggleKeylogger(uid, active) {
+    socketRef.current?.emit(active ? 'teacher:keylogger-start' : 'teacher:keylogger-stop', { uid });
   }
 
   function closeLive() {
@@ -325,6 +357,7 @@ export default function useMonitorSession(sessionId) {
     closeHistory,
     openLive,
     closeLive,
+    toggleKeylogger,
     acknowledgeAlert,
     sendMessage,
     applyWhitelist,

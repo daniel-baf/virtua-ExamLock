@@ -8,8 +8,6 @@
 .inner {
   display: grid;
   gap: 14px;
-  margin: 0 auto;
-  max-width: 100rem;
 }
 
 .header {

@@ -13,6 +13,7 @@ export default function StudentCard({
   onMessage,
   onHistory,
   onLive,
+  onToggleKeylogger,
 }) {
   const { uid, status = 'waiting', screenUrl, liveFrame, email, name } = student;
   const meta = STATUS_META[status] ?? STATUS_META.offline;
@@ -87,6 +88,14 @@ export default function StudentCard({
             <>
               <button type="button" onClick={onLive} className={`${styles.actionButton} ${styles.liveButton}`}>Enfocar</button>
               <button type="button" onClick={onScreenshot} className={`${styles.actionButton} ${styles.infoButton}`}>Capturar</button>
+              <button
+                type="button"
+                onClick={() => onToggleKeylogger?.(!student.keyloggerActive)}
+                className={`${styles.actionButton} ${student.keyloggerActive ? styles.keyloggerOnButton : ''}`}
+                title={student.keyloggerActive ? 'Detener registro de teclas' : 'Activar registro de teclas'}
+              >
+                {student.keyloggerActive ? '⌨ ON' : '⌨ OFF'}
+              </button>
               <button type="button" onClick={onMessage} className={styles.actionButton}>Mensaje</button>
               <button type="button" onClick={onKick} className={`${styles.actionButton} ${styles.dangerButton}`}>Expulsar</button>
             </>

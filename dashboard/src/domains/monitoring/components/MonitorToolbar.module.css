@@ -4,9 +4,8 @@
   border-bottom: 1px solid var(--border-soft);
   display: grid;
   gap: 12px;
-  margin: 0 auto;
-  max-width: 100rem;
   padding: 16px 20px;
+  width: 100%;
 }
 
 .row {

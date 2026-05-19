@@ -11,6 +11,8 @@ wget
 grim
 scrot
 xdotool
+xinput
+x11-xkb-utils
 fonts-noto
 fonts-liberation
 openssh-server

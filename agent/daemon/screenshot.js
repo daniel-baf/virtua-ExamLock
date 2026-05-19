@@ -50,9 +50,9 @@ function capture(options = {}) {
   };
   try {
     if (examUid) {
-      execFileSync('runuser', ['-u', EXAM_USER, '--', 'scrot', '-q', '70', tmpFile], { env: xEnv, stdio: 'pipe' });
+      execFileSync('runuser', ['-u', EXAM_USER, '--', 'scrot', '-z', '-q', '70', tmpFile], { env: xEnv, stdio: 'pipe' });
     } else {
-      execFileSync('scrot', ['-q', '70', tmpFile], { env: xEnv, stdio: 'pipe' });
+      execFileSync('scrot', ['-z', '-q', '70', tmpFile], { env: xEnv, stdio: 'pipe' });
     }
     log('screenshot', 'captured via scrot (x11)');
     return readCapture(tmpFile, normalizedOptions);

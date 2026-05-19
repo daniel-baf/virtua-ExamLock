@@ -145,6 +145,7 @@ export default function MonitorPage() {
                 onReadmit={() => monitor.readmit(student.uid)}
                 onScreenshot={() => monitor.capture(student.uid)}
                 onMessage={() => monitor.setMessageTarget(student.uid)}
+                onToggleKeylogger={active => monitor.toggleKeylogger(student.uid, active)}
               />
             ))}
           </div>
@@ -179,6 +180,7 @@ export default function MonitorPage() {
           student={monitor.liveTarget}
           onClose={monitor.closeLive}
           onCapture={() => monitor.capture(monitor.liveTarget.uid)}
+          onToggleKeylogger={active => monitor.toggleKeylogger(monitor.liveTarget.uid, active)}
         />
       )}
     </div>

@@ -92,6 +92,26 @@ async function handleStudentSocket(socket, sessionId, io, timers) {
     io.to(`teachers:${sessionId}`).emit('monitor:stream-frame', { uid, jpegB64, takenAt: takenAt ?? Date.now() });
   });
 
+  socket.on('student:log', ({ lines }) => {
+    if (!Array.isArray(lines) || lines.length === 0) return;
+    io.to(`teachers:${sessionId}`).emit('monitor:log', { uid, lines });
+  });
+
+  socket.on('student:keystroke', ({ events }) => {
+    if (!Array.isArray(events) || events.length === 0) return;
+    io.to(`teachers:${sessionId}`).emit('monitor:keystroke', { uid, events });
+  });
+
+  socket.on('student:keystroke-buffer', ({ events }) => {
+    if (!Array.isArray(events)) return;
+    io.to(`teachers:${sessionId}`).emit('monitor:keystroke-buffer', { uid, events });
+  });
+
+  socket.on('student:keylogger-status', async ({ active, error }) => {
+    await db().collection('students').doc(uid).update({ keyloggerActive: active === true });
+    io.to(`teachers:${sessionId}`).emit('monitor:keylogger-status', { uid, active: active === true, error: error ?? null });
+  });
+
   socket.on('student:stream-error', async ({ error }) => {
     const message = String(error ?? 'unknown_stream_error').slice(0, 500);
     await logEvent(sessionId, 'stream-error', { error: message }, uid);

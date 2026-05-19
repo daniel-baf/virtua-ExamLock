@@ -44,6 +44,28 @@
   font-size: 12px;
 }
 
+.tabs {
+  display: flex;
+  gap: 4px;
+}
+
+.tabButton {
+  background: var(--bg-strong, #0d1117);
+  border: 1px solid var(--border-soft);
+  border-radius: 10px;
+  color: var(--text-soft);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 6px 12px;
+}
+
+.tabActive {
+  background: var(--accent-soft);
+  border-color: rgba(56, 189, 248, 0.24);
+  color: var(--accent);
+}
+
 .actions {
   display: flex;
   flex-shrink: 0;
@@ -69,6 +91,13 @@
   color: var(--accent);
 }
 
+.viewRow {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 1fr 280px;
+  min-height: 0;
+}
+
 .view {
   align-items: center;
   aspect-ratio: 16 / 9;
@@ -77,6 +106,129 @@
   display: grid;
   overflow: hidden;
   position: relative;
+}
+
+.keystrokePanel {
+  background: var(--bg-strong, #0d1117);
+  border: 1px solid var(--border-soft);
+  border-radius: 16px;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.keystrokeHeader {
+  align-items: center;
+  border-bottom: 1px solid var(--border-soft);
+  display: flex;
+  gap: 8px;
+  padding: 10px 12px;
+}
+
+.keystrokeTitle {
+  color: var(--text-soft);
+  flex: 1;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.toggleButton {
+  background: var(--bg-card);
+  border: 1px solid var(--border-soft);
+  border-radius: 10px;
+  color: var(--text-soft);
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 10px;
+}
+
+.toggleOn {
+  background: rgba(245, 158, 11, 0.12);
+  border-color: rgba(245, 158, 11, 0.32);
+  color: #f59e0b;
+}
+
+.clearButton {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1;
+  padding: 4px 6px;
+}
+
+.keystrokeBody {
+  overflow-y: auto;
+  padding: 10px 12px;
+}
+
+.keystrokePlaceholder {
+  color: var(--text-muted);
+  font-size: 12px;
+  margin: 0;
+}
+
+.keystrokeText {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 13px;
+  line-height: 1.8;
+  margin: 0;
+  overflow-wrap: break-word;
+  word-break: break-all;
+}
+
+.keyChip {
+  background: rgba(56, 189, 248, 0.12);
+  border: 1px solid rgba(56, 189, 248, 0.2);
+  border-radius: 5px;
+  color: #7dd3fc;
+  display: inline-block;
+  font-size: 10px;
+  margin: 0 2px;
+  padding: 1px 5px;
+  vertical-align: middle;
+}
+
+.keySpace {
+  color: var(--text-muted);
+  opacity: 0.4;
+}
+
+.logPanel {
+  background: #060a0f;
+  border-radius: 16px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 11px;
+  line-height: 1.6;
+  max-height: calc(100vh - 180px);
+  overflow-y: auto;
+  padding: 12px 14px;
+}
+
+.logLine {
+  display: flex;
+  gap: 8px;
+  padding: 1px 0;
+}
+
+.logLine:hover {
+  background: rgba(255,255,255,0.04);
+}
+
+.logTag {
+  color: #38bdf8;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.logMsg {
+  color: #94a3b8;
+  word-break: break-all;
 }
 
 .image {
@@ -112,6 +264,12 @@
   .header {
     align-items: flex-start;
     flex-direction: column;
+  }
+  .viewRow {
+    grid-template-columns: 1fr;
+  }
+  .keystrokePanel {
+    max-height: 200px;
   }
 }
 
