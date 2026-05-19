@@ -1,0 +1,36 @@
+services:
+  server:
+    image: node:20-alpine
+    working_dir: /app
+    command: sh -c "npm ci && npm run dev"
+    env_file:
+      - ./server/.env
+    environment:
+      PORT: 8080
+      CORS_ORIGINS: http://localhost:5173,http://127.0.0.1:5173
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./server:/app
+      - server_node_modules:/app/node_modules
+      - ${HOME}/.config/gcloud:/root/.config/gcloud:ro
+
+  dashboard:
+    image: node:20-alpine
+    working_dir: /app
+    command: sh -c "npm ci && npm run dev -- --host 0.0.0.0"
+    env_file:
+      - ./dashboard/.env
+    environment:
+      VITE_SERVER_URL: http://localhost:8080
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./dashboard:/app
+      - dashboard_node_modules:/app/node_modules
+    depends_on:
+      - server
+
+volumes:
+  server_node_modules:
+  dashboard_node_modules:

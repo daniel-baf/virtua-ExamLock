@@ -13,6 +13,9 @@ AGENT_URL="http://localhost:7878"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROCTOR_DIR="$(cd "$SCRIPT_DIR/../proctor" && pwd)"
 
+# shellcheck source=./lib/runtime.sh
+source "$SCRIPT_DIR/lib/runtime.sh"
+
 # ── Validaciones ─────────────────────────────────────────────────────────────
 
 if [ -z "$SESSION_CODE" ]; then
@@ -20,32 +23,13 @@ if [ -z "$SESSION_CODE" ]; then
   exit 1
 fi
 
-for cmd in docker cage; do
-  if ! command -v "$cmd" &>/dev/null; then
-    echo "Error: '$cmd' no está instalado."
-    exit 1
-  fi
-done
-
-CHROMIUM=""
-for bin in chromium chromium-browser google-chrome; do
-  if command -v "$bin" &>/dev/null; then CHROMIUM="$bin"; break; fi
-done
-
-if [ -z "$CHROMIUM" ]; then
-  echo "Error: no se encontró Chromium."
-  exit 1
-fi
+require_command docker
+require_command cage
+CHROMIUM="$(find_chromium)"
 
 # ── Docker: red aislada ───────────────────────────────────────────────────────
 
-if ! docker network inspect exam-net &>/dev/null; then
-  echo "Creando red exam-net…"
-  docker network create \
-    --driver bridge \
-    --opt com.docker.network.bridge.enable_icc=false \
-    exam-net
-fi
+ensure_docker_network exam-net
 
 # ── Descarga imagen ───────────────────────────────────────────────────────────
 
@@ -95,8 +79,7 @@ cleanup() {
   echo ""
   echo "Finalizando ExamLock…"
   [ -n "$PROCTOR_PID" ] && kill "$PROCTOR_PID" 2>/dev/null || true
-  docker stop examlock-student 2>/dev/null || true
-  docker rm  examlock-student 2>/dev/null || true
+  cleanup_container examlock-student
   echo "Container eliminado. Sin rastros en el equipo."
 }
 trap cleanup EXIT INT TERM

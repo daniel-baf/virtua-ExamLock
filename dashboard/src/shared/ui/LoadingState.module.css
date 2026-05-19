@@ -1,0 +1,31 @@
+.state {
+  color: var(--text-soft);
+  display: grid;
+  gap: 12px;
+  justify-items: center;
+  padding: 92px 0;
+  text-align: center;
+}
+
+.spinner {
+  animation: spin 1s linear infinite;
+  border: 3px solid var(--border-soft);
+  border-radius: 999px;
+  border-top-color: var(--accent);
+  height: 24px;
+  width: 24px;
+}
+
+.label {
+  font-size: 14px;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}

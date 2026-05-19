@@ -1,0 +1,18 @@
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"],
+      "@app/*": ["src/app/*"],
+      "@shared/*": ["src/shared/*"],
+      "@domains/*": ["src/domains/*"],
+      "@auth/*": ["src/domains/auth/*"],
+      "@sessions/*": ["src/domains/sessions/*"],
+      "@monitoring/*": ["src/domains/monitoring/*"],
+      "@users/*": ["src/domains/users/*"],
+      "@admin/*": ["src/domains/admin/*"],
+      "@audit/*": ["src/domains/audit/*"]
+    }
+  },
+  "exclude": ["dist", "node_modules"]
+}

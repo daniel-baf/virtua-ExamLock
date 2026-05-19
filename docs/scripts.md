@@ -21,10 +21,33 @@ cp .env.examlock.example .env.examlock
 
 | Script | Uso |
 |---|---|
+| `scripts/dev-local.sh` | Levanta server/dashboard con Docker Compose y arranca/configura la VM local. |
 | `scripts/build-iso.sh` | Compila ISO full/dev, opcionalmente limpiando cache o arrancando VM. |
 | `scripts/dev-vm.sh` | Arranca QEMU, empuja cambios del agent y hace hot reload. |
 | `scripts/dev-key` | Llave SSH local para la VM de desarrollo. No se versiona. |
 | `scripts/dev-key.pub` | Llave pública incluida para acceso root en la VM dev. |
+
+### `dev-local.sh`
+
+```bash
+./scripts/dev-local.sh --dev
+./scripts/dev-local.sh --dev --no-vm
+./scripts/dev-local.sh --logs
+./scripts/dev-local.sh --down
+```
+
+| Flag | Efecto |
+|---|---|
+| `--dev` | Arranca la VM con `iso/examlock-dev.iso`. |
+| `--no-vm` | Levanta solo Docker Compose. |
+| `--logs` | Sigue logs de `server` y `dashboard`. |
+| `--down` | Detiene el stack Docker local. |
+
+El script usa `compose.dev.yml`, publica el server en `localhost:8080`, el dashboard en `localhost:5173`, y configura la VM QEMU para usar `SERVER_URL=http://10.0.2.2:8080`. Si necesitas otra URL alcanzable desde la VM:
+
+```bash
+LOCAL_SERVER_URL=http://192.168.1.50:8080 ./scripts/dev-local.sh --dev
+```
 
 ### `build-iso.sh`
 
@@ -47,6 +70,8 @@ cp .env.examlock.example .env.examlock
 ```bash
 ./scripts/dev-vm.sh
 ./scripts/dev-vm.sh --dev
+./scripts/dev-vm.sh --dev --local
+./scripts/dev-vm.sh --configure-local
 ./scripts/dev-vm.sh --logs
 ./scripts/dev-vm.sh --shell
 ./scripts/dev-vm.sh --push
@@ -55,11 +80,38 @@ cp .env.examlock.example .env.examlock
 | Flag | Efecto |
 |---|---|
 | `--dev` | Usa `iso/examlock-dev.iso`. |
+| `--local` | Configura la VM para hablar con el server local del host. En QEMU usa `http://10.0.2.2:8080`. |
+| `--configure-local` | Solo reescribe `SERVER_URL` en `/etc/examlock.conf` dentro de una VM ya corriendo y reinicia el daemon. |
 | `--logs` | Muestra `journalctl` y `/var/log/examlock/agent.log`. |
 | `--shell` | Abre SSH root a la VM en `127.0.0.1:2222`. |
 | `--push` | Copia `agent/daemon/*.js` y `agent/ui/*.html` a una VM ya corriendo. |
 
 El hot reload usa `entr` si está disponible, luego `inotifywait`, y como último recurso polling cada 5 segundos.
+
+Para desarrollo local sin reconstruir ISO:
+
+```bash
+cd server
+npm run dev
+
+cd ../dashboard
+npm run dev
+
+cd ..
+./scripts/dev-vm.sh --dev --local
+```
+
+Si la VM ya está encendida:
+
+```bash
+./scripts/dev-vm.sh --configure-local
+```
+
+Para VirtualBox, VMware o una VM en la LAN, pasa la URL alcanzable desde la VM:
+
+```bash
+LOCAL_SERVER_URL=http://192.168.1.50:8080 ./scripts/dev-vm.sh --configure-local
+```
 
 ## Scripts del server
 
@@ -140,4 +192,3 @@ rm -rf agent/node_modules dashboard/node_modules dashboard/dist server/node_modu
 ```
 
 No borres carpetas fuente como `agent`, `dashboard`, `server`, `infra`, `iso`, `launcher`, `proctor` o `scripts`.
-

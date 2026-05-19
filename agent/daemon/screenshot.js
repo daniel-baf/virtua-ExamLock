@@ -10,10 +10,11 @@ function getExamUid() {
   } catch { return null; }
 }
 
-function capture() {
+function capture(options = {}) {
   const { log } = require('./logger');
   const tmpFile = path.join(os.tmpdir(), `examlock_${Date.now()}.jpg`);
   const examUid = getExamUid();
+  const normalizedOptions = normalizeOptions(options);
 
   const errors = [];
 
@@ -31,7 +32,7 @@ function capture() {
           stdio: 'pipe',
         });
         log('screenshot', 'captured via grim (wayland)');
-        return fs.readFileSync(tmpFile).toString('base64');
+        return readCapture(tmpFile, normalizedOptions);
       } catch (err) {
         errors.push(`grim: ${err.stderr?.toString().trim() || err.message}`);
       } finally {
@@ -54,7 +55,7 @@ function capture() {
       execFileSync('scrot', ['-q', '70', tmpFile], { env: xEnv, stdio: 'pipe' });
     }
     log('screenshot', 'captured via scrot (x11)');
-    return fs.readFileSync(tmpFile).toString('base64');
+    return readCapture(tmpFile, normalizedOptions);
   } catch (err) {
     errors.push(`scrot: ${err.stderr?.toString().trim() || err.message}`);
   } finally {
@@ -76,6 +77,61 @@ function detectWaylandSocket(examUid) {
     } catch {}
   }
   return null;
+}
+
+function readCapture(filePath, options) {
+  if (!options.maxWidth || !options.maxHeight) {
+    return fs.readFileSync(filePath).toString('base64');
+  }
+
+  const resizedPath = `${filePath}.stream.jpg`;
+
+  try {
+    resizeImage(filePath, resizedPath, options);
+    return fs.readFileSync(resizedPath).toString('base64');
+  } catch {
+    return fs.readFileSync(filePath).toString('base64');
+  } finally {
+    try { fs.unlinkSync(resizedPath); } catch {}
+  }
+}
+
+function resizeImage(inputPath, outputPath, options) {
+  const sizeArg = `${options.maxWidth}x${options.maxHeight}>`;
+  const qualityArg = String(options.quality ?? 70);
+
+  if (commandExists('magick')) {
+    execFileSync('magick', [inputPath, '-resize', sizeArg, '-quality', qualityArg, outputPath], { stdio: 'pipe' });
+    return;
+  }
+
+  if (commandExists('convert')) {
+    execFileSync('convert', [inputPath, '-resize', sizeArg, '-quality', qualityArg, outputPath], { stdio: 'pipe' });
+    return;
+  }
+
+  throw new Error('no_image_resizer_available');
+}
+
+function commandExists(command) {
+  try {
+    execFileSync('which', [command], { stdio: 'pipe' });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function normalizeOptions(options) {
+  const maxWidth = Number(options.maxWidth);
+  const maxHeight = Number(options.maxHeight);
+  const quality = Number(options.quality);
+
+  return {
+    maxWidth: Number.isFinite(maxWidth) && maxWidth > 0 ? maxWidth : null,
+    maxHeight: Number.isFinite(maxHeight) && maxHeight > 0 ? maxHeight : null,
+    quality: Number.isFinite(quality) && quality > 0 ? quality : 70,
+  };
 }
 
 module.exports = { capture };

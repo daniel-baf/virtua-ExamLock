@@ -1,5 +1,7 @@
 const DEFAULT_NETWORK_DOMAINS = [
   { domain: 'www.url.edu.gt', enabled: true, source: 'default' },
+  { domain: 'principal.url.edu.gt', enabled: true, source: 'default' },
+  { domain: 'cdn.gtranslate.net', enabled: true, source: 'default' },
   { domain: 'landivar.url.edu.gt', enabled: true, source: 'default' },
   { domain: 'moodle26.url.edu.gt', enabled: true, source: 'default' },
   { domain: 'accounts.google.com', enabled: true, source: 'default' },

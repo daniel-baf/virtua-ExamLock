@@ -1,0 +1,111 @@
+.toolbar {
+  backdrop-filter: blur(18px);
+  background: rgba(255, 255, 255, 0.03);
+  border-bottom: 1px solid var(--border-soft);
+  display: grid;
+  gap: 12px;
+  margin: 0 auto;
+  max-width: 100rem;
+  padding: 16px 20px;
+}
+
+.row {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  justify-content: space-between;
+}
+
+.search {
+  display: block;
+  flex: 1;
+  margin-bottom: 0;
+  min-width: 280px;
+}
+
+.searchInput,
+.selectInput {
+  background: var(--bg-input);
+  border: 1px solid var(--border-soft);
+  border-radius: 14px;
+  color: var(--text-main);
+  min-height: 44px;
+  outline: none;
+  padding: 0 14px;
+}
+
+.searchInput {
+  width: 100%;
+}
+
+.controls {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.select {
+  display: block;
+  margin-bottom: 0;
+}
+
+.toggleGroup {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.segmentedButton {
+  background: var(--bg-card);
+  border: 1px solid var(--border-soft);
+  border-radius: 999px;
+  color: var(--text-soft);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 700;
+  min-height: 40px;
+  padding: 0 12px;
+}
+
+.segmentedButtonActive {
+  background: var(--accent-soft);
+  border-color: rgba(56, 189, 248, 0.24);
+  color: var(--accent);
+}
+
+.actionButton {
+  border-radius: 14px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+  min-height: 44px;
+  padding: 0 14px;
+}
+
+.infoButton {
+  background: var(--accent-soft);
+  border: 1px solid rgba(56, 189, 248, 0.24);
+  color: var(--accent);
+}
+
+.neutralButton {
+  background: var(--bg-card);
+  border: 1px solid var(--border-soft);
+  color: var(--text-main);
+}
+
+.summary {
+  color: var(--text-soft);
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+@media (max-width: 640px) {
+  .toolbar {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+}

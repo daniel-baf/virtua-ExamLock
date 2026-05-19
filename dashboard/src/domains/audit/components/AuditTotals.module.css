@@ -1,0 +1,44 @@
+.totals {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.total {
+  padding: 18px;
+  text-align: center;
+}
+
+.value {
+  font-size: 28px;
+  font-weight: 800;
+}
+
+.label {
+  color: var(--text-soft);
+  font-size: 12px;
+  font-weight: 600;
+  margin-top: 4px;
+}
+
+.neutral {
+  color: var(--text-main);
+}
+
+.ok {
+  color: var(--success);
+}
+
+.danger {
+  color: var(--danger);
+}
+
+.warning {
+  color: var(--warning);
+}
+
+@media (min-width: 640px) {
+  .totals {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}

@@ -10,13 +10,15 @@ const {
   EXAM_USER,
   SERVER_URL,
   FIREBASE_API_KEY,
-  SCREENSHOT_INTERVAL_MS,
   LIVE_STREAM_INTERVAL_MS,
+  LIVE_STREAM_MAX_WIDTH,
+  LIVE_STREAM_MAX_HEIGHT,
 } = require('./config');
 
 // ── Config ────────────────────────────────────────────────────────────────────
 
 const BROWSER_PROCESS_PATTERN = '(chromium|chromium-browser|google-chrome)';
+const HEARTBEAT_INTERVAL_MS = 15_000;
 
 // ── State ─────────────────────────────────────────────────────────────────────
 
@@ -27,14 +29,18 @@ const state = {
   sessionCode: null,
   endsAt: null,
   socket: null,
+  streamConfig: {
+    intervalMs: LIVE_STREAM_INTERVAL_MS,
+    maxWidth: LIVE_STREAM_MAX_WIDTH,
+    maxHeight: LIVE_STREAM_MAX_HEIGHT,
+  },
 };
 
 let browserSeen = false;
 let closingSession = false;
 let screenshotInFlight = false;
-let initialScreenshotSent = false;
 let liveStreamTimer = null;
-let liveStreamViewer = null;
+let liveMonitorActive = false;
 
 // ── App ───────────────────────────────────────────────────────────────────────
 
@@ -168,6 +174,7 @@ try {
 // ── Socket connection ─────────────────────────────────────────────────────────
 
 function connectSocket(sessionCode) {
+  log('socket', 'connecting to server', SERVER_URL, 'sessionCode:', sessionCode);
   const socket = ioClient(SERVER_URL, {
     auth: { token: state.idToken },
     query: { sessionCode },
@@ -187,11 +194,28 @@ function connectSocket(sessionCode) {
     broadcast('state', { status: state.status, endsAt: state.endsAt });
   });
 
+  socket.on('connect_error', err => {
+    log('socket', 'connect_error:', err.message);
+  });
+
+  socket.io.on('reconnect_attempt', attempt => {
+    log('socket', 'reconnect_attempt:', attempt);
+  });
+
+  socket.io.on('reconnect_error', err => {
+    log('socket', 'reconnect_error:', err.message);
+  });
+
+  socket.io.on('reconnect_failed', () => {
+    log('socket', 'reconnect_failed');
+  });
+
   // Admitted: apply whitelist and redirect UI
-  socket.on('server:admitted', async ({ whitelist = [], blockInternet = false, endsAt = null }) => {
-    log('socket', 'server:admitted received', { whitelist, blockInternet });
+  socket.on('server:admitted', async ({ whitelist = [], blockInternet = false, endsAt = null, streamConfig = null }) => {
+    log('socket', 'server:admitted received', { whitelist, blockInternet, streamConfig });
     state.status = 'admitted';
     state.endsAt = endsAt ?? state.endsAt;
+    state.streamConfig = normalizeStreamConfig(streamConfig);
     try {
       await applyWhitelist(whitelist, blockInternet, true);
     } catch (err) {
@@ -204,7 +228,6 @@ function connectSocket(sessionCode) {
     broadcast('alert', { kind: 'whitelist-applied', text: alertText });
     log('socket', 'admitted broadcast sent');
     socket.emit('student:stream-ready');
-    sendInitialScreenshot();
   });
 
   // Whitelist update mid-exam
@@ -227,12 +250,12 @@ function connectSocket(sessionCode) {
     await sendScreenshot(requestId ?? `manual_${Date.now()}`);
   });
 
-  socket.on('server:stream-start', ({ viewerId }) => {
-    startLiveStream(viewerId);
+  socket.on('server:monitor-start', () => {
+    startLiveStream();
   });
 
-  socket.on('server:stream-stop', ({ viewerId }) => {
-    stopLiveStream(viewerId);
+  socket.on('server:monitor-stop', () => {
+    stopLiveStream();
   });
 
   // Message from teacher
@@ -263,7 +286,7 @@ function connectSocket(sessionCode) {
   // Heartbeat
   setInterval(() => {
     if (socket.connected) socket.emit('student:heartbeat');
-  }, 10_000);
+  }, HEARTBEAT_INTERVAL_MS);
 }
 
 async function sendScreenshot(requestId) {
@@ -289,21 +312,23 @@ async function sendScreenshot(requestId) {
 
 async function captureFrame() {
   if (!state.socket?.connected || state.status !== 'admitted') return;
-  if (!liveStreamViewer) return;
+  if (!liveMonitorActive) return;
   if (screenshotInFlight) return;
 
   screenshotInFlight = true;
   try {
-    const jpegB64 = capture();
-    state.socket.emit('student:stream-frame', {
-      viewerId: liveStreamViewer,
+    const jpegB64 = capture({
+      maxWidth: state.streamConfig.maxWidth,
+      maxHeight: state.streamConfig.maxHeight,
+      quality: 70,
+    });
+    state.socket.emit('student:monitor-frame', {
       jpegB64,
       takenAt: Date.now(),
     });
   } catch (err) {
     log('stream', 'ERROR:', err.message);
     state.socket.emit('student:stream-error', {
-      viewerId: liveStreamViewer,
       error: err.message,
     });
   } finally {
@@ -311,34 +336,33 @@ async function captureFrame() {
   }
 }
 
-function startLiveStream(viewerId) {
+function startLiveStream() {
   if (state.status !== 'admitted') return;
-  if (!viewerId) return;
+  if (liveMonitorActive) return;
 
-  liveStreamViewer = viewerId;
+  liveMonitorActive = true;
   if (liveStreamTimer) clearInterval(liveStreamTimer);
 
-  const interval = Number.isFinite(LIVE_STREAM_INTERVAL_MS) && LIVE_STREAM_INTERVAL_MS > 0
-    ? LIVE_STREAM_INTERVAL_MS
+  const interval = Number.isFinite(state.streamConfig.intervalMs) && state.streamConfig.intervalMs > 0
+    ? state.streamConfig.intervalMs
     : 1000;
 
-  log('stream', 'starting live stream for viewer', viewerId, 'interval:', interval);
-  state.socket.emit('student:stream-started', { viewerId });
+  log('stream', 'starting session live stream', 'interval:', interval, 'streamConfig:', state.streamConfig);
+  state.socket.emit('student:stream-started');
   captureFrame().catch(err => log('stream', 'initial frame ERROR:', err.message));
   liveStreamTimer = setInterval(() => {
     captureFrame().catch(err => log('stream', 'frame ERROR:', err.message));
   }, interval);
 }
 
-function stopLiveStream(viewerId = null) {
-  if (viewerId && liveStreamViewer && viewerId !== liveStreamViewer) return;
+function stopLiveStream() {
   if (liveStreamTimer) clearInterval(liveStreamTimer);
   liveStreamTimer = null;
-  if (liveStreamViewer && state.socket?.connected) {
-    state.socket.emit('student:stream-stopped', { viewerId: liveStreamViewer });
+  if (liveMonitorActive && state.socket?.connected) {
+    state.socket.emit('student:stream-stopped');
   }
-  if (liveStreamViewer) log('stream', 'stopped live stream for viewer', liveStreamViewer);
-  liveStreamViewer = null;
+  if (liveMonitorActive) log('stream', 'stopped session live stream');
+  liveMonitorActive = false;
 }
 
 async function closeSession(reason, { kill = true, killDelayMs = 2000 } = {}) {
@@ -381,25 +405,6 @@ function startBrowserWatchdog() {
   }, 2000);
 }
 
-function startPeriodicScreenshots() {
-  if (!Number.isFinite(SCREENSHOT_INTERVAL_MS) || SCREENSHOT_INTERVAL_MS <= 0) return;
-
-  setInterval(() => {
-    if (state.status !== 'admitted') return;
-    if (!state.socket?.connected) return;
-    sendScreenshot(`auto_${Date.now()}`).catch(err => log('screenshot', 'periodic ERROR:', err.message));
-  }, SCREENSHOT_INTERVAL_MS);
-}
-
-function sendInitialScreenshot() {
-  if (initialScreenshotSent) return;
-  initialScreenshotSent = true;
-  setTimeout(() => {
-    if (state.status !== 'admitted') return;
-    sendScreenshot(`login_${Date.now()}`).catch(err => log('screenshot', 'initial ERROR:', err.message));
-  }, 1500);
-}
-
 function killSession(delayMs) {
   setTimeout(() => {
     try {
@@ -408,9 +413,20 @@ function killSession(delayMs) {
   }, delayMs);
 }
 
+function normalizeStreamConfig(streamConfig) {
+  const intervalMs = Number(streamConfig?.intervalMs);
+  const maxWidth = Number(streamConfig?.maxWidth);
+  const maxHeight = Number(streamConfig?.maxHeight);
+
+  return {
+    intervalMs: Number.isFinite(intervalMs) && intervalMs > 0 ? intervalMs : LIVE_STREAM_INTERVAL_MS,
+    maxWidth: Number.isFinite(maxWidth) && maxWidth > 0 ? maxWidth : LIVE_STREAM_MAX_WIDTH,
+    maxHeight: Number.isFinite(maxHeight) && maxHeight > 0 ? maxHeight : LIVE_STREAM_MAX_HEIGHT,
+  };
+}
+
 // ── Start ─────────────────────────────────────────────────────────────────────
 
 startBrowserWatchdog();
-startPeriodicScreenshots();
 
 app.listen(7878, '127.0.0.1', () => log('daemon', 'listening on 127.0.0.1:7878'));

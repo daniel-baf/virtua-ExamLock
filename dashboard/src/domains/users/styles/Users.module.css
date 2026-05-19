@@ -1,0 +1,223 @@
+.pageShell {
+  color: var(--text-main);
+  min-height: 100vh;
+}
+
+.content {
+  margin: 0 auto;
+  max-width: 72rem;
+  padding: 32px 20px 64px;
+}
+
+.tableCard {
+  overflow: hidden;
+}
+
+.tableScroll {
+  overflow-x: auto;
+}
+
+.table {
+  border-collapse: collapse;
+  min-width: 880px;
+  width: 100%;
+}
+
+.table th,
+.table td {
+  border-bottom: 1px solid var(--border-soft);
+  padding: 16px 18px;
+  text-align: left;
+  vertical-align: middle;
+}
+
+.table th {
+  color: var(--text-soft);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.row:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.primary {
+  color: var(--text-main);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.secondary {
+  color: var(--text-soft);
+  font-size: 14px;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.badge {
+  border-radius: 999px;
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 5px 10px;
+}
+
+.badgeNeutral {
+  background: var(--bg-strong);
+  color: var(--text-soft);
+}
+
+.badgeInfo {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.badgeSuccess {
+  background: var(--success-soft);
+  color: var(--success);
+}
+
+.badgeWarning {
+  background: var(--warning-soft);
+  color: var(--warning);
+}
+
+.badgeDanger {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.dialogBackdrop {
+  align-items: center;
+  background: rgba(2, 6, 23, 0.72);
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  padding: 20px;
+  position: fixed;
+  z-index: 80;
+}
+
+.dialog {
+  box-shadow: var(--shadow-strong);
+  max-width: 34rem;
+  padding: 24px;
+  width: 100%;
+}
+
+.dialogHeader {
+  margin-bottom: 18px;
+}
+
+.dialogTitle {
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+
+.dialogCopy {
+  color: var(--text-soft);
+  font-size: 14px;
+  margin-top: 6px;
+}
+
+.form {
+  display: grid;
+  gap: 16px;
+}
+
+.formGrid {
+  display: grid;
+  gap: 16px;
+}
+
+.field {
+  display: grid;
+  gap: 8px;
+}
+
+.fieldLabel {
+  color: var(--text-soft);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.fieldHint {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.control {
+  appearance: none;
+  background: var(--bg-input);
+  border: 1px solid var(--border-soft);
+  border-radius: 16px;
+  color: var(--text-main);
+  min-height: 48px;
+  outline: none;
+  padding: 0 14px;
+  width: 100%;
+}
+
+.control::placeholder {
+  color: var(--text-muted);
+}
+
+.control:focus {
+  border-color: var(--accent-strong);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.controlSelect {
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--text-soft) 50%),
+    linear-gradient(135deg, var(--text-soft) 50%, transparent 50%);
+  background-position:
+    calc(100% - 22px) calc(50% - 3px),
+    calc(100% - 16px) calc(50% - 3px);
+  background-repeat: no-repeat;
+  background-size: 6px 6px, 6px 6px;
+  padding-right: 42px;
+}
+
+.controlSelect option {
+  background: var(--bg-input);
+  color: var(--text-main);
+}
+
+.formActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 4px;
+}
+
+.formError {
+  margin-bottom: 0;
+}
+
+.formActionButton {
+  min-width: 8.5rem;
+}
+
+@media (max-width: 720px) {
+  .dialog {
+    border-radius: 20px;
+    padding: 20px;
+  }
+
+  .formActions {
+    justify-content: stretch;
+  }
+
+  .formActionButton {
+    flex: 1;
+  }
+}

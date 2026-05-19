@@ -1,9 +1,15 @@
 #!/bin/bash
 # Grabs one frame from /dev/video0 via ffmpeg and POSTs it to the agent.
 
+set -euo pipefail
+
 AGENT_URL="${1:-http://localhost:7878}"
 DEVICE="${CAMERA_DEVICE:-/dev/video0}"
 TMP="/tmp/examlock_cam_$$.jpg"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+
+# shellcheck source=./lib/capture.sh
+source "$SCRIPT_DIR/lib/capture.sh"
 
 if ! command -v ffmpeg &>/dev/null; then
   echo "[proctor:camera] ffmpeg not found" >&2
@@ -23,10 +29,4 @@ if [ ! -f "$TMP" ]; then
   exit 1
 fi
 
-B64=$(base64 -w 0 "$TMP")
-rm -f "$TMP"
-
-curl -sf -X POST "$AGENT_URL/proctor/upload" \
-  -H "Content-Type: application/json" \
-  -d "{\"type\":\"camera\",\"imageBase64\":\"$B64\"}" \
-  > /dev/null || echo "[proctor:camera] upload failed" >&2
+upload_capture "$AGENT_URL" "camera" "$TMP" "proctor:camera"

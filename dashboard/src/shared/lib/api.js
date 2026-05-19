@@ -78,4 +78,8 @@ export const api = {
   createUser:  (body)      => req('POST',   '/api/users', body),
   updateUser:  (uid, body) => req('PATCH',  `/api/users/${uid}`, body),
   deleteUser:  (uid)       => req('DELETE', `/api/users/${uid}`),
+
+  // Admin monitoring settings
+  getMonitoringSettings: () => req('GET', '/api/admin/monitoring-settings'),
+  updateMonitoringSettings: (body) => req('PATCH', '/api/admin/monitoring-settings', body),
 };
