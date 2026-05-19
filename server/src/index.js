@@ -6,12 +6,10 @@ const { createApp } = require('./app/http/createApp');
 const { createSocketServer } = require('./app/socket/createSocketServer');
 
 const allowedOrigins = getAllowedOrigins();
-const httpServer = http.createServer();
+const app = createApp({ io: null, allowedOrigins });
+const httpServer = http.createServer(app);
 const io = createSocketServer(httpServer, allowedOrigins);
-const app = createApp({ io, allowedOrigins });
-
-httpServer.removeAllListeners('request');
-httpServer.on('request', app);
+app.set('io', io);
 
 const PORT = process.env.PORT ?? 8080;
 httpServer.listen(PORT, () => console.log(`server listening on :${PORT}`));

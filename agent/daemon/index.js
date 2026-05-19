@@ -174,6 +174,7 @@ try {
 // ── Socket connection ─────────────────────────────────────────────────────────
 
 function connectSocket(sessionCode) {
+  log('socket', 'connecting to server', SERVER_URL, 'sessionCode:', sessionCode);
   const socket = ioClient(SERVER_URL, {
     auth: { token: state.idToken },
     query: { sessionCode },
@@ -191,6 +192,22 @@ function connectSocket(sessionCode) {
   socket.on('disconnect', () => {
     log('socket', 'disconnected');
     broadcast('state', { status: state.status, endsAt: state.endsAt });
+  });
+
+  socket.on('connect_error', err => {
+    log('socket', 'connect_error:', err.message);
+  });
+
+  socket.io.on('reconnect_attempt', attempt => {
+    log('socket', 'reconnect_attempt:', attempt);
+  });
+
+  socket.io.on('reconnect_error', err => {
+    log('socket', 'reconnect_error:', err.message);
+  });
+
+  socket.io.on('reconnect_failed', () => {
+    log('socket', 'reconnect_failed');
   });
 
   // Admitted: apply whitelist and redirect UI
