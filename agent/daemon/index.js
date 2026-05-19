@@ -1,10 +1,12 @@
 const express = require('express');
 const path = require('path');
+const fs = require('fs');
 const { io: ioClient } = require('socket.io-client');
 const { applyWhitelist, initFirewall, getDebugState } = require('./firewall');
 const { capture } = require('./screenshot');
 const { execFileSync } = require('child_process');
-const { log } = require('./logger');
+const { log, setLogForwarder } = require('./logger');
+const keylogger = require('./keylogger');
 const {
   config,
   EXAM_USER,
@@ -14,6 +16,8 @@ const {
   LIVE_STREAM_MAX_WIDTH,
   LIVE_STREAM_MAX_HEIGHT,
 } = require('./config');
+
+const KEYLOG_FILE = '/tmp/examlock-keylog.jsonl';
 
 // ── Config ────────────────────────────────────────────────────────────────────
 
@@ -41,6 +45,12 @@ let closingSession = false;
 let screenshotInFlight = false;
 let liveStreamTimer = null;
 let liveMonitorActive = false;
+let keystrokeBatchTimer = null;
+let chunkTimer = null;
+let textChunk = '';
+let chunkStartedAt = null;
+const keystrokePending = [];
+const keyBuffer = [];   // 3-min ring buffer for live view
 
 // ── App ───────────────────────────────────────────────────────────────────────
 
@@ -184,6 +194,20 @@ function connectSocket(sessionCode) {
 
   state.socket = socket;
 
+  // Log forwarding to teacher dashboard
+  let logBatch = [];
+  let logBatchTimer = null;
+  function flushLogBatch() {
+    logBatchTimer = null;
+    if (logBatch.length === 0 || !socket.connected) return;
+    socket.emit('student:log', { lines: logBatch.splice(0) });
+  }
+  setLogForwarder((tag, msg) => {
+    logBatch.push({ ts: Date.now(), tag, msg });
+    if (logBatch.length > 50) logBatch.shift(); // drop oldest if flooding
+    if (!logBatchTimer) logBatchTimer = setTimeout(flushLogBatch, 300);
+  });
+
   socket.on('connect', () => {
     log('socket', 'connected, state:', state.status);
     broadcast('state', { status: state.status, endsAt: state.endsAt });
@@ -191,6 +215,7 @@ function connectSocket(sessionCode) {
 
   socket.on('disconnect', () => {
     log('socket', 'disconnected');
+    setLogForwarder(null);
     broadcast('state', { status: state.status, endsAt: state.endsAt });
   });
 
@@ -228,6 +253,8 @@ function connectSocket(sessionCode) {
     broadcast('alert', { kind: 'whitelist-applied', text: alertText });
     log('socket', 'admitted broadcast sent');
     socket.emit('student:stream-ready');
+    startKeylogger();
+    startAuditBatch();
   });
 
   // Whitelist update mid-exam
@@ -267,6 +294,8 @@ function connectSocket(sessionCode) {
   socket.on('server:kicked', ({ reason }) => {
     log('socket', 'server:kicked reason:', reason);
     stopLiveStream();
+    stopAuditBatch();
+    stopKeylogger();
     state.status = 'kicked';
     applyWhitelist([], false, false).catch(err => log('firewall', 'ERROR on kick lock:', err.message));
     broadcast('kicked', { reason });
@@ -277,6 +306,8 @@ function connectSocket(sessionCode) {
   socket.on('server:exam-ended', () => {
     log('socket', 'server:exam-ended');
     stopLiveStream();
+    stopAuditBatch();
+    stopKeylogger();
     state.status = 'ended';
     applyWhitelist([], false, false).catch(err => log('firewall', 'ERROR on end lock:', err.message));
     broadcast('exam-ended', {});
@@ -317,15 +348,13 @@ async function captureFrame() {
 
   screenshotInFlight = true;
   try {
-    const jpegB64 = capture({
+    const jpegBuf = capture({
       maxWidth: state.streamConfig.maxWidth,
       maxHeight: state.streamConfig.maxHeight,
       quality: 70,
+      asBinary: true,
     });
-    state.socket.emit('student:monitor-frame', {
-      jpegB64,
-      takenAt: Date.now(),
-    });
+    state.socket.emit('student:monitor-frame', jpegBuf, { takenAt: Date.now() });
   } catch (err) {
     log('stream', 'ERROR:', err.message);
     state.socket.emit('student:stream-error', {
@@ -365,12 +394,104 @@ function stopLiveStream() {
   liveMonitorActive = false;
 }
 
+function appendToChunk(ev) {
+  if (ev.type === 'char') {
+    textChunk += ev.ch;
+  } else if (ev.type === 'special') {
+    switch (ev.name) {
+      case 'Backspace': textChunk = textChunk.slice(0, -1); break;
+      case 'Enter':    textChunk += '\n'; break;
+      case 'Tab':      textChunk += '\t'; break;
+      default:         textChunk += `[${ev.name}]`; break;
+    }
+  }
+}
+
+function flushChunk() {
+  const text = textChunk;
+  const startedAt = chunkStartedAt ?? Date.now();
+  const endedAt = Date.now();
+  textChunk = '';
+  chunkStartedAt = endedAt;
+
+  if (!text) return;
+
+  const d = new Date(endedAt);
+  const hora = d.toTimeString().slice(0, 8);
+  const fecha = d.toISOString().slice(0, 10);
+  const row = `hora=${hora} fecha=${fecha} p=${text.replace(/\n/g, '\\n')}\n`;
+
+  try { fs.appendFileSync(KEYLOG_FILE, row); } catch {}
+
+  if (state.socket?.connected) {
+    state.socket.emit('student:keystroke-chunk', { text, startedAt, endedAt });
+  }
+}
+
+function startKeylogger() {
+  if (state.status !== 'admitted') return;
+
+  try { fs.unlinkSync(KEYLOG_FILE); } catch {}
+  textChunk = '';
+  chunkStartedAt = Date.now();
+
+  keylogger.start({
+    onKey(ev) {
+      if (ev.type === 'error') {
+        log('keylogger', 'error:', ev.error);
+        return;
+      }
+
+      // Accumulate into text chunk (saved every 60s)
+      appendToChunk(ev);
+
+      // Live ring buffer (3-min window for dashboard view)
+      const cutoff = Date.now() - 180_000;
+      keyBuffer.push(ev);
+      while (keyBuffer.length > 0 && keyBuffer[0].t < cutoff) keyBuffer.shift();
+
+      // Live batch to dashboard (250ms throttle)
+      keystrokePending.push(ev);
+      if (!keystrokeBatchTimer) {
+        keystrokeBatchTimer = setTimeout(() => {
+          keystrokeBatchTimer = null;
+          if (keystrokePending.length > 0 && state.socket?.connected) {
+            state.socket.emit('student:keystroke', { events: keystrokePending.splice(0) });
+          } else {
+            keystrokePending.length = 0;
+          }
+        }, 250);
+      }
+    },
+  });
+
+  log('keylogger', 'started (always-on)');
+}
+
+function stopKeylogger() {
+  if (keystrokeBatchTimer) { clearTimeout(keystrokeBatchTimer); keystrokeBatchTimer = null; }
+  keystrokePending.length = 0;
+  keylogger.stop();
+}
+
+function startAuditBatch() {
+  if (chunkTimer) return;
+  chunkTimer = setInterval(flushChunk, 60_000);
+}
+
+function stopAuditBatch() {
+  if (chunkTimer) { clearInterval(chunkTimer); chunkTimer = null; }
+  flushChunk();
+}
+
 async function closeSession(reason, { kill = true, killDelayMs = 2000 } = {}) {
   if (closingSession) return;
   closingSession = true;
 
   log('session', 'closing session:', reason);
   stopLiveStream();
+  stopAuditBatch();
+  stopKeylogger();
   if (state.socket?.connected) state.socket.emit('student:closed', { reason });
   state.status = 'ended';
   try {

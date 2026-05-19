@@ -218,11 +218,14 @@ async function getSessionAudit(sessionId, teacherId) {
     };
   });
 
+  const sessionData = sessionDoc.data();
   return {
     session: {
-      name: sessionDoc.data().name,
-      startedAt: sessionDoc.data().startedAt,
-      endsAt: sessionDoc.data().endsAt,
+      name: sessionData.name,
+      startedAt: sessionData.startedAt,
+      endsAt: sessionData.endsAt,
+      allowedDomains: normalizeWhitelist(sessionData.whitelist ?? []),
+      blockInternet: sessionData.blockInternet ?? true,
     },
     totals: {
       registered: students.length,

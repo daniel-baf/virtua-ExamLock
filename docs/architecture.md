@@ -26,8 +26,8 @@ graph TB
 
     subgraph ALUMNO["Máquina del alumno"]
         DAEMON["agent/daemon\n127.0.0.1:7878"]
-        BROWSER["Chromium kiosk\nlocalhost:7878"]
-        CAGE["Cage (Wayland)"]
+        BROWSER["Chromium\nlocalhost:7878"]
+        SESSION["XFCE launcher o Cage"]
     end
 
     TEACHER["Docente\nNavegador"]
@@ -41,7 +41,7 @@ graph TB
     DAEMON -->|REST + Socket.io\nHTTPS| SERVER
     DAEMON -->|Firebase REST API| FB
 
-    CAGE --> BROWSER
+    SESSION --> BROWSER
 ```
 
 ---
@@ -182,11 +182,12 @@ graph LR
     classDef lab fill:#047857,color:#fff
 ```
 
-### ISO (kiosk dedicado)
+### ISO (live de escritorio)
 - Debian live, construido con `live-build` dentro de Docker
 - Agente bakeado en `/opt/examlock/`, arranca como servicio systemd
-- Cage (Wayland) + Chromium kiosk apuntando a `localhost:7878`
-- `examuser` sin contraseña, autologin
+- XFCE + launcher de Chromium apuntando a `localhost:7878`
+- Diagnóstico gráfico local para detectar arranques degradados (`800x600`)
+- `examuser` sin contraseña, autologin y acceso al escritorio
 
 ### BYOD (VM del alumno)
 - Ubuntu 22.04 importada como `.ova` en VirtualBox

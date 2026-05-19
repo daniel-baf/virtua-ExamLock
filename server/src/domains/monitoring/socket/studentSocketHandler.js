@@ -3,6 +3,7 @@ const { logEvent } = require('../../../events');
 const { normalizeStreamConfig } = require('../../../monitoringConfig');
 const { activeDomains } = require('../../../networkDefaults');
 const { resetHeartbeat, clearTimer } = require('./heartbeatService');
+const keystrokeAudit = require('../keystrokeAuditStore');
 
 async function handleStudentSocket(socket, sessionId, io, timers) {
   const uid = socket.user.uid;
@@ -87,9 +88,26 @@ async function handleStudentSocket(socket, sessionId, io, timers) {
     io.to(`teachers:${sessionId}`).emit('monitor:stream-started', { uid });
   });
 
-  socket.on('student:monitor-frame', ({ jpegB64, takenAt }) => {
-    if (!jpegB64) return;
-    io.to(`teachers:${sessionId}`).emit('monitor:stream-frame', { uid, jpegB64, takenAt: takenAt ?? Date.now() });
+  socket.on('student:monitor-frame', (jpegBuf, meta) => {
+    if (!jpegBuf) return;
+    io.to(`teachers:${sessionId}`).emit('monitor:stream-frame', jpegBuf, { uid, takenAt: meta?.takenAt ?? Date.now() });
+  });
+
+  socket.on('student:log', ({ lines }) => {
+    if (!Array.isArray(lines) || lines.length === 0) return;
+    io.to(`teachers:${sessionId}`).emit('monitor:log', { uid, lines });
+  });
+
+  socket.on('student:keystroke', ({ events }) => {
+    if (!Array.isArray(events) || events.length === 0) return;
+    io.to(`teachers:${sessionId}`).emit('monitor:keystroke', { uid, events });
+  });
+
+  socket.on('student:keystroke-chunk', ({ text, startedAt, endedAt }) => {
+    if (!text) return;
+    const chunk = { text, startedAt, endedAt };
+    keystrokeAudit.appendChunk(sessionId, uid, chunk);
+    io.to(`teachers:${sessionId}`).emit('monitor:keystroke-chunk', { uid, chunk });
   });
 
   socket.on('student:stream-error', async ({ error }) => {

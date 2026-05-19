@@ -14,6 +14,9 @@ import {
   setWhitelist,
 } from '@monitoring/services/monitoringService';
 import { activeDomainCount, mergeDomainLists, normalizeDomainList } from '@sessions';
+import { auth } from '@shared/lib/firebase';
+
+const SERVER_URL = import.meta.env.VITE_SERVER_URL ?? '';
 
 export default function useMonitorSession(sessionId) {
   const [students, setStudents] = useState({});
@@ -40,6 +43,7 @@ export default function useMonitorSession(sessionId) {
   const socketRef = useRef(null);
   const historyTargetRef = useRef(null);
   const studentsRef = useRef({});
+  const liveFrameUrlsRef = useRef({});
 
   const patch = useCallback((uid, data) => {
     setStudents(prev => {
@@ -119,12 +123,43 @@ export default function useMonitorSession(sessionId) {
       socket.on('monitor:stream-started', ({ uid }) => {
         patch(uid, { streamStatus: 'live', streamError: null });
       });
-      socket.on('monitor:stream-frame', ({ uid, jpegB64, takenAt }) => {
-        patch(uid, {
-          liveFrame: `data:image/jpeg;base64,${jpegB64}`,
-          liveTakenAt: takenAt ?? Date.now(),
-          streamStatus: 'live',
-          streamError: null,
+      socket.on('monitor:stream-frame', (jpegBuf, meta) => {
+        const { uid, takenAt } = meta ?? {};
+        if (!uid || !jpegBuf) return;
+        const blob = new Blob([jpegBuf], { type: 'image/jpeg' });
+        const url = URL.createObjectURL(blob);
+        if (liveFrameUrlsRef.current[uid]) URL.revokeObjectURL(liveFrameUrlsRef.current[uid]);
+        liveFrameUrlsRef.current[uid] = url;
+        patch(uid, { liveFrame: url, liveTakenAt: takenAt ?? Date.now(), streamStatus: 'live', streamError: null });
+      });
+      socket.on('monitor:keystroke', ({ uid, events }) => {
+        setStudents(prev => {
+          const student = prev[uid] ?? { uid };
+          const existing = student.keystrokes ?? [];
+          const cutoff = Date.now() - 180_000;
+          const merged = [...existing, ...events].filter(ev => ev.t >= cutoff);
+          const next = { ...prev, [uid]: { ...student, keystrokes: merged } };
+          studentsRef.current = next;
+          return next;
+        });
+      });
+      socket.on('monitor:keystroke-chunk', ({ uid, chunk }) => {
+        setStudents(prev => {
+          const student = prev[uid] ?? { uid };
+          const existing = student.keystrokeChunks ?? [];
+          const next = { ...prev, [uid]: { ...student, keystrokeChunks: [...existing, chunk] } };
+          studentsRef.current = next;
+          return next;
+        });
+      });
+      socket.on('monitor:log', ({ uid, lines }) => {
+        setStudents(prev => {
+          const student = prev[uid] ?? { uid };
+          const existing = student.daemonLogs ?? [];
+          const merged = [...existing, ...lines].slice(-300);
+          const next = { ...prev, [uid]: { ...student, daemonLogs: merged } };
+          studentsRef.current = next;
+          return next;
         });
       });
       socket.on('monitor:stream-error', ({ uid, error }) => {
@@ -167,6 +202,8 @@ export default function useMonitorSession(sessionId) {
     return () => {
       cancelled = true;
       disconnectSocket();
+      Object.values(liveFrameUrlsRef.current).forEach(url => URL.revokeObjectURL(url));
+      liveFrameUrlsRef.current = {};
     };
   }, [sessionId, patch, pushAlert]);
 
@@ -244,6 +281,21 @@ export default function useMonitorSession(sessionId) {
 
   function closeLive() {
     setLiveTargetUid(null);
+  }
+
+  async function downloadAudit() {
+    const token = await auth.currentUser?.getIdToken();
+    const res = await fetch(`${SERVER_URL}/api/session/${sessionId}/audit?download=1`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) throw new Error('download_failed');
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `audit-${sessionId}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
   }
 
   async function sendMessage() {
@@ -325,6 +377,7 @@ export default function useMonitorSession(sessionId) {
     closeHistory,
     openLive,
     closeLive,
+    downloadAudit,
     acknowledgeAlert,
     sendMessage,
     applyWhitelist,

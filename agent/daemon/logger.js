@@ -5,12 +5,18 @@ try { fs.mkdirSync('/var/log/examlock', { recursive: true }); fs.chmodSync('/var
 const stream = fs.createWriteStream(LOG_PATH, { flags: 'a', mode: 0o644 });
 try { fs.chmodSync(LOG_PATH, 0o644); } catch {}
 
-function log(tag, ...args) {
-  const line = `[${new Date().toISOString()}] [${tag}] ${args.map(a =>
-    typeof a === 'string' ? a : JSON.stringify(a)
-  ).join(' ')}\n`;
-  stream.write(line);
-  process.stdout.write(line);
+let _forwarder = null;
+
+function setLogForwarder(fn) {
+  _forwarder = fn;
 }
 
-module.exports = { log };
+function log(tag, ...args) {
+  const msg = args.map(a => typeof a === 'string' ? a : JSON.stringify(a)).join(' ');
+  const line = `[${new Date().toISOString()}] [${tag}] ${msg}\n`;
+  stream.write(line);
+  process.stdout.write(line);
+  if (_forwarder) _forwarder(tag, msg);
+}
+
+module.exports = { log, setLogForwarder };

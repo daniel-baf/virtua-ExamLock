@@ -112,8 +112,9 @@ EOF
   lb config \
     --distribution bookworm \
     --archive-areas "main contrib non-free non-free-firmware" \
+    --backports true \
     --binary-images iso-hybrid \
-    --bootappend-live "boot=live components quiet splash hostname=examlock live-config.noroot" \
+    --bootappend-live "boot=live components quiet splash hostname=examlock live-config.noroot modprobe.blacklist=nouveau nvidia-drm.modeset=1" \
     --debian-installer none \
     --memtest none
 

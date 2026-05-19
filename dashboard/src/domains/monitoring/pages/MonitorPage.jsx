@@ -86,9 +86,9 @@ export default function MonitorPage() {
       {monitor.examEnded && (
         <div className={styles.endedBanner}>
           Examen terminado.{' '}
-          <button onClick={() => navigate(`/session/${sessionId}/audit`)}>
-            Ver auditoria
-          </button>
+          <button onClick={() => navigate(`/session/${sessionId}/audit`)}>Ver auditoria</button>
+          {' · '}
+          <button onClick={monitor.downloadAudit}>Descargar auditoria (JSON)</button>
         </div>
       )}
 

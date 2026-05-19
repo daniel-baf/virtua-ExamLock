@@ -96,6 +96,13 @@ Los perfiles usan listas en `iso/package-lists/`:
 - `examlock-full.list.chroot`
 - `examlock-dev.list.chroot`
 
+Ambos perfiles incluyen un kit mínimo para exámenes de programación:
+
+- Python 3 con alias `python`, `pip`, `venv`, `pytest`, `requests`, `flask` e IDLE.
+- Node.js 20, instalado por el hook `9000-examlock.hook.chroot`.
+- SQLite por consola y DB Browser for SQLite.
+- Geany, Nano, Git, `build-essential` y utilidades como `jq`, `ripgrep`, `tree`, `zip` y `unzip`.
+
 ## Boot de la ISO
 
 ```mermaid
@@ -106,8 +113,8 @@ flowchart TD
     Systemd --> Firewall["examlock firewall\nnftables/iptables"]
     Systemd --> Daemon["examlock-daemon\nnode /opt/examlock/daemon/index.js"]
     Systemd --> Login["autologin examuser"]
-    Login --> Cage["Cage / Wayland"]
-    Cage --> Chromium["Chromium kiosk\nhttp://127.0.0.1:7878"]
+    Login --> XFCE["XFCE autostart"]
+    XFCE --> Chromium["Chromium\nhttp://127.0.0.1:7878"]
     Chromium --> UI["Login / exam / ended"]
 ```
 
@@ -144,4 +151,3 @@ También sirve una herramienta gráfica como balenaEtcher.
 | `iso/build.log` | Sí | Log del build más reciente. |
 | `iso/examlock-dev.iso` | Sí | ISO dev. |
 | `iso/examlock-live.iso` | Sí | ISO full. |
-
