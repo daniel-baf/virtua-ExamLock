@@ -31,6 +31,48 @@ const SPECIAL_KEYSYM_NAMES = {
   space: ' ',
 };
 
+const PRINTABLE_KEYSYM_CHARS = {
+  period: '.',
+  comma: ',',
+  semicolon: ';',
+  colon: ':',
+  slash: '/',
+  question: '?',
+  apostrophe: '\'',
+  quotedbl: '"',
+  grave: '`',
+  asciitilde: '~',
+  minus: '-',
+  underscore: '_',
+  equal: '=',
+  plus: '+',
+  exclam: '!',
+  at: '@',
+  numbersign: '#',
+  dollar: '$',
+  percent: '%',
+  asciicircum: '^',
+  ampersand: '&',
+  asterisk: '*',
+  parenleft: '(',
+  parenright: ')',
+  bracketleft: '[',
+  bracketright: ']',
+  braceleft: '{',
+  braceright: '}',
+  backslash: '\\',
+  bar: '|',
+  less: '<',
+  greater: '>',
+  KP_Decimal: '.',
+  KP_Divide: '/',
+  KP_Multiply: '*',
+  KP_Subtract: '-',
+  KP_Add: '+',
+  KP_Space: ' ',
+  KP_Equal: '=',
+};
+
 // Static fallback for common US QWERTY keycodes (when xmodmap fails)
 const STATIC_KEYMAP = new Map([
   [10,'1'],[11,'2'],[12,'3'],[13,'4'],[14,'5'],[15,'6'],[16,'7'],[17,'8'],[18,'9'],[19,'0'],
@@ -103,6 +145,7 @@ function loadKeymap() {
 function symToChar(sym) {
   if (!sym || sym === 'NoSymbol') return null;
   if (sym.length === 1) return sym;
+  if (sym in PRINTABLE_KEYSYM_CHARS) return PRINTABLE_KEYSYM_CHARS[sym];
   if (/^U[0-9A-Fa-f]{4,}$/.test(sym)) return String.fromCodePoint(parseInt(sym.slice(1), 16));
   return null;
 }

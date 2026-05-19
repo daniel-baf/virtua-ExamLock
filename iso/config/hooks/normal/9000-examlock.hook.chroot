@@ -11,14 +11,186 @@ apt-get install -y nodejs
 systemctl enable examlock-daemon.service
 systemctl enable nftables.service
 
-# XFCE autostart: launch Chromium in a normal window pointing to daemon
+# Display diagnostics + launcher scripts
+mkdir -p /usr/local/bin /usr/local/share/examlock /etc/X11/xorg.conf.d
+
+cat > /usr/local/bin/examlock-display-diagnostics <<'EOF'
+#!/bin/bash
+set -u
+
+OUT="/var/log/examlock-display.log"
+mkdir -p "$(dirname "$OUT")"
+
+{
+  echo "=== examlock display diagnostics ==="
+  date -Is
+  echo
+  echo "--- /proc/cmdline ---"
+  cat /proc/cmdline 2>/dev/null || true
+  echo
+  echo "--- xrandr --verbose ---"
+  xrandr --verbose 2>&1 || true
+  echo
+  echo "--- lspci -k ---"
+  lspci -k 2>&1 || true
+  echo
+  echo "--- lsmod ---"
+  lsmod 2>&1 || true
+  echo
+  echo "--- /sys/class/drm ---"
+  ls -la /sys/class/drm 2>&1 || true
+  echo
+  echo "--- fb0 modes ---"
+  cat /sys/class/graphics/fb0/modes 2>&1 || true
+  echo
+  echo "--- dmesg (drm/nouveau/edid) ---"
+  dmesg 2>&1 | grep -iE "drm|nouveau|edid|fbdev|vesa|modeset|nvidia" || true
+  echo
+  echo "--- Xorg.0.log (EE/WW/display) ---"
+  grep -iE "(EE|WW|nouveau|drm|EDID|fbdev|vesa|modeset|nvidia)" /var/log/Xorg.0.log 2>&1 || true
+} > "$OUT"
+EOF
+chmod 755 /usr/local/bin/examlock-display-diagnostics
+
+cat > /usr/local/share/examlock/display-error.html <<'EOF'
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ExamLock - Modo grafico degradado</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(180deg, #0b1020 0%, #111827 100%);
+      color: #e5e7eb;
+      font-family: system-ui, sans-serif;
+      padding: 2rem;
+    }
+    main {
+      width: min(760px, 100%);
+      background: rgba(17, 24, 39, 0.92);
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      border-radius: 20px;
+      padding: 2rem;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+    }
+    h1 { margin: 0 0 1rem; font-size: 2rem; }
+    p { line-height: 1.55; color: #cbd5e1; }
+    .code {
+      margin-top: 1.5rem;
+      padding: 1rem;
+      border-radius: 12px;
+      background: #020617;
+      border: 1px solid rgba(148, 163, 184, 0.18);
+      font-family: monospace;
+      color: #93c5fd;
+      overflow-wrap: anywhere;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>ExamLock no pudo iniciar en modo grafico valido</h1>
+    <p>El sistema live detecto un modo de video degradado. La sesion de examen no se abrira porque la pantalla quedaria inutilizable.</p>
+    <p>Reinicia el equipo o cambia el modo de arranque. Si necesitas soporte, comparte el archivo de diagnostico mostrado abajo.</p>
+    <div class="code">/var/log/examlock-display.log</div>
+  </main>
+</body>
+</html>
+EOF
+
+cat > /usr/local/bin/examlock-launcher <<'EOF'
+#!/bin/bash
+set -euo pipefail
+
+URL="http://127.0.0.1:7878"
+ERROR_PAGE="file:///usr/local/share/examlock/display-error.html"
+STATE_FILE="/tmp/examlock-display-state"
+
+wait_for_daemon() {
+  for _ in $(seq 1 60); do
+    if curl -sf "$URL/api/state" >/dev/null 2>&1; then
+      return 0
+    fi
+    sleep 0.5
+  done
+  return 1
+}
+
+is_degraded_display() {
+  local xrandr_out
+  xrandr_out="$(xrandr 2>&1 || true)"
+  printf '%s\n' "$xrandr_out" > "$STATE_FILE"
+
+  if grep -qE '^default connected' "$STATE_FILE"; then
+    if grep -q 'current 800 x 600' "$STATE_FILE" || grep -q 'current 800x600' "$STATE_FILE"; then
+      return 0
+    fi
+    if grep -q '800x600' "$STATE_FILE" && ! grep -qE 'eDP-|HDMI-|DP-|LVDS-' "$STATE_FILE"; then
+      return 0
+    fi
+  fi
+
+  return 1
+}
+
+/usr/local/bin/examlock-display-diagnostics || true
+
+TARGET="$URL"
+if is_degraded_display; then
+  TARGET="$ERROR_PAGE"
+else
+  wait_for_daemon || true
+fi
+
+exec chromium \
+  --start-maximized \
+  --force-device-scale-factor=1 \
+  --noerrdialogs \
+  --disable-pinch \
+  --no-first-run \
+  --disable-features=TranslateUI \
+  --disable-background-networking \
+  --disable-background-mode \
+  --disable-sync \
+  --no-default-browser-check \
+  "$TARGET"
+EOF
+chmod 755 /usr/local/bin/examlock-launcher
+
+cat > /etc/X11/xorg.conf.d/20-examlock-modesetting.conf <<'EOF'
+Section "OutputClass"
+  Identifier "ExamLock Intel Modesetting"
+  MatchDriver "i915"
+  Driver "modesetting"
+EndSection
+
+Section "OutputClass"
+  Identifier "ExamLock AMD Modesetting"
+  MatchDriver "amdgpu"
+  Driver "modesetting"
+EndSection
+
+Section "OutputClass"
+  Identifier "ExamLock Nouveau Modesetting"
+  MatchDriver "nouveau"
+  Driver "modesetting"
+EndSection
+EOF
+
+# XFCE autostart: launch ExamLock through a dedicated launcher
 # /etc/xdg/autostart applies to all users — no dependency on home dir
 mkdir -p /etc/xdg/autostart
 cat > /etc/xdg/autostart/examlock.desktop <<'EOF'
 [Desktop Entry]
 Type=Application
 Name=ExamLock
-Exec=bash -c "until curl -sf http://127.0.0.1:7878/api/state >/dev/null 2>&1; do sleep 0.5; done; chromium --noerrdialogs --disable-pinch --no-first-run --disable-features=TranslateUI --disable-background-networking --disable-background-mode --disable-sync --no-default-browser-check --window-size=1280,800 --window-position=40,40 http://127.0.0.1:7878"
+Exec=/usr/local/bin/examlock-launcher
 Hidden=false
 NoDisplay=false
 X-GNOME-Autostart-enabled=true
