@@ -1,5 +1,6 @@
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '@auth';
+import { AlertBanner, EmptyState } from '@shared/ui';
 import {
   AttentionAlerts,
   ClosedStudentRow,
@@ -51,7 +52,7 @@ export default function MonitorPage() {
         onEndExam={monitor.endExam}
       />
 
-      {monitor.sessionError && <div className={styles.alert}>{monitor.sessionError}</div>}
+      {monitor.sessionError && <AlertBanner className={styles.alert}>{monitor.sessionError}</AlertBanner>}
 
       <AttentionAlerts
         alerts={monitor.alerts}
@@ -110,7 +111,11 @@ export default function MonitorPage() {
 
       <main className={styles.main}>
         {visibleStudents.length === 0 ? (
-          <div className={styles.empty}>No hay alumnos para los filtros actuales.</div>
+          <EmptyState
+            className={styles.empty}
+            title="Sin alumnos para los filtros actuales."
+            description="Ajusta la busqueda, el filtro o la pestaña para ver resultados."
+          />
         ) : preferences.tab === 'kicked' && preferences.closedView === 'list' ? (
           <div className={styles.closedList}>
             {visibleStudents.map(student => (

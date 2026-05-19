@@ -1,15 +1,16 @@
-import styles from '@users/styles/Users.module.css';
+import Button from '@shared/ui/Button';
+import PageSection from '@shared/ui/PageSection';
 
 export default function UsersToolbar({ onCreate }) {
   return (
-    <div className={styles.sectionTitle}>
-      <div>
-        <h2>Usuarios</h2>
-        <p className={styles.sectionCopy}>Gestiona cuentas de administrador, profesor y alumno.</p>
-      </div>
-      <button type="button" onClick={onCreate} className="btn btn-primary">
-        Crear usuario
-      </button>
-    </div>
+    <PageSection
+      title="Usuarios"
+      subtitle="Gestiona cuentas de administrador, profesor y alumno."
+      actions={(
+        <Button type="button" onClick={onCreate} variant="primary">
+          Crear usuario
+        </Button>
+      )}
+    />
   );
 }

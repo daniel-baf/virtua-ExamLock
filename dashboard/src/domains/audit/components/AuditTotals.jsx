@@ -1,3 +1,6 @@
+import CardPanel from '@shared/ui/CardPanel';
+import styles from './AuditTotals.module.css';
+
 const TOTALS = [
   ['Registrados', 'registered', 'neutral'],
   ['Admitidos', 'admitted', 'ok'],
@@ -7,12 +10,12 @@ const TOTALS = [
 
 export default function AuditTotals({ totals }) {
   return (
-    <div className="audit-totals">
+    <div className={styles.totals}>
       {TOTALS.map(([label, key, tone]) => (
-        <div key={key} className="audit-total">
-          <p className={`audit-total__value audit-total--${tone}`}>{totals[key]}</p>
-          <p className="audit-total__label">{label}</p>
-        </div>
+        <CardPanel key={key} className={styles.total}>
+          <p className={`${styles.value} ${styles[tone]}`}>{totals[key]}</p>
+          <p className={styles.label}>{label}</p>
+        </CardPanel>
       ))}
     </div>
   );

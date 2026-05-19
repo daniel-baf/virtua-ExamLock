@@ -1,6 +1,6 @@
-import { Link } from 'react-router-dom';
-import { formatStreamConfig } from '../streamConfigModel';
-import SessionWhitelistTable from './SessionWhitelistTable';
+import Button from '@shared/ui/Button';
+import { formatStreamConfig } from '@sessions/streamConfigModel';
+import SessionWhitelistTable from '@sessions/components/SessionWhitelistTable';
 import styles from './SessionCard.module.css';
 
 export default function SessionCard({ session }) {
@@ -24,12 +24,12 @@ export default function SessionCard({ session }) {
         </div>
 
         <div className={styles.actions}>
-          <Link to={`/session/${session.sessionId}/monitor`} className="link-btn">
+          <Button to={`/session/${session.sessionId}/monitor`} variant="ghost">
             Monitor
-          </Link>
-          <Link to={`/session/${session.sessionId}/audit`} className="link-btn">
+          </Button>
+          <Button to={`/session/${session.sessionId}/audit`} variant="ghost">
             Auditoria
-          </Link>
+          </Button>
         </div>
       </div>
 

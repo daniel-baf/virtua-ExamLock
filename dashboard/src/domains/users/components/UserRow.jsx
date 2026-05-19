@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import Button from '@shared/ui/Button';
 import UserRoleBadge from '@users/components/UserRoleBadge';
 import UserStatusBadge from '@users/components/UserStatusBadge';
 import styles from '@users/styles/Users.module.css';
@@ -28,24 +29,24 @@ export default function UserRow({ user, onEdit, onDelete, onToggleDisabled }) {
       </td>
       <td>
         <div className={styles.actions}>
-          <button type="button" onClick={() => onEdit(user)} className="btn btn-ghost">
+          <Button type="button" onClick={() => onEdit(user)} variant="ghost">
             Editar
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
             onClick={() => onToggleDisabled(user.uid, !user.disabled)}
-            className="btn btn-ghost"
+            variant="ghost"
           >
             {user.disabled ? 'Habilitar' : 'Deshabilitar'}
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
             onClick={handleDelete}
             onBlur={() => setConfirming(false)}
-            className={`btn ${confirming ? 'btn-danger' : 'btn-ghost'}`}
+            variant={confirming ? 'danger' : 'ghost'}
           >
             {confirming ? 'Confirmar borrado' : 'Eliminar'}
-          </button>
+          </Button>
         </div>
       </td>
     </tr>

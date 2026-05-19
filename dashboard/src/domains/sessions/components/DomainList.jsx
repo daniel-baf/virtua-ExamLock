@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import Button from '@shared/ui/Button';
 import {
   mergeDomainLists,
   normalizeDomain,
@@ -63,13 +64,13 @@ export default function DomainList({ domains, onChange, onLoadDefault, defaultLo
     <div className={styles.root}>
       <div className={styles.tools}>
         {onLoadDefault && (
-          <button type="button" onClick={onLoadDefault} disabled={defaultLoading} className="link-btn">
+          <Button type="button" onClick={onLoadDefault} disabled={defaultLoading} variant="ghost">
             {defaultLoading ? 'Cargando...' : 'Cargar config default'}
-          </button>
+          </Button>
         )}
-        <button type="button" onClick={savePreset} disabled={entries.length === 0} className="link-btn">
+        <Button type="button" onClick={savePreset} disabled={entries.length === 0} variant="ghost">
           Guardar lista
-        </button>
+        </Button>
       </div>
 
       {presets.length > 0 && (
@@ -95,12 +96,12 @@ export default function DomainList({ domains, onChange, onLoadDefault, defaultLo
           placeholder="moodle.universidad.edu"
           className={styles.input}
         />
-        <button
+        <Button
           type="button"
           onClick={add}
-          className="btn link-btn">
+          variant="ghost">
           Agregar
-        </button>
+        </Button>
       </div>
 
       {entries.length > 0 && (

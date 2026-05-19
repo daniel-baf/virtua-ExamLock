@@ -1,40 +1,43 @@
-import AdminHeader from '../components/AdminHeader';
-import { formatStreamConfig } from '@/domains/sessions';
-import useMonitoringSettings from '../hooks/useMonitoringSettings';
-import '@/domains/sessions/Sessions.css';
+import { AdminHeader } from '@admin';
+import useMonitoringSettings from '@admin/hooks/useMonitoringSettings';
+import { formatStreamConfig } from '@sessions';
+import { AlertBanner, Button, CardPanel, PageSection } from '@shared/ui';
+import styles from './MonitoringSettingsPage.module.css';
 
 export default function MonitoringSettingsPage() {
   const settings = useMonitoringSettings();
 
   return (
-    <div className="page-shell">
+    <div className={styles.pageShell}>
       <AdminHeader activeSection="monitoring" loading={settings.loading} onRefresh={settings.refresh} />
 
-      <main className="content content--narrow">
-        <div className="section-title">
-          <h2 className="text-xl font-semibold">Defaults globales de stream</h2>
-        </div>
+      <main className={styles.content}>
+        <PageSection
+          title="Defaults globales de stream"
+          subtitle="Se copian a sesiones nuevas y no alteran sesiones ya activas."
+        />
 
-        {settings.error && <div className="alert-error">{settings.error}</div>}
+        {settings.error && <AlertBanner>{settings.error}</AlertBanner>}
 
-        <section className="form-card admin-settings-card">
-          <div className="admin-settings-summary">
-            <p className="admin-settings-summary__label">Aplicación</p>
-            <p className="admin-settings-summary__value">{formatStreamConfig(settings.streamConfig)}</p>
-            <p className="admin-settings-summary__help">
+        <CardPanel className={styles.card}>
+          <div className={styles.summary}>
+            <p className={styles.summaryLabel}>Aplicacion</p>
+            <p className={styles.summaryValue}>{formatStreamConfig(settings.streamConfig)}</p>
+            <p className={styles.summaryHelp}>
               Estos valores se copian a sesiones nuevas. No cambian sesiones ya activas.
             </p>
             {settings.updatedAt && (
-              <p className="muted">Última actualización: {new Date(settings.updatedAt).toLocaleString('es')}</p>
+              <p className={styles.muted}>Ultima actualizacion: {new Date(settings.updatedAt).toLocaleString('es')}</p>
             )}
           </div>
 
-          <div className="field">
+          <div className={styles.field}>
             <label>Resolución del stream</label>
             <select
               value={settings.streamConfig.resolutionPreset}
               onChange={e => settings.setStreamConfig(current => ({ ...current, resolutionPreset: e.target.value }))}
               disabled={settings.loading || settings.saving}
+              className={styles.control}
             >
               {settings.presets.resolutionPreset.map(option => (
                 <option key={option} value={option}>{option}</option>
@@ -42,12 +45,13 @@ export default function MonitoringSettingsPage() {
             </select>
           </div>
 
-          <div className="field">
+          <div className={styles.field}>
             <label>Intervalo entre frames</label>
             <select
               value={settings.streamConfig.intervalMs}
               onChange={e => settings.setStreamConfig(current => ({ ...current, intervalMs: Number(e.target.value) }))}
               disabled={settings.loading || settings.saving}
+              className={styles.control}
             >
               {settings.presets.intervalMs.map(option => (
                 <option key={option} value={option}>{option / 1000}s</option>
@@ -55,12 +59,12 @@ export default function MonitoringSettingsPage() {
             </select>
           </div>
 
-          <div className="admin-settings-actions">
-            <button onClick={settings.save} disabled={settings.loading || settings.saving} className="btn btn-primary">
+          <div className={styles.actions}>
+            <Button onClick={settings.save} disabled={settings.loading || settings.saving} variant="primary">
               {settings.saving ? 'Guardando...' : 'Guardar defaults'}
-            </button>
+            </Button>
           </div>
-        </section>
+        </CardPanel>
       </main>
     </div>
   );

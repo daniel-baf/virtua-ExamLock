@@ -7,6 +7,7 @@ export { default as MonitorHeader } from './components/MonitorHeader';
 export { default as MonitorTabs } from './components/MonitorTabs';
 export { default as MonitorToolbar } from './components/MonitorToolbar';
 export { default as NetworkPanel } from './components/NetworkPanel';
+export { default as MonitorPage } from './pages/MonitorPage';
 export { default as StudentCard } from './components/StudentCard';
 export { default as useMonitorPreferences } from './hooks/useMonitorPreferences';
 export { default as useMonitorSession } from './hooks/useMonitorSession';

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { AlertBanner, Button, CardPanel } from '@shared/ui';
 import { USER_ROLE_LABELS } from '@users/constants/userRoles';
 import {
   buildNewUserPayload,
@@ -46,7 +47,7 @@ export default function UserForm({ user, onSave, onCancel }) {
 
   return (
     <div className={styles.dialogBackdrop}>
-      <div className={styles.dialog}>
+      <CardPanel className={styles.dialog}>
         <div className={styles.dialogHeader}>
           <h2 className={styles.dialogTitle}>{isNew ? 'Crear usuario' : 'Editar usuario'}</h2>
           <p className={styles.dialogCopy}>
@@ -114,18 +115,18 @@ export default function UserForm({ user, onSave, onCancel }) {
             </UserFormField>
           </div>
 
-          {error && <p className={styles.formError}>{error}</p>}
+          {error && <AlertBanner className={styles.formError}>{error}</AlertBanner>}
 
           <div className={styles.formActions}>
-            <button type="button" onClick={onCancel} className="btn btn-ghost">
+            <Button type="button" onClick={onCancel} variant="ghost" className={styles.formActionButton}>
               Cancelar
-            </button>
-            <button type="submit" disabled={saving} className="btn btn-primary">
+            </Button>
+            <Button type="submit" disabled={saving} variant="primary" className={styles.formActionButton}>
               {saving ? 'Guardando...' : 'Guardar'}
-            </button>
+            </Button>
           </div>
         </form>
-      </div>
+      </CardPanel>
     </div>
   );
 }

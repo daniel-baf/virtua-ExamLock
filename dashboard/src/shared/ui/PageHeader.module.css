@@ -1,0 +1,87 @@
+.header {
+  backdrop-filter: blur(18px);
+  background: var(--bg-elevated);
+  border-bottom: 1px solid var(--border-soft);
+  padding: 14px 20px;
+}
+
+.inner {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin: 0 auto;
+  max-width: 72rem;
+}
+
+.narrow {
+  max-width: 42rem;
+}
+
+.lead {
+  display: grid;
+  gap: 10px;
+}
+
+.brand {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+}
+
+.brandMark {
+  background:
+    radial-gradient(circle at 30% 30%, #f8fbff, transparent 35%),
+    linear-gradient(135deg, var(--accent), var(--accent-strong));
+  border-radius: 14px;
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.35);
+  height: 40px;
+  width: 40px;
+}
+
+.brandTitle,
+.title {
+  color: var(--text-main);
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.brandSubtitle,
+.subtitle {
+  color: var(--text-soft);
+  font-size: 14px;
+  margin-top: 2px;
+}
+
+.actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.backButton {
+  justify-content: flex-start;
+}
+
+@media (min-width: 960px) {
+  .inner {
+    align-items: center;
+    flex-direction: row;
+    justify-content: space-between;
+  }
+
+  .lead {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+}
+
+@media (max-width: 640px) {
+  .header {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+}

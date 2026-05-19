@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import AdminHeader from '@admin/components/AdminHeader';
+import { AdminHeader } from '@admin';
+import { AlertBanner, EmptyState, LoadingState } from '@shared/ui';
 import useUsers from '@users/hooks/useUsers';
 import UserTable from '@users/components/UserTable';
 import UserForm from '@users/components/UserForm';
@@ -38,15 +39,12 @@ export default function UsersPage() {
       <main className={styles.content}>
         <UsersToolbar onCreate={openCreate} />
 
-        {error && <div className={styles.alertError}>{error}</div>}
+        {error && <AlertBanner>{error}</AlertBanner>}
 
         {loading ? (
-          <div className={styles.loadingState}><p>Cargando usuarios…</p></div>
+          <LoadingState label="Cargando usuarios..." />
         ) : users.length === 0 ? (
-          <div className={styles.emptyState}>
-            <p className={styles.emptyTitle}>Sin usuarios aún.</p>
-            <p className={styles.emptyCopy}>Crea uno para comenzar.</p>
-          </div>
+          <EmptyState title="Sin usuarios aun." description="Crea uno para comenzar." />
         ) : (
           <UserTable
             users={users}

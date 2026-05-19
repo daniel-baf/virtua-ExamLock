@@ -13,7 +13,7 @@ import {
   sendStudentMessage,
   setWhitelist,
 } from '@monitoring/services/monitoringService';
-import { activeDomainCount, mergeDomainLists, normalizeDomainList } from '@sessions/domainModel';
+import { activeDomainCount, mergeDomainLists, normalizeDomainList } from '@sessions';
 
 export default function useMonitorSession(sessionId) {
   const [students, setStudents] = useState({});

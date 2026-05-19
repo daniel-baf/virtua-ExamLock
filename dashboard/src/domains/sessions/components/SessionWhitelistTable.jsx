@@ -1,4 +1,4 @@
-import { activeDomainCount, normalizeDomainList } from '../domainModel';
+import { activeDomainCount, normalizeDomainList } from '@sessions/domainModel';
 import styles from './SessionCard.module.css';
 
 export default function SessionWhitelistTable({ session }) {

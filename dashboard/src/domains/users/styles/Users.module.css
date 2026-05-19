@@ -9,71 +9,7 @@
   padding: 32px 20px 64px;
 }
 
-.sectionTitle {
-  align-items: center;
-  display: flex;
-  gap: 16px;
-  justify-content: space-between;
-  margin-bottom: 24px;
-}
-
-.sectionTitle h2 {
-  font-size: 22px;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-}
-
-.sectionCopy {
-  color: var(--text-soft);
-  font-size: 14px;
-  margin-top: 6px;
-}
-
-.alertError {
-  background: var(--danger-soft);
-  border: 1px solid rgba(244, 63, 94, 0.28);
-  border-radius: 16px;
-  color: var(--danger);
-  font-size: 14px;
-  margin-bottom: 16px;
-  padding: 14px 16px;
-}
-
-.loadingState,
-.emptyState {
-  color: var(--text-soft);
-  padding: 92px 0;
-  text-align: center;
-}
-
-.emptyState p:first-child {
-  color: var(--text-main);
-  font-size: 18px;
-  font-weight: 600;
-}
-
-.emptyState p:last-child {
-  font-size: 14px;
-  margin-top: 6px;
-}
-
-.emptyTitle {
-  color: var(--text-main);
-  font-size: 18px;
-  font-weight: 600;
-}
-
-.emptyCopy {
-  font-size: 14px;
-  margin-top: 6px;
-}
-
 .tableCard {
-  backdrop-filter: blur(18px);
-  background: var(--bg-card);
-  border: 1px solid var(--border-soft);
-  border-radius: 24px;
-  box-shadow: var(--shadow-soft);
   overflow: hidden;
 }
 
@@ -169,10 +105,6 @@
 }
 
 .dialog {
-  backdrop-filter: blur(18px);
-  background: var(--bg-card);
-  border: 1px solid var(--border-soft);
-  border-radius: 24px;
   box-shadow: var(--shadow-strong);
   max-width: 34rem;
   padding: 24px;
@@ -268,12 +200,11 @@
 }
 
 .formError {
-  background: var(--danger-soft);
-  border: 1px solid rgba(244, 63, 94, 0.28);
-  border-radius: 16px;
-  color: var(--danger);
-  font-size: 14px;
-  padding: 12px 14px;
+  margin-bottom: 0;
+}
+
+.formActionButton {
+  min-width: 8.5rem;
 }
 
 @media (max-width: 720px) {
@@ -286,7 +217,7 @@
     justify-content: stretch;
   }
 
-  .formActions :global(.btn) {
+  .formActionButton {
     flex: 1;
   }
 }

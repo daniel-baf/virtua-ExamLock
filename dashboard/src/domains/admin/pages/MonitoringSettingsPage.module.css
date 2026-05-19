@@ -1,0 +1,106 @@
+.pageShell {
+  color: var(--text-main);
+  min-height: 100vh;
+}
+
+.content {
+  margin: 0 auto;
+  max-width: 42rem;
+  padding: 32px 20px 64px;
+}
+
+.card {
+  display: grid;
+  gap: 20px;
+  padding: 22px;
+}
+
+.summary {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border-soft);
+  border-radius: 18px;
+  padding: 16px;
+}
+
+.summaryLabel {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.summaryValue {
+  color: var(--text-main);
+  font-size: 22px;
+  font-weight: 800;
+  margin-top: 6px;
+}
+
+.summaryHelp,
+.muted {
+  color: var(--text-soft);
+}
+
+.summaryHelp {
+  font-size: 13px;
+  margin-top: 8px;
+}
+
+.muted {
+  font-size: 13px;
+  margin-top: 8px;
+}
+
+.field {
+  display: grid;
+  gap: 8px;
+}
+
+.field label {
+  color: var(--text-soft);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.control {
+  appearance: none;
+  background: var(--bg-input);
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--text-soft) 50%),
+    linear-gradient(135deg, var(--text-soft) 50%, transparent 50%);
+  background-position:
+    calc(100% - 22px) calc(50% - 3px),
+    calc(100% - 16px) calc(50% - 3px);
+  background-repeat: no-repeat;
+  background-size: 6px 6px, 6px 6px;
+  border: 1px solid var(--border-soft);
+  border-radius: 14px;
+  color: var(--text-main);
+  font-size: 14px;
+  min-height: 46px;
+  outline: none;
+  padding: 0 42px 0 14px;
+  transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+}
+
+.control:focus {
+  border-color: var(--accent-strong);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+@media (max-width: 640px) {
+  .content {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .card {
+    padding: 18px;
+  }
+}

@@ -1,9 +1,11 @@
-import AuthImage from '@/shared/components/AuthImage';
-import { EVENT_LABEL, fmtAuditTime, formatAuditEventDetail } from '../auditModel';
+import AuthImage from '@shared/components/AuthImage';
+import CardPanel from '@shared/ui/CardPanel';
+import { EVENT_LABEL, fmtAuditTime, formatAuditEventDetail } from '@audit/auditModel';
+import styles from './AuditStudentList.module.css';
 
 export default function AuditStudentList({ students, expanded, onToggle }) {
   return (
-    <div className="audit-students">
+    <div className={styles.students}>
       {students.map(student => (
         <AuditStudent key={student.uid} student={student} expanded={expanded[student.uid]} onToggle={() => onToggle(student.uid)} />
       ))}
@@ -15,22 +17,22 @@ function AuditStudent({ student, expanded, onToggle }) {
   const readmitCount = student.attempts ?? 0;
 
   return (
-    <article className="audit-student">
-      <button className="audit-student__button" onClick={onToggle}>
-        <span className={`audit-student__dot ${dotClass(student.status)}`} />
-        <span className="audit-student__email">{student.email ?? student.uid}</span>
-        {readmitCount > 0 && <span className="audit-pill">{readmitCount} reingreso{readmitCount > 1 ? 's' : ''}</span>}
-        <span className="audit-student__count">{student.screenshots?.length ?? 0} capturas</span>
-        <span className="audit-student__chevron">{expanded ? '▲' : '▼'}</span>
+    <CardPanel as="article" className={styles.student}>
+      <button className={styles.button} onClick={onToggle}>
+        <span className={`${styles.dot} ${dotClass(student.status)}`} />
+        <span className={styles.email}>{student.email ?? student.uid}</span>
+        {readmitCount > 0 && <span className={styles.pill}>{readmitCount} reingreso{readmitCount > 1 ? 's' : ''}</span>}
+        <span className={styles.count}>{student.screenshots?.length ?? 0} capturas</span>
+        <span className={styles.chevron}>{expanded ? '▲' : '▼'}</span>
       </button>
 
       {expanded && (
-        <div className="audit-student__details">
+        <div className={styles.details}>
           <Timeline events={student.timeline ?? []} />
           <ScreenshotGallery student={student} />
         </div>
       )}
-    </article>
+    </CardPanel>
   );
 }
 
@@ -39,15 +41,15 @@ function Timeline({ events }) {
 
   return (
     <section>
-      <h4 className="audit-section-title">Timeline</h4>
-      <div className="audit-timeline">
+      <h4 className={styles.sectionTitle}>Timeline</h4>
+      <div className={styles.timeline}>
         {events.map((event, index) => (
-          <div key={index} className="audit-event">
-            <span className="audit-event__time">{fmtAuditTime(event.ts)}</span>
-            <div className="audit-event__content">
-              <span className="audit-event__label">{EVENT_LABEL[event.type] ?? event.type}</span>
+          <div key={index} className={styles.event}>
+            <span className={styles.eventTime}>{fmtAuditTime(event.ts)}</span>
+            <div className={styles.eventContent}>
+              <span className={styles.eventLabel}>{EVENT_LABEL[event.type] ?? event.type}</span>
               {formatAuditEventDetail(event) && (
-                <span className="audit-event__reason">{formatAuditEventDetail(event)}</span>
+                <span className={styles.eventReason}>{formatAuditEventDetail(event)}</span>
               )}
             </div>
           </div>
@@ -62,15 +64,15 @@ function ScreenshotGallery({ student }) {
 
   return (
     <section>
-      <h4 className="audit-section-title">Capturas ({student.screenshots.length})</h4>
-      <div className="audit-gallery">
+      <h4 className={styles.sectionTitle}>Capturas ({student.screenshots.length})</h4>
+      <div className={styles.gallery}>
         {student.screenshots.map((shot, index) => (
           <AuthImage
             key={index}
             uid={student.uid}
             src={shot.url}
             alt={`captura ${index + 1}`}
-            className="audit-gallery__image"
+            className={styles.galleryImage}
           />
         ))}
       </div>
@@ -79,7 +81,7 @@ function ScreenshotGallery({ student }) {
 }
 
 function dotClass(status) {
-  if (status === 'admitted') return 'audit-student__dot--ok';
-  if (status === 'kicked') return 'audit-student__dot--danger';
-  return 'audit-student__dot--neutral';
+  if (status === 'admitted') return styles.dotOk;
+  if (status === 'kicked') return styles.dotDanger;
+  return styles.dotNeutral;
 }

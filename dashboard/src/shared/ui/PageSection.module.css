@@ -1,0 +1,34 @@
+.section {
+  align-items: center;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.title {
+  color: var(--text-main);
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.subtitle {
+  color: var(--text-soft);
+  font-size: 14px;
+  margin-top: 6px;
+}
+
+.actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+@media (max-width: 640px) {
+  .section {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

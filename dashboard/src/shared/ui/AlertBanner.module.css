@@ -1,0 +1,30 @@
+.banner {
+  border-radius: 16px;
+  font-size: 14px;
+  margin-bottom: 16px;
+  padding: 14px 16px;
+}
+
+.error {
+  background: var(--danger-soft);
+  border: 1px solid rgba(244, 63, 94, 0.28);
+  color: var(--danger);
+}
+
+.info {
+  background: var(--accent-soft);
+  border: 1px solid rgba(56, 189, 248, 0.28);
+  color: var(--accent);
+}
+
+.success {
+  background: var(--success-soft);
+  border: 1px solid rgba(16, 185, 129, 0.24);
+  color: var(--success);
+}
+
+.warning {
+  background: var(--warning-soft);
+  border: 1px solid rgba(245, 158, 11, 0.24);
+  color: var(--warning);
+}

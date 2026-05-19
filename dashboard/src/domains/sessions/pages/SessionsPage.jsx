@@ -1,7 +1,6 @@
-import { Link } from 'react-router-dom';
-import SessionCard from '../components/SessionCard';
-import useSessions from '../hooks/useSessions';
-import '../Sessions.css';
+import SessionCard from '@sessions/components/SessionCard';
+import useSessions from '@sessions/hooks/useSessions';
+import { AlertBanner, Button, EmptyState, LoadingState, PageHeader, PageSection } from '@shared/ui';
 import styles from './SessionsPage.module.css';
 
 export default function SessionsPage() {
@@ -9,49 +8,41 @@ export default function SessionsPage() {
 
   return (
     <div className={styles.pageShell}>
-      <header className={styles.topbar}>
-        <div className={styles.topbarInner}>
-        <div className={styles.topbarTitle}>
-          <div className="brand-mark" />
-          <div>
-            <p className="brand-title">ExamLock</p>
-            <p className="brand-subtitle">Sesiones docentes</p>
-          </div>
-        </div>
-        <div className={styles.topbarActions}>
-          <span className={styles.topbarEmail}>{sessions.teacherEmail}</span>
-          <button onClick={sessions.refresh} disabled={sessions.loading} className="btn btn-ghost">
-            {sessions.loading ? 'Cargando...' : 'Actualizar'}
-          </button>
-          <button onClick={sessions.resetData} disabled={sessions.resetting} className="btn btn-danger">
-            {sessions.resetting ? 'Borrando...' : 'Reset DB'}
-          </button>
-          <button onClick={sessions.signOut} className="btn btn-link">
-            Cerrar sesion
-          </button>
-        </div>
-        </div>
-      </header>
+      <PageHeader
+        brandTitle="ExamLock"
+        brandSubtitle="Sesiones docentes"
+        actions={(
+          <>
+            <span className={styles.topbarEmail}>{sessions.teacherEmail}</span>
+            <Button onClick={sessions.refresh} disabled={sessions.loading} variant="ghost">
+              {sessions.loading ? 'Cargando...' : 'Actualizar'}
+            </Button>
+            <Button onClick={sessions.resetData} disabled={sessions.resetting} variant="danger">
+              {sessions.resetting ? 'Borrando...' : 'Reset DB'}
+            </Button>
+            <Button onClick={sessions.signOut} variant="link">
+              Cerrar sesion
+            </Button>
+          </>
+        )}
+      />
 
       <main className={styles.content}>
-        <div className={styles.sectionTitle}>
-          <h2 className="text-xl font-semibold">Sesiones</h2>
-          <Link to="/session/new" className="link-primary">
-            <span>+</span> Nueva sesión
-          </Link>
-        </div>
+        <PageSection
+          title="Sesiones"
+          actions={(
+            <Button to="/session/new" variant="primary">
+              <span>+</span> Nueva sesion
+            </Button>
+          )}
+        />
 
-        {sessions.error && <div className={styles.alertError}>{sessions.error}</div>}
+        {sessions.error && <AlertBanner>{sessions.error}</AlertBanner>}
 
         {sessions.loading ? (
-          <div className={styles.loadingState}>
-            <p>Cargando sesiones…</p>
-          </div>
+          <LoadingState label="Cargando sesiones..." />
         ) : sessions.sessions.length === 0 ? (
-          <div className={styles.emptyState}>
-            <p className="text-lg">Sin sesiones aún.</p>
-            <p className="mt-1 text-sm">Crea una para comenzar.</p>
-          </div>
+          <EmptyState title="Sin sesiones aun." description="Crea una para comenzar." />
         ) : (
           <div className={styles.stack}>
             {sessions.sessions.map(session => <SessionCard key={session.sessionId} session={session} />)}
