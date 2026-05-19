@@ -17,3 +17,17 @@ x11-xkb-utils
 fonts-noto
 fonts-liberation
 openssh-server
+firmware-linux
+firmware-linux-nonfree
+firmware-misc-nonfree
+xserver-xorg-video-fbdev
+xserver-xorg-video-vesa
+libgl1-mesa-dri
+mesa-vulkan-drivers
+mesa-utils
+nvidia-driver
+nvidia-kernel-dkms
+linux-headers-amd64
+network-manager
+network-manager-gnome
+wpasupplicant

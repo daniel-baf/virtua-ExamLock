@@ -159,6 +159,7 @@ exec chromium \
   --disable-background-mode \
   --disable-sync \
   --no-default-browser-check \
+  --password-store=basic \
   "$TARGET"
 EOF
 chmod 755 /usr/local/bin/examlock-launcher
@@ -177,9 +178,11 @@ Section "OutputClass"
 EndSection
 
 Section "OutputClass"
-  Identifier "ExamLock Nouveau Modesetting"
-  MatchDriver "nouveau"
-  Driver "modesetting"
+  Identifier "ExamLock NVIDIA"
+  MatchDriver "nvidia-drm"
+  Driver "nvidia"
+  Option "AllowEmptyInitialConfiguration"
+  Option "PrimaryGPU" "yes"
 EndSection
 EOF
 
@@ -212,13 +215,15 @@ cat > /etc/skel/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-panel.xml <<'EOF'
         <value type="int" value="1"/>
         <value type="int" value="2"/>
         <value type="int" value="3"/>
+        <value type="int" value="4"/>
       </property>
     </property>
   </property>
   <property name="plugins" type="empty">
     <property name="plugin-1" type="string" value="applicationsmenu"/>
     <property name="plugin-2" type="string" value="tasklist"/>
-    <property name="plugin-3" type="string" value="clock"/>
+    <property name="plugin-3" type="string" value="systray"/>
+    <property name="plugin-4" type="string" value="clock"/>
   </property>
 </channel>
 EOF
@@ -240,6 +245,11 @@ cat > /etc/skel/.config/xfce4/xfconf/xfce-perchannel-xml/xfdesktop.xml <<'EOF'
   </property>
 </channel>
 EOF
+
+# Blacklist nouveau so nvidia-drm takes the GPU at boot
+echo "blacklist nouveau" > /etc/modprobe.d/examlock-blacklist-nouveau.conf
+echo "options nouveau modeset=0" >> /etc/modprobe.d/examlock-blacklist-nouveau.conf
+update-initramfs -u
 
 # Block TTY switching — student can't Ctrl+Alt+F2 to drop to console
 cat > /etc/systemd/system/disable-tty-switching.service <<'EOF'

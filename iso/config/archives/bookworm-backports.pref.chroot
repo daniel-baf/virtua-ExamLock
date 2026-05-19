@@ -1,0 +1,3 @@
+Package: nvidia-driver nvidia-kernel-dkms nvidia-kernel-support* nvidia-alternative* libnvidia-* xserver-xorg-video-nvidia nvidia-vdpau-driver nvidia-egl-icd nvidia-opencl-icd
+Pin: release a=bookworm-backports
+Pin-Priority: 900
