@@ -87,9 +87,9 @@ async function handleStudentSocket(socket, sessionId, io, timers) {
     io.to(`teachers:${sessionId}`).emit('monitor:stream-started', { uid });
   });
 
-  socket.on('student:monitor-frame', ({ jpegB64, takenAt }) => {
-    if (!jpegB64) return;
-    io.to(`teachers:${sessionId}`).emit('monitor:stream-frame', { uid, jpegB64, takenAt: takenAt ?? Date.now() });
+  socket.on('student:monitor-frame', (jpegBuf, meta) => {
+    if (!jpegBuf) return;
+    io.to(`teachers:${sessionId}`).emit('monitor:stream-frame', jpegBuf, { uid, takenAt: meta?.takenAt ?? Date.now() });
   });
 
   socket.on('student:log', ({ lines }) => {

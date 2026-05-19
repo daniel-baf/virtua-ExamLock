@@ -40,6 +40,7 @@ export default function useMonitorSession(sessionId) {
   const socketRef = useRef(null);
   const historyTargetRef = useRef(null);
   const studentsRef = useRef({});
+  const liveFrameUrlsRef = useRef({});
 
   const patch = useCallback((uid, data) => {
     setStudents(prev => {
@@ -119,13 +120,14 @@ export default function useMonitorSession(sessionId) {
       socket.on('monitor:stream-started', ({ uid }) => {
         patch(uid, { streamStatus: 'live', streamError: null });
       });
-      socket.on('monitor:stream-frame', ({ uid, jpegB64, takenAt }) => {
-        patch(uid, {
-          liveFrame: `data:image/jpeg;base64,${jpegB64}`,
-          liveTakenAt: takenAt ?? Date.now(),
-          streamStatus: 'live',
-          streamError: null,
-        });
+      socket.on('monitor:stream-frame', (jpegBuf, meta) => {
+        const { uid, takenAt } = meta ?? {};
+        if (!uid || !jpegBuf) return;
+        const blob = new Blob([jpegBuf], { type: 'image/jpeg' });
+        const url = URL.createObjectURL(blob);
+        if (liveFrameUrlsRef.current[uid]) URL.revokeObjectURL(liveFrameUrlsRef.current[uid]);
+        liveFrameUrlsRef.current[uid] = url;
+        patch(uid, { liveFrame: url, liveTakenAt: takenAt ?? Date.now(), streamStatus: 'live', streamError: null });
       });
       socket.on('monitor:keystroke', ({ uid, events }) => {
         setStudents(prev => {
@@ -194,6 +196,8 @@ export default function useMonitorSession(sessionId) {
     return () => {
       cancelled = true;
       disconnectSocket();
+      Object.values(liveFrameUrlsRef.current).forEach(url => URL.revokeObjectURL(url));
+      liveFrameUrlsRef.current = {};
     };
   }, [sessionId, patch, pushAlert]);
 

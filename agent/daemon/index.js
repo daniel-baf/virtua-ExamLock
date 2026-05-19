@@ -351,15 +351,13 @@ async function captureFrame() {
 
   screenshotInFlight = true;
   try {
-    const jpegB64 = capture({
+    const jpegBuf = capture({
       maxWidth: state.streamConfig.maxWidth,
       maxHeight: state.streamConfig.maxHeight,
       quality: 70,
+      asBinary: true,
     });
-    state.socket.emit('student:monitor-frame', {
-      jpegB64,
-      takenAt: Date.now(),
-    });
+    state.socket.emit('student:monitor-frame', jpegBuf, { takenAt: Date.now() });
   } catch (err) {
     log('stream', 'ERROR:', err.message);
     state.socket.emit('student:stream-error', {

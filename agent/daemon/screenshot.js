@@ -14,7 +14,7 @@ function capture(options = {}) {
   const { log } = require('./logger');
   const tmpFile = path.join(os.tmpdir(), `examlock_${Date.now()}.jpg`);
   const examUid = getExamUid();
-  const normalizedOptions = normalizeOptions(options);
+  const normalizedOptions = { ...normalizeOptions(options), asBinary: options.asBinary === true };
 
   const errors = [];
 
@@ -80,17 +80,19 @@ function detectWaylandSocket(examUid) {
 }
 
 function readCapture(filePath, options) {
+  const toResult = (buf) => options.asBinary ? buf : buf.toString('base64');
+
   if (!options.maxWidth || !options.maxHeight) {
-    return fs.readFileSync(filePath).toString('base64');
+    return toResult(fs.readFileSync(filePath));
   }
 
   const resizedPath = `${filePath}.stream.jpg`;
 
   try {
     resizeImage(filePath, resizedPath, options);
-    return fs.readFileSync(resizedPath).toString('base64');
+    return toResult(fs.readFileSync(resizedPath));
   } catch {
-    return fs.readFileSync(filePath).toString('base64');
+    return toResult(fs.readFileSync(filePath));
   } finally {
     try { fs.unlinkSync(resizedPath); } catch {}
   }
