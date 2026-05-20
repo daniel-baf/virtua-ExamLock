@@ -17,7 +17,7 @@ export default function Slide06Demo() {
           <div>
             <p style={{color:'var(--text-1)', fontSize:'1rem', lineHeight:'1.7', marginBottom:'1rem'}}>El simulador recorre <b>9 etapas discretas</b> de una sesión real. Cada paso avanza con velocidad logarítmica (lento → rápido → lento), visualizando el escalado de Cloud Run y los flujos de auth en detalle.</p>
             <div className="highlight-box" style={{marginBottom:'1.2rem'}}>
-              <h4 style={{color:'white', fontFamily:'var(--font-title)', fontSize:'0.95rem', marginBottom:'0.5rem'}}>Etapas del simulador:</h4>
+              <h4 style={{color:'var(--text-1)', fontFamily:'var(--font-title)', fontSize:'0.95rem', marginBottom:'0.5rem'}}>Etapas del simulador:</h4>
               <ul style={{fontSize:'0.82rem', color:'var(--text-2)', listStyle:'none', display:'flex', flexDirection:'column', gap:'0.35rem'}}>
                 <li>• Servidor arranca → Cloud Run escala <b>0 → 1</b> instancia</li>
                 <li>• <b>25 PCs</b> pop-in uno a uno con flujo auth animado (JWT → Firestore → iptables)</li>

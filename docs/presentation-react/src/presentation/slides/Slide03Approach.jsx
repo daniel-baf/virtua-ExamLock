@@ -11,7 +11,7 @@ export default function Slide03Approach() {
         <span className="badge badge-cyan">OBJETIVOS</span>
       </div>
       <div className="slide-body">
-        <div className="grid-2-1" style={{width:'100%'}}>
+        <div className="grid-2-1" style={{width:'100%', gridTemplateColumns:'1.2fr 0.8fr'}}>
           <div className="steps-container">
             <div className="step-row">
               <div className="step-number">1</div>
@@ -42,9 +42,11 @@ export default function Slide03Approach() {
               </div>
             </div>
           </div>
-          <div className="highlight-box">
+          <div className="highlight-box" style={{alignSelf:'stretch', display:'flex', flexDirection:'column', justifyContent:'center'}}>
             <h4 className="highlight-title">Objetivo General</h4>
-            <p style={{fontSize:'0.875rem', color:'var(--text-2)', lineHeight:'1.6'}}>Diseñar e implementar una infraestructura segura, virtualizada y altamente endurecida basada en principios de seguridad de la información, permitiendo evaluar competencias prácticas en un entorno 100% controlado e íntegro.</p>
+            <p style={{fontSize:'clamp(1.15rem, 2vw, 2.15rem)', color:'var(--text-1)', lineHeight:'1.18', fontWeight:800, textWrap:'balance'}}>
+              Diseñar una infraestructura <i>segura</i>, virtualizada y endurecida para evaluar competencias en un entorno <b>100% controlado</b>.
+            </p>
           </div>
         </div>
       </div>

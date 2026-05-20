@@ -29,7 +29,7 @@ function ArchNode({ id }) {
       <rect x={n.x} y={n.y} width={n.w} height={n.h} rx="8"
         fill={`${n.color}12`} stroke={n.color} strokeWidth="1.5" strokeOpacity="0.5"/>
       <rect x={n.x} y={n.y} width="4" height={n.h} rx="2" fill={n.color} opacity="0.9"/>
-      <text x={n.x + 16} y={n.y + n.h / 2 - 5} fill="white" fontSize="11.5"
+      <text x={n.x + 16} y={n.y + n.h / 2 - 5} fill="var(--text-1)" fontSize="11.5"
         fontFamily="Outfit,sans-serif" fontWeight="700">{n.icon} {n.label}</text>
       <text x={n.x + 16} y={n.y + n.h / 2 + 11} fill="#6b7280" fontSize="8.5"
         fontFamily="JetBrains Mono,monospace">{n.sub}</text>

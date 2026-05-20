@@ -17,11 +17,11 @@ export default function Slide01Cover() {
           </defs>
         </svg>
         <h1 className="portada-title">ExamLock</h1>
-        <p className="portada-sub">Entorno Seguro y Controlado para Evaluaciones Académicas Prácticas</p>
+        <p className="portada-sub"><b>Evaluaciones prácticas</b> en un entorno aislado, observable y defendible.</p>
         <div className="portada-meta">
-          <span><b>✓</b> Pila de Red Aislada</span>
-          <span><b>✓</b> Hardening a nivel Kernel</span>
-          <span><b>✓</b> Proctoring en Tiempo Real</span>
+          <span><b>01</b> Red aislada</span>
+          <span><b>02</b> Kernel hardening</span>
+          <span><b>03</b> Proctoring en vivo</span>
         </div>
         <div className="portada-authors">
           <span>Diego Abdo</span>

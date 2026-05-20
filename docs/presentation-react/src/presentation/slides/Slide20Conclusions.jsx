@@ -12,9 +12,9 @@ export default function Slide20Conclusions() {
       </div>
       <div className="slide-body">
         <div style={{ width:'100%', display:'flex', flexDirection:'column', gap:'1.5rem', alignItems:'center' }}>
-          <div className="highlight-box" style={{ width:'100%', textAlign:'center' }}>
-            <p style={{ fontSize:'1.1rem', color:'white', fontWeight:600, lineHeight:1.7 }}>
-              La combinación de hardening de SO, aislamiento de red a nivel kernel y monitoreo proactivo anula la gran mayoría de técnicas de fraude conocidas.
+          <div className="highlight-box" style={{ width:'100%', textAlign:'left' }}>
+            <p style={{ fontSize:'clamp(1.6rem, 3.6vw, 4.2rem)', color:'var(--text-1)', fontWeight:800, lineHeight:1.03, textWrap:'balance' }}>
+              Integridad académica con <i>defensa en profundidad</i>, costo realista y evidencia verificable.
             </p>
           </div>
           <div className="grid-4" style={{ width:'100%' }}>

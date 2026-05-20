@@ -20,13 +20,13 @@ const COST_DETAILS = [
         <b style={{ color:'var(--amber)' }}>~$0–$5/mes</b>{'   (según frecuencia de builds)'}<br/>
         <span style={{ color:'var(--border)' }}>{'─'.repeat(44)}</span><br/>
         {'Total fijo esperado: '}
-        <b style={{ color:'white' }}>~$0–$7/mes</b>
+        <b style={{ color:'var(--text-1)' }}>~$0–$7/mes</b>
       </div>
       <div className="highlight-box" style={{ fontSize:'0.78rem', lineHeight:1.8 }}>
         <div style={{ color:'var(--amber)', fontFamily:'var(--font-mono)', fontSize:'0.72rem', marginBottom:'0.5rem' }}>Si se activa minScale=1 (instancia caliente):</div>
         <div style={{ fontFamily:'var(--font-mono)', color:'var(--text-2)' }}>
-          CPU:  1 vCPU × 2,592,000s × $0.000024 = <b style={{ color:'white' }}>$62.21/mes</b><br/>
-          RAM:  0.5 GiB × 2,592,000s × $0.0000025 = <b style={{ color:'white' }}>$3.24/mes</b><br/>
+          CPU:  1 vCPU × 2,592,000s × $0.000024 = <b style={{ color:'var(--text-1)' }}>$62.21/mes</b><br/>
+          RAM:  0.5 GiB × 2,592,000s × $0.0000025 = <b style={{ color:'var(--text-1)' }}>$3.24/mes</b><br/>
           <span style={{ color:'var(--border)' }}>{'─'.repeat(33)}</span><br/>
           Total: <b style={{ color:'var(--amber)' }}>~+$65/mes</b>
         </div>
@@ -56,7 +56,7 @@ const COST_DETAILS = [
         {'Firebase Auth:    '}<b>$0.00</b><br/>
         <span style={{ color:'var(--border)' }}>{'─'.repeat(36)}</span><br/>
         {'Total variable:   '}
-        <b style={{ color:'white' }}>~$0.058 / alumno · examen</b>
+        <b style={{ color:'var(--text-1)' }}>~$0.058 / alumno · examen</b>
       </div>
       <div className="highlight-box" style={{ fontSize:'0.78rem' }}>
         <div style={{ color:'var(--text-2)', fontFamily:'var(--font-mono)', fontSize:'0.72rem', marginBottom:'0.5rem' }}>Fuentes de los supuestos:</div>
@@ -66,7 +66,7 @@ const COST_DETAILS = [
           • Transporte: <span className="mono">Buffer binario</span> (sin overhead base64)<br/>
           • Egreso: <span className="mono">$0.12/GiB</span> Premium Tier NA
         </div>
-        <div style={{ marginTop:'0.8rem', fontSize:'0.75rem', color:'var(--text-2)' }}>Con free tier el primer examen del mes baja a <b style={{ color:'white' }}>~$0.048</b></div>
+        <div style={{ marginTop:'0.8rem', fontSize:'0.75rem', color:'var(--text-2)' }}>Con free tier el primer examen del mes baja a <b style={{ color:'var(--text-1)' }}>~$0.048</b></div>
       </div>
     </div>
   ),
@@ -78,7 +78,7 @@ const COST_DETAILS = [
         {'  5 cursos / semestre'}<br/>
         {'  × 4 exámenes / curso'}<br/>
         {'  = '}
-        <b style={{ color:'white' }}>20 exámenes / semestre</b><br/>
+        <b style={{ color:'var(--text-1)' }}>20 exámenes / semestre</b><br/>
         {'  × 2h / examen = 40 alumno-horas'}<br/><br/>
         <b style={{ color:'var(--text-2)' }}>Cálculo:</b><br/>
         {'  20 exámenes × $0.058       = '}
@@ -171,9 +171,9 @@ export default function Slide16CostsGCP() {
                 <circle cx="100" cy="100" r="70" fill="none" stroke="#06b6d4" strokeWidth="40" strokeDasharray="356.5 439.6" strokeDashoffset="0" transform="rotate(-90 100 100)"/>
                 <circle cx="100" cy="100" r="70" fill="none" stroke="#8b5cf6" strokeWidth="40" strokeDasharray="70.4 439.6" strokeDashoffset="-356.5" transform="rotate(-90 100 100)"/>
                 <circle cx="100" cy="100" r="70" fill="none" stroke="#f59e0b" strokeWidth="40" strokeDasharray="13.2 439.6" strokeDashoffset="-427" transform="rotate(-90 100 100)"/>
-                <circle cx="100" cy="100" r="50" fill="#030712"/>
-                <text x="100" y="96" textAnchor="middle" fill="white" fontSize="14" fontFamily="Outfit,sans-serif" fontWeight="800">82%</text>
-                <text x="100" y="112" textAnchor="middle" fill="#9ca3af" fontSize="9" fontFamily="Plus Jakarta Sans,sans-serif">egreso</text>
+                <circle cx="100" cy="100" r="50" fill="#0b1020"/>
+                <text x="100" y="96" textAnchor="middle" fill="#f8fafc" fontSize="14" fontFamily="Outfit,sans-serif" fontWeight="800">82%</text>
+                <text x="100" y="112" textAnchor="middle" fill="#cbd5e1" fontSize="9" fontFamily="Plus Jakarta Sans,sans-serif">egreso</text>
               </svg>
               <div style={{ display:'flex', flexDirection:'column', gap:'0.3rem', marginTop:'0.5rem', fontSize:'0.75rem' }}>
                 <div style={{ display:'flex', alignItems:'center', gap:'0.4rem' }}><span style={{ width:'10px', height:'10px', borderRadius:'2px', background:'var(--cyan)', flexShrink:'0' }}></span><span style={{ color:'var(--text-2)' }}>Egreso stream (81%)</span></div>

@@ -31,7 +31,7 @@ export default function Slide15Lifecycle() {
             </div>
           </div>
           <div className="highlight-box" style={{textAlign:'center'}}>
-            <p style={{fontSize:'0.9rem', color:'var(--text-2)'}}>Preparación del docente: <b style={{color:'white'}}>&lt; 2 minutos</b> · Admisión del alumno: <b style={{color:'white'}}>&lt; 30 segundos</b> · Destrucción segura de sesión: <b style={{color:'white'}}>automática</b></p>
+            <p style={{fontSize:'1rem', color:'var(--text-2)'}}>Preparación del docente: <b style={{color:'var(--text-1)'}}>&lt; 2 minutos</b> · Admisión del alumno: <b style={{color:'var(--text-1)'}}>&lt; 30 segundos</b> · Destrucción segura de sesión: <b style={{color:'var(--text-1)'}}>automática</b></p>
           </div>
         </div>
       </div>

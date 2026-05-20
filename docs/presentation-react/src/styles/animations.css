@@ -65,6 +65,21 @@
     to   { opacity: 1; transform: translateY(0); }
 }
 
+@keyframes editorial-rise {
+    from { opacity: 0; transform: translateY(18px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes paper-sweep {
+    from { clip-path: inset(0 100% 0 0); }
+    to   { clip-path: inset(0 0 0 0); }
+}
+
+@keyframes type-mark {
+    from { transform: scaleX(0); }
+    to   { transform: scaleX(1); }
+}
+
 /* Heartbeat telemetry pulse */
 @keyframes telemetry-pulse {
     0%, 100% { opacity: 0.4; }

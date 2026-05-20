@@ -113,7 +113,7 @@ export default function Slide17Sensitivity() {
                     />
                     <text
                       x={BAR_XS[i]} y={bar.y - 2}
-                      fill="white" fontSize="6" textAnchor="middle"
+                      fill="#f8fafc" fontSize="6" textAnchor="middle"
                       style={{ animation: `value-flash 0.35s ${i * 0.06 + 0.3}s ease both` }}
                     >
                       ${bar.cost.toFixed(2)}
@@ -129,12 +129,12 @@ export default function Slide17Sensitivity() {
             <div className="highlight-box" style={{ padding:'0.7rem', marginTop:'0.5rem' }}>
               <p style={{ fontSize:'0.78rem', color:'var(--text-2)' }}>
                 <b>Escenario A (45 alumnos, 2h):</b>{' '}
-                <span key={`a-${flashKey.current}`} className="sens-value-flash" style={{ color:'white', display:'inline-block' }}>
+                <span key={`a-${flashKey.current}`} className="sens-value-flash" style={{ color:'var(--text-1)', display:'inline-block' }}>
                   ${(45 * mode.total2h).toFixed(2)}
                 </span>
                 {' · '}
                 <b>Escenario B (500 alumnos, 2h):</b>{' '}
-                <span key={`b-${flashKey.current}`} className="sens-value-flash" style={{ color:'white', display:'inline-block', animationDelay:'0.1s' }}>
+                <span key={`b-${flashKey.current}`} className="sens-value-flash" style={{ color:'var(--text-1)', display:'inline-block', animationDelay:'0.1s' }}>
                   ${(500 * mode.total2h).toFixed(2)}
                 </span>
               </p>
