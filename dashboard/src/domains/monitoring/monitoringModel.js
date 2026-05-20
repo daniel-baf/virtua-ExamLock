@@ -13,6 +13,20 @@ export function fmtTime(ts) {
   return new Date(ts).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 }
 
+export function formatRemainingMs(value) {
+  const remaining = Number(value);
+  if (!Number.isFinite(remaining)) return '--:--';
+
+  const totalSeconds = Math.ceil(Math.max(0, remaining) / 1000);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+
+  return hours > 0
+    ? `${hours}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
+    : `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+}
+
 export function closeReasonLabel(reason) {
   const map = {
     browser_closed: 'Cerro el navegador',

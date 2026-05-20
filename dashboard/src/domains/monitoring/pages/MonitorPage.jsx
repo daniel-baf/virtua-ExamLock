@@ -43,6 +43,7 @@ export default function MonitorPage() {
         sessionLoading={monitor.sessionLoading}
         connected={monitor.connected}
         totals={monitor.totals}
+        remainingLabel={monitor.sessionRemainingLabel}
         captureAllBusy={monitor.captureAllBusy}
         captureAllNote={monitor.captureAllNote}
         examEnded={monitor.examEnded}

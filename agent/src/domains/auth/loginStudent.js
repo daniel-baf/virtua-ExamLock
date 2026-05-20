@@ -28,7 +28,7 @@ async function loginStudent({ studentName, sessionCode, serverUrl, state, sse })
   await flushAnswers(state, serverUrl);
   registerServerHandlers({ state, sse, serverUrl });
 
-  return { ok: true, sessionId: data.sessionId, endsAt: data.endsAt };
+  return { ok: true, sessionId: data.sessionId, endsAt: data.endsAt, remainingMs: data.remainingMs };
 }
 
 module.exports = { loginStudent };

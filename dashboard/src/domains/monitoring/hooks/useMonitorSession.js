@@ -16,6 +16,7 @@ import {
 import { activeDomainCount, mergeDomainLists, normalizeDomainList } from '@sessions';
 import { useAlerts } from '@shared/alerts/AlertsContext';
 import { auth } from '@shared/lib/firebase';
+import { formatRemainingMs } from '@monitoring/monitoringModel';
 
 const SERVER_URL = import.meta.env.VITE_SERVER_URL ?? '';
 
@@ -23,6 +24,7 @@ export default function useMonitorSession(sessionId) {
   const [students, setStudents] = useState({});
   const alertsCtx = useAlerts();
   const [session, setSession] = useState(null);
+  const [nowTick, setNowTick] = useState(Date.now());
   const [sessionLoading, setSessionLoading] = useState(true);
   const [sessionError, setSessionError] = useState('');
   const [connected, setConnected] = useState(false);
@@ -64,7 +66,14 @@ export default function useMonitorSession(sessionId) {
     getSessionSummary(sessionId)
       .then(({ session: loadedSession }) => {
         if (cancelled) return;
-        setSession(loadedSession);
+        const remaining = Number(loadedSession.remainingMs);
+        setSession({
+          ...loadedSession,
+          localEndsAt: Number.isFinite(remaining)
+            ? Date.now() + Math.max(0, remaining)
+            : null,
+        });
+        setNowTick(Date.now());
         setWhitelistDomains(normalizeDomainList(loadedSession.whitelist ?? []));
         setBlockInternet(loadedSession.blockInternet ?? true);
         setExamEnded(!loadedSession.active);
@@ -203,6 +212,12 @@ export default function useMonitorSession(sessionId) {
     };
   }, [sessionId, patch, pushAlert]);
 
+  useEffect(() => {
+    if (!session?.localEndsAt || examEnded) return undefined;
+    const timer = setInterval(() => setNowTick(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, [session?.localEndsAt, examEnded]);
+
   const { registerSession, unregisterSession } = alertsCtx;
   useEffect(() => {
     registerSession(sessionId, (uid) => {
@@ -225,6 +240,14 @@ export default function useMonitorSession(sessionId) {
     admitted: studentList.filter(s => s.status === 'admitted' || s.status === 'offline' || s.status === 'waiting'),
     kicked: studentList.filter(s => s.status === 'kicked' || s.status === 'closed'),
   }), [studentList]);
+
+  const sessionRemainingMs = session?.localEndsAt
+    ? Math.max(0, session.localEndsAt - nowTick)
+    : session?.remainingMs ?? null;
+  const sessionRemainingLabel = examEnded || session?.active === false
+    || sessionRemainingMs === 0
+    ? 'Terminado'
+    : formatRemainingMs(sessionRemainingMs);
 
   async function kick(uid) {
     if (!confirm('Expulsar a este alumno?')) return;
@@ -363,6 +386,7 @@ export default function useMonitorSession(sessionId) {
     historyShots,
     liveTarget,
     totals,
+    sessionRemainingLabel,
     activeWhitelistCount: activeDomainCount(whitelistDomains),
     studentsByTab,
     setMessageTarget,

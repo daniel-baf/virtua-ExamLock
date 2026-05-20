@@ -165,13 +165,13 @@ let timerId = null;
 
 es.addEventListener('admitted', e => {
   const data = JSON.parse(e.data);
-  setEndsAt(data.endsAt);
+  setSessionTimer(data);
   updateWhitelist(data.whitelist, data.blockInternet);
 });
 
 es.addEventListener('state', e => {
   const data = JSON.parse(e.data);
-  setEndsAt(data.endsAt);
+  setSessionTimer(data);
 });
 
 es.addEventListener('whitelist', e => {
@@ -218,16 +218,21 @@ function showToast(text) {
   setTimeout(() => { el.style.display = 'none'; }, 8000);
 }
 
-fetch('/api/state').then(r => r.json()).then(({ status, endsAt: stateEndsAt }) => {
-  setEndsAt(stateEndsAt);
+fetch('/api/state').then(r => r.json()).then(({ status, endsAt: stateEndsAt, remainingMs }) => {
+  setSessionTimer({ endsAt: stateEndsAt, remainingMs });
   if (status === 'waiting') window.location.href = '/waiting';
   if (status === 'idle') window.location.href = '/';
   if (status === 'kicked' || status === 'ended') window.location.href = '/ended';
 });
 
-function setEndsAt(value) {
-  if (!value) return;
-  endsAt = Number(value);
+function setSessionTimer({ endsAt: serverEndsAt, remainingMs } = {}) {
+  if (remainingMs !== null && remainingMs !== undefined && Number.isFinite(Number(remainingMs))) {
+    endsAt = Date.now() + Math.max(0, Number(remainingMs));
+  } else if (serverEndsAt) {
+    endsAt = Number(serverEndsAt);
+  } else {
+    return;
+  }
   renderTimer();
   if (!timerId) timerId = setInterval(renderTimer, 1000);
 }

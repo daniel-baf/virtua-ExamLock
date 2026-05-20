@@ -2,6 +2,7 @@ const { db, storage } = require('../../../firebase');
 const { logEvent } = require('../../../events');
 const { normalizeStreamConfig } = require('../../../monitoringConfig');
 const { activeDomains } = require('../../../networkDefaults');
+const { sessionTimePayload } = require('../../sessions/application/sessionService');
 const { resetHeartbeat, clearTimer } = require('./heartbeatService');
 const { scheduleSessionEnd } = require('./sessionEndService');
 const keystrokeAudit = require('../keystrokeAuditStore');
@@ -38,7 +39,7 @@ async function handleStudentSocket(socket, sessionId, io, timers, sessionEndTime
   socket.emit('server:admitted', {
     whitelist: activeDomains(session.whitelist ?? []),
     blockInternet: session.blockInternet ?? false,
-    endsAt: session.endsAt,
+    ...sessionTimePayload(session.endsAt),
     whitelistVersion: session.whitelistVersion ?? 0,
     streamConfig: normalizeStreamConfig(session.streamConfig),
   });
@@ -105,7 +106,12 @@ async function handleStudentSocket(socket, sessionId, io, timers, sessionEndTime
 
   socket.on('student:keystroke', ({ events }) => {
     if (!Array.isArray(events) || events.length === 0) return;
-    io.to(`teachers:${sessionId}`).emit('monitor:keystroke', { uid, events });
+    const serverReceivedAt = Date.now();
+    io.to(`teachers:${sessionId}`).emit('monitor:keystroke', {
+      uid,
+      events: normalizeKeystrokeEvents(events, serverReceivedAt),
+      serverReceivedAt,
+    });
   });
 
   socket.on('student:keystroke-chunk', ({ text, startedAt, endedAt }) => {
@@ -144,6 +150,25 @@ async function handleStudentSocket(socket, sessionId, io, timers, sessionEndTime
 
 function teacherCount(io, sessionId) {
   return io.sockets.adapter.rooms.get(`teachers:${sessionId}`)?.size ?? 0;
+}
+
+function normalizeKeystrokeEvents(events, receivedAt) {
+  const safeEvents = events.filter(event => event && typeof event === 'object');
+  const firstClientTs = safeEvents.find(event => Number.isFinite(Number(event.t)))?.t;
+  const firstClientTime = Number(firstClientTs);
+
+  return safeEvents.map((event, index) => {
+    const clientTime = Number(event.t);
+    const offset = Number.isFinite(clientTime) && Number.isFinite(firstClientTime)
+      ? Math.max(0, Math.min(clientTime - firstClientTime, 1000))
+      : index;
+
+    return {
+      ...event,
+      clientT: event.t ?? null,
+      t: receivedAt + offset,
+    };
+  });
 }
 
 async function uploadImage(jpegB64, filePath) {
