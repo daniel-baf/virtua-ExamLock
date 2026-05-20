@@ -38,6 +38,10 @@
     padding: 0;
 }
 
+html {
+    font-size: clamp(14px, 1.1vw, 19px);
+}
+
 html, body, #root {
     height: 100%;
     width: 100%;
