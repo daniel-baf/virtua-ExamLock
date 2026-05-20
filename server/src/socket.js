@@ -4,6 +4,7 @@ const { handleTeacherSocket } = require('./domains/monitoring/socket/teacherSock
 
 module.exports = function registerSocket(io) {
   const heartbeatTimers = new Map();
+  const sessionEndTimers = new Map();
 
   io.use(authenticateSocket);
 
@@ -13,11 +14,11 @@ module.exports = function registerSocket(io) {
     if (role === 'student') {
       const resolved = await resolveStudentSession(socket);
       if (!resolved) return socket.disconnect(true);
-      handleStudentSocket(socket, resolved.sessionId, io, heartbeatTimers);
+      handleStudentSocket(socket, resolved.sessionId, io, heartbeatTimers, sessionEndTimers);
     } else if (role === 'teacher') {
       const resolved = await resolveTeacherSession(socket);
       if (!resolved) return socket.disconnect(true);
-      handleTeacherSocket(socket, resolved.sessionId, io);
+      handleTeacherSocket(socket, resolved.sessionId, io, sessionEndTimers);
     } else {
       socket.disconnect(true);
     }

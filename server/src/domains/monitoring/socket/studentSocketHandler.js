@@ -3,9 +3,10 @@ const { logEvent } = require('../../../events');
 const { normalizeStreamConfig } = require('../../../monitoringConfig');
 const { activeDomains } = require('../../../networkDefaults');
 const { resetHeartbeat, clearTimer } = require('./heartbeatService');
+const { scheduleSessionEnd } = require('./sessionEndService');
 const keystrokeAudit = require('../keystrokeAuditStore');
 
-async function handleStudentSocket(socket, sessionId, io, timers) {
+async function handleStudentSocket(socket, sessionId, io, timers, sessionEndTimers) {
   const uid = socket.user.uid;
   socket.join(`student:${uid}`);
   socket.join(`session:${sessionId}`);
@@ -41,6 +42,10 @@ async function handleStudentSocket(socket, sessionId, io, timers) {
     whitelistVersion: session.whitelistVersion ?? 0,
     streamConfig: normalizeStreamConfig(session.streamConfig),
   });
+
+  if (session.active !== false && session.endsAt) {
+    scheduleSessionEnd(sessionId, session.endsAt, io, sessionEndTimers);
+  }
 
   if (teacherCount(io, sessionId) > 0) {
     io.to(`student:${uid}`).emit('server:monitor-start');
