@@ -91,7 +91,7 @@ export default function Costs() {
           <div className="donut-wrap">
             <div className="chart-wrap" style={{ width: '100%', textAlign: 'center' }}>
               <div className="chart-title">Distribución del costo variable</div>
-              <DonutChart slices={DONUT_SLICES} r={60} cx={75} cy={70} w={240} h={145}/>
+              <DonutChart slices={DONUT_SLICES} r={64} cx={84} cy={76} w={320} h={170}/>
             </div>
             <div className="donut-caption">1 examen · 1 docente · 2h · 720p/2s</div>
             <div className="chart-wrap" style={{ marginTop: '16px' }}>
@@ -123,7 +123,7 @@ export default function Costs() {
               labels={SCENARIOS.map(s => `${s.students}`)}
               values={SCENARIOS.map(s => s.total)}
               color="#00e5ff"
-              w={620} h={200}
+              w={1080} h={230}
               yFmt={v => v < 10 ? `$${v.toFixed(1)}` : `$${v.toFixed(0)}`}
             />
           </div>
@@ -204,7 +204,7 @@ export default function Costs() {
             seriesEgress={SCENARIOS.map(s => s.egress)}
             seriesCR={SCENARIOS.map(s => s.cr)}
             seriesOther={SCENARIOS.map(s => (s.fs || 0) + (s.gcs || 0))}
-            w={620} h={220}
+            w={1080} h={250}
           />
         </div>
         <table className="data-table" style={{ fontSize: '0.8rem' }}>

@@ -39,34 +39,46 @@ const COST_DETAILS = [
   // Card 1 — $0.058 por alumno · examen 2h
   (
     <div className="grid-2" style={{ gap:'2rem', width:'100%', height: '100%', alignItems: 'stretch' }}>
-      <div className="code-block" style={{ fontSize:'1rem', lineHeight:1.9, height: '100%', overflow: 'auto', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-        <div>
-          <b style={{ color:'var(--cyan)' }}>Egreso stream</b>{' (720p/2s, 1 docente):'}<br/>
-          {'  115 KB/frame × 0.5 fps × 7200s = 0.395 GiB'}<br/>
-          {'  0.395 GiB × $0.12/GiB = '}
-          <b style={{ color:'var(--cyan)' }}>$0.047</b>{'  (81%)'}<br/><br/>
-          <b style={{ color:'var(--purple)' }}>Cloud Run</b>{'  :'}<br/>
-          {'  CPU/RAM subtotal = '}
-          <b style={{ color:'var(--purple)' }}>$0.0095</b>{'  (16%)'}<br/><br/>
-          <b style={{ color:'var(--amber)' }}>Firestore</b>{'  :'}<br/>
-          {'  Writes + Reads = '}
-          <b style={{ color:'var(--amber)' }}>$0.0006</b>{'  (1%)'}<br/><br/>
-          {'GCS screenshots:  '}<b>$0.0001</b>{'  (<1%)'}<br/>
-          {'Firebase Auth:    '}<b>$0.00</b><br/>
-          <span style={{ color:'var(--border)' }}>{'─'.repeat(36)}</span><br/>
-          {'Total variable:   '}
-          <b style={{ color:'var(--text-1)' }}>~$0.058 / alumno · examen</b>
+      <div className="code-block" style={{ fontSize:'0.85rem', lineHeight:1.6, height: '100%', overflow: 'auto', display: 'flex', flexDirection: 'column', padding: '1rem 1.5rem' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', height: '100%', justifyContent: 'center' }}>
+          <div>
+            <b style={{ color:'var(--cyan)' }}>Egreso stream</b>{' (720p/2s):'}<br/>
+            {'  115 KB/frame × 0.5 fps × 7200s = 0.395 GiB'}<br/>
+            {'  0.395 GiB × $0.12/GiB = '}
+            <b style={{ color:'var(--cyan)' }}>$0.047</b>{'  (81%)'}
+          </div>
+          <div>
+            <b style={{ color:'var(--purple)' }}>Cloud Run</b>{' (concurrencia):'}<br/>
+            {'  CPU: 0.05 vCPU/alumno × 7200s × $0.000024 = $0.00864'}<br/>
+            {'  RAM: 50MB (0.048 GiB) × 7200s × $0.0000025 = $0.00088'}<br/>
+            {'  Subtotal = '}
+            <b style={{ color:'var(--purple)' }}>$0.0095</b>{'  (16%)'}
+          </div>
+          <div>
+            <b style={{ color:'var(--amber)' }}>Firestore</b>{' (Logs/Heartbeats):'}<br/>
+            {'  ~505 writes / 100k × $0.09 = $0.00045'}<br/>
+            {'  ~480 reads  / 100k × $0.03 = $0.00014'}<br/>
+            {'  Subtotal = '}
+            <b style={{ color:'var(--amber)' }}>$0.0006</b>{'  (1%)'}
+          </div>
+          <div>
+            <span style={{ color:'var(--border)' }}>{'─'.repeat(48)}</span><br/>
+            {'Total variable:   '}
+            <b style={{ color:'var(--text-1)' }}>~$0.058 / alumno · examen</b>
+          </div>
         </div>
       </div>
-      <div className="highlight-box" style={{ fontSize:'1.1rem', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-        <div style={{ color:'var(--text-2)', fontFamily:'var(--font-mono)', fontSize:'1.05rem', marginBottom:'0.8rem' }}>Fuentes de los supuestos:</div>
-        <div style={{ fontSize:'1.05rem', color:'var(--text-2)', lineHeight:1.7 }}>
-          • Frame 720p q70: <span className="mono">115 KB</span> medido<br/>
-          • Intervalo default: <span className="mono">2000ms</span> → <span className="mono">monitoringConfig.js</span><br/>
-          • Transporte: <span className="mono">Buffer binario</span> (sin overhead base64)<br/>
-          • Egreso: <span className="mono">$0.12/GiB</span> Premium Tier NA
+      <div className="highlight-box" style={{ fontSize:'1rem', height: '100%', overflow: 'auto', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '1rem 1.5rem' }}>
+        <div style={{ color:'var(--text-2)', fontFamily:'var(--font-mono)', fontSize:'0.9rem', marginBottom:'0.6rem', textTransform: 'uppercase', letterSpacing: '1px' }}>GCS Screenshots (Almacenamiento)</div>
+        <div style={{ color:'var(--text-2)', lineHeight:1.5 }}>
+          • <b style={{color:'var(--text-1)'}}>Operaciones:</b> 3,600 frames por examen.<br/>
+          • <b style={{color:'var(--text-1)'}}>Class A Ops:</b> 3,600 / 10,000 × $0.005 = <b>$0.0018</b><br/>
+          • <b style={{color:'var(--text-1)'}}>Storage ($0.02/GB):</b> ~400MB por examen = <b>$0.008/mes</b><br/>
         </div>
-        <div style={{ marginTop:'1.2rem', fontSize:'1.05rem', color:'var(--text-2)' }}>Con free tier el primer examen del mes baja a <b style={{ color:'var(--text-1)' }}>~$0.048</b></div>
+        <div style={{ padding: '0.8rem', background: 'rgba(0,0,0,0.4)', borderRadius: 'var(--radius-sm)', marginTop: '1rem', fontSize: '0.9rem', borderLeft: '3px solid var(--amber)', lineHeight: 1.5 }}>
+          💡 <b>Para gastar apenas $1.00</b> en almacenamiento puro de GCS, necesitas subir y almacenar <b>50 GB</b> de fotos.<br/><br/>
+          <span style={{color:'var(--text-3)'}}>Esto equivale a <b>450,000 screenshots</b>, lo cual cubre <b>125 exámenes de 2 horas</b>.</span>
+        </div>
       </div>
     </div>
   ),

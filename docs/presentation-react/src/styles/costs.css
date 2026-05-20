@@ -1,14 +1,14 @@
 /* costs.css — estilos del tab de costos */
 
 #tab-costs {
-    padding: 0 24px 40px;
+    padding: 0 clamp(14px, 2.6vw, 42px) 40px;
     overflow-y: auto;
     height: 100%;
 }
 
 /* ---- Slides de costos ---- */
 .costs-slide {
-    max-width: 900px;
+    width: min(100%, 1500px);
     margin: 0 auto 48px;
     animation: fade-up 0.4s ease both;
 }
@@ -51,8 +51,8 @@
 /* ---- Slide 16: modelo ---- */
 .model-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 20px;
+    grid-template-columns: minmax(520px, 1.2fr) minmax(420px, 1fr);
+    gap: clamp(16px, 2vw, 30px);
     align-items: start;
 }
 
@@ -100,10 +100,22 @@
 
 .scenarios-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 20px;
+    grid-template-columns: repeat(2, minmax(360px, 1fr));
+    gap: clamp(14px, 1.8vw, 24px);
 }
 @media (max-width: 700px) { .scenarios-grid { grid-template-columns: 1fr; } }
+
+.costs-slide .data-table,
+.costs-slide .chart-wrap,
+.costs-slide .exec-highlight {
+    width: 100%;
+}
+
+@media (min-width: 1400px) {
+    .costs-slide {
+        width: min(100%, 1650px);
+    }
+}
 
 .scenario-card {
     background: rgba(255,255,255,0.06);

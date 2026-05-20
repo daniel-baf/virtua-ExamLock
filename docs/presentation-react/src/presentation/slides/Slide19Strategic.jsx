@@ -18,7 +18,7 @@ export default function Slide19Strategic() {
           </div>
           <div className="card-item" style={{borderColor:'rgba(16,185,129,0.2)'}}>
             <h3 className="card-title" style={{color:'var(--emerald)', fontSize:'1.45rem'}}>Costo-Eficiente</h3>
-            <p className="card-desc">Cloud Run con <span className="mono">minScale=0</span>: costo fijo <b>~$0/mes</b> fuera de examenes. Variable: <b>$0.058/alumno·examen</b>. Margen bruto a $0.30/h: <b>90%</b>.</p>
+            <p className="card-desc">Cloud Run con <span className="mono">minScale=0</span>: costo fijo <b>~$0/mes</b> fuera de examenes. Variable: <b>$0.058/alumno·examen</b>.<br/><span style={{ color:'var(--text-3)', fontSize:'0.95em' }}>Nota: estimacion referencial; no incluye mantenimiento operativo, soporte ni costos administrativos.</span></p>
           </div>
           <div className="card-item" style={{borderColor:'rgba(139,92,246,0.2)'}}>
             <h3 className="card-title" style={{color:'var(--purple)', fontSize:'1.45rem'}}>Sin Fricción</h3>
