@@ -1,0 +1,362 @@
+/* costs.css — estilos del tab de costos */
+
+#tab-costs {
+    padding: 0 clamp(14px, 2.6vw, 42px) 40px;
+    overflow-y: auto;
+    height: 100%;
+}
+
+/* ---- Slides de costos ---- */
+.costs-slide {
+    width: min(100%, 1500px);
+    margin: 0 auto 48px;
+    animation: fade-up 0.4s ease both;
+}
+
+.costs-slide-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 28px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+}
+
+.costs-slide-num {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: #f8fafc;
+    color: #0b1020;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+
+.costs-slide-title {
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: var(--text-1);
+}
+
+.costs-slide-subtitle {
+    font-size: 0.85rem;
+    color: var(--text-3);
+    margin-top: 2px;
+}
+
+/* ---- Slide 16: modelo ---- */
+.model-grid {
+    display: grid;
+    grid-template-columns: minmax(520px, 1.2fr) minmax(420px, 1fr);
+    gap: clamp(16px, 2vw, 30px);
+    align-items: start;
+}
+
+@media (max-width: 700px) { .model-grid { grid-template-columns: 1fr; } }
+
+.cost-breakdown-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.82rem;
+}
+.cost-breakdown-table th,
+.cost-breakdown-table td {
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--border);
+    text-align: left;
+}
+.cost-breakdown-table th { color: var(--text-3); font-weight: 600; }
+.cost-breakdown-table td:last-child { text-align: right; font-weight: 700; color: var(--cyan); }
+.cost-breakdown-table tr.total-row td { color: var(--text-1); border-top: 2px solid var(--border); }
+
+.donut-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+}
+.donut-caption {
+    font-size: 0.78rem;
+    color: #64748b;
+    text-align: center;
+}
+
+/* ---- Slide 17: sensibilidad ---- */
+.sensitivity-section {
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
+}
+
+.sensitivity-table { font-size: 0.8rem; }
+.sensitivity-table .heat-low  { color: #34d399; }
+.sensitivity-table .heat-mid  { color: #fbbf24; }
+.sensitivity-table .heat-high { color: #f87171; }
+.sensitivity-table tr.row-default td { background: rgba(10,78,142,0.08); }
+
+.scenarios-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(360px, 1fr));
+    gap: clamp(14px, 1.8vw, 24px);
+}
+@media (max-width: 700px) { .scenarios-grid { grid-template-columns: 1fr; } }
+
+.costs-slide .data-table,
+.costs-slide .chart-wrap,
+.costs-slide .exec-highlight {
+    width: 100%;
+}
+
+@media (min-width: 1400px) {
+    .costs-slide {
+        width: min(100%, 1650px);
+    }
+}
+
+.scenario-card {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+}
+.scenario-card h4 {
+    color: var(--cyan);
+    font-size: 0.9rem;
+    margin: 0 0 12px;
+    font-weight: 700;
+}
+.scenario-stat {
+    display: flex;
+    justify-content: space-between;
+    padding: 4px 0;
+    font-size: 0.82rem;
+    border-bottom: 1px solid var(--border);
+}
+.scenario-stat:last-child { border-bottom: none; }
+.scenario-stat .sval { font-weight: 700; color: var(--cyan); }
+.scenario-stat .sval.green { color: var(--emerald); }
+
+/* ---- Slide 18: budget simulator ---- */
+.budget-sim-wrap {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    align-items: start;
+}
+@media (max-width: 750px) { .budget-sim-wrap { grid-template-columns: 1fr; } }
+
+.budget-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+}
+
+.bs-slider-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.bs-slider-group label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.82rem;
+    color: var(--text-2);
+}
+.bs-val {
+    font-weight: 700;
+    color: var(--cyan);
+}
+
+input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 4px;
+    background: rgba(255,255,255,0.16);
+    border-radius: 2px;
+    outline: none;
+}
+input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #f8fafc;
+    cursor: pointer;
+    border: 2px solid #0b1020;
+}
+input[type="range"]::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #f8fafc;
+    cursor: pointer;
+    border: 2px solid #0b1020;
+}
+
+.budget-results {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.bs-result-primary {
+    background: linear-gradient(135deg, rgba(56,189,248,0.22), rgba(167,139,250,0.16));
+    border: 1px solid rgba(56,189,248,0.3);
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+}
+.bs-big-num {
+    font-size: 2.4rem;
+    font-weight: 800;
+    color: var(--text-1);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -1px;
+}
+.bs-big-label {
+    font-size: 0.82rem;
+    color: var(--text-2);
+    margin-top: 4px;
+}
+
+.bs-result-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+}
+@media (max-width: 600px) { .bs-result-grid { grid-template-columns: repeat(2, 1fr); } }
+
+.bs-metric {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
+.bs-metric-val {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--text-1);
+    font-variant-numeric: tabular-nums;
+}
+.bs-metric-lbl {
+    font-size: 0.68rem;
+    color: var(--text-3);
+    text-align: center;
+    line-height: 1.2;
+}
+
+.egress-color { color: var(--cyan) !important; }
+.cr-color     { color: var(--purple) !important; }
+.fs-color     { color: var(--emerald) !important; }
+.success-color{ color: var(--emerald) !important; }
+
+.bs-egress-dombar-wrap {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+}
+.bs-egress-dombar-label {
+    font-size: 0.78rem;
+    color: var(--text-2);
+    margin-bottom: 6px;
+}
+.bs-egress-dombar-track {
+    height: 8px;
+    background: rgba(255,255,255,0.12);
+    border-radius: 4px;
+    overflow: hidden;
+}
+.bs-egress-dombar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--cyan), var(--emerald));
+    border-radius: 4px;
+    transition: width 0.2s ease;
+}
+
+.bs-formula {
+    background: #111318;
+    border: 1px solid #111318;
+    border-radius: 6px;
+    padding: 10px 14px;
+    font-size: 0.75rem;
+    color: #d7f5e9;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    overflow-x: auto;
+    white-space: nowrap;
+}
+
+/* ---- Costs nav sticky ---- */
+.costs-nav {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: rgba(7,10,18,0.9);
+    padding: 12px 0;
+    display: flex;
+    gap: 8px;
+    margin-bottom: 32px;
+    border-bottom: 1px solid var(--border);
+    overflow-x: auto;
+}
+.costs-nav-btn {
+    padding: 6px 14px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-3);
+    font-size: 0.8rem;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.15s;
+}
+.costs-nav-btn:hover,
+.costs-nav-btn.active {
+    background: rgba(255,255,255,0.13);
+    border-color: rgba(255,255,255,0.24);
+    color: var(--text-1);
+}
+
+/* ---- Chart containers ---- */
+.chart-wrap {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+    overflow: hidden;
+}
+.chart-title {
+    font-size: 0.8rem;
+    color: var(--text-3);
+    margin-bottom: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+/* ---- Highlight box for executives ---- */
+.exec-highlight {
+    background: rgba(52,211,153,0.09);
+    border: 1px solid rgba(52,211,153,0.22);
+    border-radius: 10px;
+    padding: 18px 20px;
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+}
+.exec-icon { font-size: 1.4rem; flex-shrink: 0; }
+.exec-text { font-size: 0.85rem; color: var(--text-2); line-height: 1.6; }
+.exec-text strong { color: var(--emerald); }

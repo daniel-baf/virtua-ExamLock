@@ -3,6 +3,7 @@ node_modules/
 *.json.local
 serviceAccount.json
 dist/
+docs/presentation-built/
 .DS_Store
 infra/terraform.tfvars
 infra/.terraform/
