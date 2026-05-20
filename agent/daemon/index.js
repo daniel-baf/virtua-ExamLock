@@ -6,6 +6,7 @@ const { applyWhitelist, initFirewall, getDebugState } = require('./firewall');
 const { capture } = require('./screenshot');
 const { execFileSync } = require('child_process');
 const { log, setLogForwarder } = require('./logger');
+const { showSystemNotification } = require('./systemNotify');
 const keylogger = require('./keylogger');
 const {
   config,
@@ -32,6 +33,7 @@ const state = {
   sessionId: null,
   sessionCode: null,
   endsAt: null,
+  localEndsAt: null,
   socket: null,
   streamConfig: {
     intervalMs: LIVE_STREAM_INTERVAL_MS,
@@ -52,6 +54,33 @@ let chunkStartedAt = null;
 const keystrokePending = [];
 const keyBuffer = [];   // 3-min ring buffer for live view
 
+function applySessionTiming({ endsAt = null, remainingMs = null } = {}) {
+  if (endsAt !== null && endsAt !== undefined) {
+    state.endsAt = Number(endsAt);
+  }
+
+  const remaining = Number(remainingMs);
+  if (Number.isFinite(remaining)) {
+    state.localEndsAt = Date.now() + Math.max(0, remaining);
+  } else if (!state.localEndsAt && Number.isFinite(Number(state.endsAt))) {
+    state.localEndsAt = Number(state.endsAt);
+  }
+}
+
+function publicTiming() {
+  if (!state.localEndsAt) {
+    return { endsAt: state.endsAt, remainingMs: null };
+  }
+  return {
+    endsAt: state.endsAt,
+    remainingMs: Math.max(0, state.localEndsAt - Date.now()),
+  };
+}
+
+function publicState() {
+  return { status: state.status, ...publicTiming() };
+}
+
 // ── App ───────────────────────────────────────────────────────────────────────
 
 const app = express();
@@ -66,7 +95,7 @@ app.get('/config', (_req, res) => {
   });
 });
 
-app.get('/api/state', (_req, res) => res.json({ status: state.status, endsAt: state.endsAt }));
+app.get('/api/state', (_req, res) => res.json(publicState()));
 
 app.get('/api/debug', (_req, res) => {
   const { socket, ...safeState } = state;
@@ -119,7 +148,7 @@ app.post('/api/login', async (req, res) => {
 
     state.sessionId = joinData.sessionId;
     state.sessionCode = code;
-    state.endsAt = joinData.endsAt ?? null;
+    applySessionTiming(joinData);
     state.status = 'waiting';
     log('login', 'joined session', joinData.sessionId, 'code:', code);
 
@@ -161,7 +190,7 @@ app.get('/api/events', (req, res) => {
   const send = msg => res.write(msg);
   sseClients.add(send);
   res.write('event: connected\ndata: {}\n\n');
-  res.write(`event: state\ndata: ${JSON.stringify({ status: state.status, endsAt: state.endsAt })}\n\n`);
+  res.write(`event: state\ndata: ${JSON.stringify(publicState())}\n\n`);
 
   req.on('close', () => sseClients.delete(send));
 });
@@ -210,13 +239,13 @@ function connectSocket(sessionCode) {
 
   socket.on('connect', () => {
     log('socket', 'connected, state:', state.status);
-    broadcast('state', { status: state.status, endsAt: state.endsAt });
+    broadcast('state', publicState());
   });
 
   socket.on('disconnect', () => {
     log('socket', 'disconnected');
     setLogForwarder(null);
-    broadcast('state', { status: state.status, endsAt: state.endsAt });
+    broadcast('state', publicState());
   });
 
   socket.on('connect_error', err => {
@@ -236,10 +265,10 @@ function connectSocket(sessionCode) {
   });
 
   // Admitted: apply whitelist and redirect UI
-  socket.on('server:admitted', async ({ whitelist = [], blockInternet = false, endsAt = null, streamConfig = null }) => {
+  socket.on('server:admitted', async ({ whitelist = [], blockInternet = false, endsAt = null, remainingMs = null, streamConfig = null }) => {
     log('socket', 'server:admitted received', { whitelist, blockInternet, streamConfig });
     state.status = 'admitted';
-    state.endsAt = endsAt ?? state.endsAt;
+    applySessionTiming({ endsAt, remainingMs });
     state.streamConfig = normalizeStreamConfig(streamConfig);
     try {
       await applyWhitelist(whitelist, blockInternet, true);
@@ -249,7 +278,7 @@ function connectSocket(sessionCode) {
     const alertText = whitelist.length > 0
       ? `Acceso habilitado a: ${whitelist.join(', ')}`
       : blockInternet ? 'Internet restringido — sin dominios autorizados' : 'Acceso libre a internet';
-    broadcast('admitted', { whitelist, blockInternet, endsAt: state.endsAt });
+    broadcast('admitted', { whitelist, blockInternet, ...publicTiming() });
     broadcast('alert', { kind: 'whitelist-applied', text: alertText });
     log('socket', 'admitted broadcast sent');
     socket.emit('student:stream-ready');
@@ -287,6 +316,7 @@ function connectSocket(sessionCode) {
 
   // Message from teacher
   socket.on('server:message', ({ text }) => {
+    showSystemNotification('Mensaje del docente', text);
     broadcast('message', { text });
   });
 

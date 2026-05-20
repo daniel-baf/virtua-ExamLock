@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ExamLock — Presentación Oficial</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="assets/css/base.css">
+    <link rel="stylesheet" href="assets/css/layout.css">
+    <link rel="stylesheet" href="assets/css/components.css">
+    <link rel="stylesheet" href="assets/css/animations.css">
+    <link rel="stylesheet" href="assets/presentation/presentation.css">
+    <link rel="stylesheet" href="assets/simulator/simulator.css">
+    <link rel="stylesheet" href="assets/costs/costs.css">
+</head>
+<body>
+
+    <div class="bg-glow bg-glow-1"></div>
+    <div class="bg-glow bg-glow-2"></div>
+
+    <!-- App Header with Tabs -->
+    <header class="app-header">
+        <div class="app-brand">
+            <div class="brand-logo">
+                <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="50" cy="50" r="45" stroke="url(#hdr_grad)" stroke-width="5" stroke-dasharray="10 5"/>
+                    <rect x="35" y="45" width="30" height="25" rx="6" stroke="#06b6d4" stroke-width="4"/>
+                    <path d="M40 45V36C40 30.5 44.5 26 50 26C55.5 26 60 30.5 60 36V45" stroke="#8b5cf6" stroke-width="4" stroke-linecap="round"/>
+                    <circle cx="50" cy="57" r="3" fill="#06b6d4"/>
+                    <defs>
+                        <linearGradient id="hdr_grad" x1="5" y1="5" x2="95" y2="95" gradientUnits="userSpaceOnUse">
+                            <stop stop-color="#8b5cf6"/><stop offset="1" stop-color="#06b6d4"/>
+                        </linearGradient>
+                    </defs>
+                </svg>
+            </div>
+            <div>
+                <span class="brand-name">ExamLock</span>
+                <span class="brand-sub">Entorno Seguro para Evaluaciones</span>
+            </div>
+        </div>
+
+        <nav class="tab-nav" role="tablist">
+            <button class="tab-btn active" data-tab="presentation" role="tab" aria-selected="true">
+                <span class="tab-icon">📊</span>
+                <span>Presentación</span>
+            </button>
+            <button class="tab-btn" data-tab="simulator" role="tab" aria-selected="false">
+                <span class="tab-icon">🖥️</span>
+                <span>Simulador en Vivo</span>
+            </button>
+            <button class="tab-btn" data-tab="costs" role="tab" aria-selected="false">
+                <span class="tab-icon">💰</span>
+                <span>Análisis de Costos GCP</span>
+            </button>
+        </nav>
+
+        <div class="header-actions">
+            <span class="session-badge">ExamLock v2.0</span>
+        </div>
+    </header>
+
+    <!-- Tab Panels -->
+    <main class="tab-content" id="main-content">
+
+        <!-- TAB 1: Presentación -->
+        <div class="tab-panel active" id="tab-presentation" role="tabpanel">
+            <div class="presentation-viewport" id="presentation-container">
+                <!-- Slides inserted by presentation.js -->
+            </div>
+
+            <!-- Sidebar -->
+            <aside class="sidebar" id="sidebar" aria-hidden="true">
+                <h3 class="sidebar-title">📑 Índice de Slides</h3>
+                <ul class="sidebar-list" id="sidebar-list"></ul>
+            </aside>
+
+            <!-- Footer navigation -->
+            <footer class="pres-footer">
+                <button class="sidebar-toggle-btn" id="btn-sidebar-toggle" aria-label="Abrir índice">
+                    ☰ Índice
+                </button>
+                <div class="nav-progress" id="nav-dots" role="list" aria-label="Progreso"></div>
+                <div class="nav-controls">
+                    <button class="nav-btn" id="btn-prev" aria-label="Diapositiva anterior">←</button>
+                    <span class="nav-counter" id="slide-counter">1 / 20</span>
+                    <button class="nav-btn" id="btn-next" aria-label="Diapositiva siguiente">→</button>
+                </div>
+            </footer>
+
+            <div class="kb-help">
+                <span><span class="kb-key">←</span><span class="kb-key">→</span> Navegar</span>
+                <span><span class="kb-key">F</span> Índice</span>
+                <span><span class="kb-key">Esc</span> Cerrar</span>
+            </div>
+        </div>
+
+        <!-- TAB 2: Simulador -->
+        <div class="tab-panel" id="tab-simulator" role="tabpanel">
+            <!-- Simulator content mounted by simulator.js -->
+            <div id="simulator-root"></div>
+        </div>
+
+        <!-- TAB 3: Costos -->
+        <div class="tab-panel" id="tab-costs" role="tabpanel">
+            <!-- Costs content mounted by costs.js -->
+            <div id="costs-root"></div>
+        </div>
+
+    </main>
+
+    <!-- Core JS modules -->
+    <script type="module">
+        import { initTabs } from './assets/js/core/tabs.js';
+        import { initPresentation } from './assets/presentation/presentation.js';
+        import { initSimulator } from './assets/simulator/simulator.js';
+        import { initCosts } from './assets/costs/costs.js';
+
+        // Boot core tab system
+        initTabs();
+
+        // Boot each module
+        initPresentation();
+        initSimulator();
+        initCosts();
+    </script>
+</body>
+</html>

@@ -1,0 +1,129 @@
+.pageShell {
+  color: var(--text-main);
+  min-height: 100vh;
+}
+
+.content {
+  margin: 0 auto;
+  max-width: 52rem;
+  padding: 32px 20px 64px;
+}
+
+.presetList {
+  display: grid;
+  gap: 16px;
+}
+
+.presetCard {
+  display: grid;
+  gap: 14px;
+  padding: 20px 22px;
+}
+
+.presetHeader {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+}
+
+.presetName {
+  flex: 1;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.builtinBadge {
+  background: var(--accent-soft);
+  border-radius: 20px;
+  color: var(--accent-strong);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  padding: 3px 10px;
+  text-transform: uppercase;
+}
+
+.domainPills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.domainPill {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-soft);
+  border-radius: 20px;
+  color: var(--text-soft);
+  font-size: 12px;
+  padding: 3px 10px;
+}
+
+.domainPillOff {
+  opacity: 0.4;
+  text-decoration: line-through;
+}
+
+.cardActions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.editorCard {
+  display: grid;
+  gap: 18px;
+  padding: 22px;
+}
+
+.editorTitle {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.nameField {
+  display: grid;
+  gap: 6px;
+}
+
+.nameField label {
+  color: var(--text-soft);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.nameInput {
+  background: var(--bg-input);
+  border: 1px solid var(--border-soft);
+  border-radius: 14px;
+  color: var(--text-main);
+  font-size: 14px;
+  min-height: 44px;
+  outline: none;
+  padding: 0 14px;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  width: 100%;
+}
+
+.nameInput:focus {
+  border-color: var(--accent-strong);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.editorActions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.newPresetRow {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 8px;
+}
+
+@media (max-width: 640px) {
+  .content {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+}

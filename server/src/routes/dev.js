@@ -5,7 +5,7 @@ const { requireRole } = require('../auth');
 const router = Router();
 
 // POST /api/dev/reset  — wipe all test data, teacher auth required
-router.post('/reset', requireRole('teacher'), async (req, res) => {
+router.post('/reset', requireRole('admin'), async (req, res) => {
   const collections = ['sessions', 'students', 'events', 'screenshots'];
 
   await Promise.all(

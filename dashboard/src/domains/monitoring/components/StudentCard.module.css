@@ -150,27 +150,25 @@
 }
 
 .body {
-  display: grid;
-  gap: 14px;
-  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 10px 8px;
 }
 
-.copy {
-  display: grid;
-  gap: 4px;
-}
-
-.headline {
+.nameRow {
   align-items: center;
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+  gap: 6px;
+  min-width: 0;
 }
 
 .name {
   color: var(--text-main);
-  font-size: 15px;
+  flex: 1;
+  font-size: 13px;
   font-weight: 700;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -178,9 +176,10 @@
 
 .chip {
   border-radius: 999px;
-  font-size: 11px;
-  font-weight: 700;
-  padding: 3px 8px;
+  flex-shrink: 0;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 2px 6px;
 }
 
 .warningChip {
@@ -188,104 +187,68 @@
   color: var(--warning);
 }
 
-.attentionBanner {
-  align-items: start;
-  background: rgba(2, 6, 23, 0.28);
-  border: 1px solid rgba(245, 158, 11, 0.18);
-  border-radius: 14px;
-  display: grid;
-  gap: 2px;
-  margin: 6px 0 4px;
-  padding: 10px 12px;
+.infoChip {
+  background: var(--accent-soft);
+  color: var(--accent);
 }
 
-.attentionBanner strong {
-  color: var(--warning);
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
-.attentionBanner span {
-  color: var(--text-main);
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.meta {
-  color: var(--text-soft);
-  font-size: 12px;
-}
-
-.warningText {
-  color: var(--warning);
-  font-size: 12px;
-}
-
-.errorText {
-  color: var(--danger);
-  font-size: 12px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
+/* action group — segmented control */
 .actions {
-  display: grid;
-  gap: 8px;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  background: var(--bg-strong);
+  border: 1px solid var(--border-soft);
+  border-radius: 10px;
+  display: flex;
+  overflow: hidden;
 }
 
 .actionButton {
-  background: var(--bg-card);
-  border: 1px solid var(--border-soft);
-  border-radius: 14px;
-  color: var(--text-main);
+  background: transparent;
+  border: none;
+  border-right: 1px solid var(--border-soft);
+  color: var(--text-soft);
   cursor: pointer;
-  font-size: 13px;
+  flex: 1;
+  font-size: 11px;
   font-weight: 700;
-  min-height: 42px;
-  padding: 0 12px;
+  min-height: 30px;
+  padding: 0 6px;
+  transition: background 120ms, color 120ms;
+}
+
+.actionButton:last-child {
+  border-right: none;
 }
 
 .actionButton:hover {
-  border-color: var(--border-strong);
+  background: var(--bg-card);
+  color: var(--text-main);
 }
 
 .infoButton {
+  color: var(--accent);
+}
+
+.infoButton:hover {
   background: var(--accent-soft);
-  border-color: rgba(56, 189, 248, 0.24);
   color: var(--accent);
 }
 
 .liveButton {
-  background: var(--success-soft);
-  border-color: rgba(16, 185, 129, 0.24);
   color: var(--success);
 }
 
-.keyloggerOnButton {
-  background: rgba(245, 158, 11, 0.12);
-  border-color: rgba(245, 158, 11, 0.32);
-  color: var(--warning);
+.liveButton:hover {
+  background: var(--success-soft);
+  color: var(--success);
 }
 
 .dangerButton {
-  background: var(--danger-soft);
-  border-color: rgba(244, 63, 94, 0.22);
   color: var(--danger);
-  grid-column: span 2;
 }
 
-.wideButton {
-  grid-column: span 2;
-}
-
-@media (max-width: 767px) {
-  .actions {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
+.dangerButton:hover {
+  background: var(--danger-soft);
+  color: var(--danger);
 }
 
 @media (max-width: 640px) {

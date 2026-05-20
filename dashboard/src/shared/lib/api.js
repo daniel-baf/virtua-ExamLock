@@ -9,7 +9,7 @@ async function headers() {
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
   };
 }
-
+  
 function imagePathFromStorageUrl(url) {
   try {
     const parsed = new URL(url);
@@ -82,4 +82,12 @@ export const api = {
   // Admin monitoring settings
   getMonitoringSettings: () => req('GET', '/api/admin/monitoring-settings'),
   updateMonitoringSettings: (body) => req('PATCH', '/api/admin/monitoring-settings', body),
+
+  // Global domain presets
+  getGlobalDomainPresets:  ()         => req('GET',    '/api/session/domain-presets'),
+  adminListDomainPresets:  ()         => req('GET',    '/api/admin/domain-presets'),
+  createDomainPreset:      (body)     => req('POST',   '/api/admin/domain-presets', body),
+  updateDomainPreset:      (id, body) => req('PUT',    `/api/admin/domain-presets/${id}`, body),
+  deleteDomainPreset:      (id)       => req('DELETE', `/api/admin/domain-presets/${id}`),
 };
+  

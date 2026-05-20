@@ -2,6 +2,7 @@ const { db, storage } = require('../../../firebase');
 const { logEvent } = require('../../../events');
 const { normalizeStreamConfig } = require('../../../monitoringConfig');
 const { activeDomains } = require('../../../networkDefaults');
+const { sessionTimePayload } = require('../../sessions/application/sessionService');
 
 async function admitStudent(teacherUid, uid, io) {
   const doc = await getOwnedStudent(teacherUid, uid);
@@ -18,7 +19,7 @@ async function admitStudent(teacherUid, uid, io) {
   io.to(`student:${uid}`).emit('server:admitted', {
     whitelist: activeDomains(whitelist),
     blockInternet,
-    endsAt: session.data().endsAt,
+    ...sessionTimePayload(session.data().endsAt),
     whitelistVersion: session.data().whitelistVersion ?? 0,
     streamConfig: normalizeStreamConfig(session.data().streamConfig),
   });
@@ -56,7 +57,7 @@ async function readmitStudent(teacherUid, uid, io) {
   io.to(`student:${uid}`).emit('server:admitted', {
     whitelist: activeDomains(whitelist),
     blockInternet,
-    endsAt: session.data().endsAt,
+    ...sessionTimePayload(session.data().endsAt),
     whitelistVersion: session.data().whitelistVersion ?? 0,
     streamConfig: normalizeStreamConfig(session.data().streamConfig),
   });

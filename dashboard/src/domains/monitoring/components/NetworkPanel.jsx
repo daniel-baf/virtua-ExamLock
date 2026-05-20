@@ -1,4 +1,6 @@
+import { useEffect, useState } from 'react';
 import { DomainList } from '@sessions';
+import { api } from '@/shared/lib/api';
 import styles from '@monitoring/components/NetworkPanel.module.css';
 
 export default function NetworkPanel({
@@ -12,6 +14,11 @@ export default function NetworkPanel({
   onLoadDefault,
   onApply,
 }) {
+  const [globalPresets, setGlobalPresets] = useState([]);
+
+  useEffect(() => {
+    api.getGlobalDomainPresets().then(setGlobalPresets).catch(() => {});
+  }, []);
   return (
     <div className={styles.panel}>
       <div className={styles.inner}>
@@ -39,6 +46,7 @@ export default function NetworkPanel({
             onChange={onDomainsChange}
             onLoadDefault={onLoadDefault}
             defaultLoading={defaultLoading}
+            globalPresets={globalPresets}
           />
         )}
         <button onClick={onApply} disabled={saving} className={styles.applyButton}>

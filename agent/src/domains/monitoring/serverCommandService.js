@@ -2,6 +2,7 @@ const socketClient = require('../../../socket');
 const heartbeat = require('../../../heartbeat');
 const { endSession } = require('../session/sessionService');
 const { flushAnswers } = require('../answers/answerQueueService');
+const { showSystemNotification } = require('../../../daemon/systemNotify');
 
 function connectToServer(serverUrl, token) {
   socketClient.connect(serverUrl, token);
@@ -32,7 +33,10 @@ function registerServerHandlers({ state, sse, serverUrl }) {
   socketClient.on('server:block-internet', () => sse.broadcast('block-internet', {}));
   socketClient.on('server:unblock-internet', () => sse.broadcast('unblock-internet', {}));
   socketClient.on('server:reactivate', ({ token }) => sse.broadcast('reactivate', { token }));
-  socketClient.on('server:message', ({ text }) => sse.broadcast('message', { text }));
+  socketClient.on('server:message', ({ text }) => {
+    showSystemNotification('Mensaje del docente', text);
+    sse.broadcast('message', { text });
+  });
   socketClient.on('server:exam-ended', () => {
     endSession(state);
     stopHeartbeat();

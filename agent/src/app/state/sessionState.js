@@ -6,6 +6,7 @@ function createSessionState() {
     questions: [],
     status: 'idle',
     endsAt: null,
+    localEndsAt: null,
   };
 
   return {

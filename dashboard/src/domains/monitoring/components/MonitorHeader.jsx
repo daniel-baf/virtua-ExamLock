@@ -8,6 +8,7 @@ export default function MonitorHeader({
   sessionLoading,
   connected,
   totals,
+  remainingLabel,
   captureAllBusy,
   captureAllNote,
   examEnded,
@@ -40,6 +41,7 @@ export default function MonitorHeader({
           <Metric label="Total" value={totals.all} />
           <Metric label="Activos" value={totals.active} tone="emerald" />
           <Metric label="Alertas" value={totals.alerts} tone="amber" />
+          <Metric label="Restante" value={remainingLabel ?? '--:--'} />
           <button
             onClick={onCaptureAll}
             disabled={captureAllBusy || totals.active === 0}

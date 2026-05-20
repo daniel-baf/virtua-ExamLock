@@ -1,5 +1,5 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
-import { AuditPage, LoginPage, MonitoringSettingsPage, MonitorPage, NewSessionPage, RequireAuth, SessionsPage, UsersPage } from '@domains';
+import { AuditPage, DomainPresetsPage, LoginPage, MonitoringSettingsPage, MonitorPage, NewSessionPage, RequireAuth, SessionsPage, UsersPage } from '@domains';
 
 export default function AppRouter() {
   return (
@@ -12,6 +12,7 @@ export default function AppRouter() {
         <Route path="/session/:id/audit" element={<RequireAuth><AuditPage /></RequireAuth>} />
         <Route path="/admin/users" element={<RequireAuth allow={['admin']}><UsersPage /></RequireAuth>} />
         <Route path="/admin/monitoring" element={<RequireAuth allow={['admin']}><MonitoringSettingsPage /></RequireAuth>} />
+        <Route path="/admin/domain-presets" element={<RequireAuth allow={['admin']}><DomainPresetsPage /></RequireAuth>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>

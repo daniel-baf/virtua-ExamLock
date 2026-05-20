@@ -1,7 +1,8 @@
 const { db } = require('../../../firebase');
 const { logEvent } = require('../../../events');
+const { clearSessionEndTimer } = require('./sessionEndService');
 
-async function handleTeacherSocket(socket, sessionId, io) {
+async function handleTeacherSocket(socket, sessionId, io, sessionEndTimers) {
   socket.join(`teachers:${sessionId}`);
 
   startSessionMonitor(io, sessionId).catch(err => {
@@ -9,6 +10,7 @@ async function handleTeacherSocket(socket, sessionId, io) {
   });
 
   socket.on('teacher:end-exam', async () => {
+    clearSessionEndTimer(sessionId, sessionEndTimers);
     await db().collection('sessions').doc(sessionId).update({ active: false });
     await logEvent(sessionId, 'exam-ended', {});
     io.to(`session:${sessionId}`).emit('server:exam-ended');

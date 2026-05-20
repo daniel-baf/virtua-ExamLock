@@ -9,7 +9,7 @@ import {
 } from '../domainModel';
 import styles from './DomainList.module.css';
 
-export default function DomainList({ domains, onChange, onLoadDefault, defaultLoading = false }) {
+export default function DomainList({ domains, onChange, onLoadDefault, defaultLoading = false, globalPresets = [] }) {
   const [draft, setDraft] = useState('');
   const [presets, setPresets] = useState(() => readLocalPresets());
   const entries = normalizeDomainList(domains);
@@ -73,8 +73,26 @@ export default function DomainList({ domains, onChange, onLoadDefault, defaultLo
         </Button>
       </div>
 
+      {globalPresets.length > 0 && (
+        <div className={styles.presetList}>
+          <span className={styles.presetGroupLabel}>Listas globales</span>
+          {globalPresets.map(preset => (
+            <div key={preset.id} className={styles.presetPill}>
+              <button
+                type="button"
+                onClick={() => onChange(mergeDomainLists(entries, preset.domains))}
+                className={styles.presetButton}
+              >
+                {preset.name}
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
       {presets.length > 0 && (
         <div className={styles.presetList}>
+          <span className={styles.presetGroupLabel}>Mis listas</span>
           {presets.map(preset => (
             <div key={preset.name} className={styles.presetPill}>
               <button type="button" onClick={() => loadPreset(preset.name)} className={styles.presetButton}>

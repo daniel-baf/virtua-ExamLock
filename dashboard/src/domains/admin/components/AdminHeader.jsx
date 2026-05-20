@@ -17,6 +17,9 @@ export default function AdminHeader({ activeSection, loading, onRefresh }) {
           <Button to="/admin/monitoring" variant={activeSection === 'monitoring' ? 'primary' : 'ghost'}>
             Monitoreo
           </Button>
+          <Button to="/admin/domain-presets" variant={activeSection === 'domain-presets' ? 'primary' : 'ghost'}>
+            Listas de dominios
+          </Button>
           <span className={styles.email}>{email}</span>
           <Button onClick={onRefresh} disabled={loading} variant="ghost">
             {loading ? 'Cargando...' : 'Actualizar'}

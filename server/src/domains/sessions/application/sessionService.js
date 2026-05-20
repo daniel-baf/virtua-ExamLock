@@ -7,6 +7,18 @@ const { activeDomains, defaultWhitelist, normalizeWhitelist } = require('../../.
 const HEARTBEAT_INTERVAL_MS = 15_000;
 const HEARTBEAT_TIMEOUT_MS = HEARTBEAT_INTERVAL_MS * 3;
 
+function sessionTimePayload(endsAt, now = Date.now()) {
+  const end = Number(endsAt);
+  if (!Number.isFinite(end)) {
+    return { endsAt: null, serverNow: now, remainingMs: null };
+  }
+  return {
+    endsAt: end,
+    serverNow: now,
+    remainingMs: Math.max(0, end - now),
+  };
+}
+
 function isHeartbeatExpired(student, now = Date.now()) {
   return student.status === 'admitted'
     && Number.isFinite(student.lastHeartbeat)
@@ -67,7 +79,7 @@ async function getTeacherSessionSummary(sessionId, teacherId) {
 async function getPublicSessionByCode(code) {
   const sessionDoc = await findActiveSessionByCode(code);
   const data = sessionDoc.data();
-  return { sessionId: sessionDoc.id, name: data.name, endsAt: data.endsAt };
+  return { sessionId: sessionDoc.id, name: data.name, ...sessionTimePayload(data.endsAt) };
 }
 
 async function joinSession({ code, user }) {
@@ -127,7 +139,7 @@ async function joinSession({ code, user }) {
     attempt: attempts,
   }, uid);
 
-  return { sessionId, status: 'admitted', endsAt: session.endsAt };
+  return { sessionId, status: 'admitted', ...sessionTimePayload(session.endsAt) };
 }
 
 async function listSessionStudents(sessionId, teacherId) {
@@ -244,7 +256,8 @@ function mapSession(sessionId, data) {
     code: data.code,
     active: data.active,
     createdAt: data.startedAt,
-    endsAt: data.endsAt,
+    timeLimit: data.timeLimit,
+    ...sessionTimePayload(data.endsAt),
     whitelist: normalizeWhitelist(data.whitelist ?? []),
     blockInternet: data.blockInternet ?? true,
     streamConfig: normalizeStreamConfig(data.streamConfig),
@@ -299,4 +312,5 @@ module.exports = {
   requestSessionScreenshots,
   updateWhitelist,
   getSessionAudit,
+  sessionTimePayload,
 };

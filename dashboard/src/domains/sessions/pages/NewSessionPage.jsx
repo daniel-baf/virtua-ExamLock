@@ -1,10 +1,17 @@
+import { useEffect, useState } from 'react';
 import { DomainList } from '@sessions';
 import useNewSessionForm from '@sessions/hooks/useNewSessionForm';
+import { api } from '@/shared/lib/api';
 import { AlertBanner, Button, CardPanel, PageHeader } from '@shared/ui';
 import styles from './NewSessionPage.module.css';
 
 export default function NewSessionPage() {
   const form = useNewSessionForm();
+  const [globalPresets, setGlobalPresets] = useState([]);
+
+  useEffect(() => {
+    api.getGlobalDomainPresets().then(setGlobalPresets).catch(() => {});
+  }, []);
 
   return (
     <div className={styles.pageShell}>
@@ -52,6 +59,7 @@ export default function NewSessionPage() {
                   onChange={form.setDomains}
                   onLoadDefault={form.loadDefaultDomains}
                   defaultLoading={form.defaultLoading}
+                  globalPresets={globalPresets}
                 />
               </div>
               <p className={styles.formHelp}>DNS + localhost siempre permitidos.</p>

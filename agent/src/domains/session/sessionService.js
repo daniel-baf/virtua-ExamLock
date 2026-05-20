@@ -9,7 +9,11 @@ function requireActiveSession(state) {
 }
 
 function activateSession(state, payload) {
-  return state.patch({ ...payload, status: 'active' });
+  const remaining = Number(payload?.remainingMs);
+  const localEndsAt = Number.isFinite(remaining)
+    ? Date.now() + Math.max(0, remaining)
+    : null;
+  return state.patch({ ...payload, localEndsAt, status: 'active' });
 }
 
 function endSession(state) {
@@ -18,7 +22,10 @@ function endSession(state) {
 
 function getPublicState(state) {
   const current = state.getState();
-  return { status: current.status, endsAt: current.endsAt ?? null };
+  const remainingMs = current.localEndsAt
+    ? Math.max(0, current.localEndsAt - Date.now())
+    : null;
+  return { status: current.status, endsAt: current.endsAt ?? null, remainingMs };
 }
 
 function cacheQuestions(state, questions) {

@@ -2,6 +2,8 @@ const { Router } = require('express');
 const { requireRole } = require('../auth');
 const sessionService = require('../domains/sessions/application/sessionService');
 const keystrokeAudit = require('../domains/monitoring/keystrokeAuditStore');
+const domainPresetsService = require('../domains/admin/application/domainPresetsService');
+const { db } = require('../firebase');
 
 const router = Router();
 
@@ -21,6 +23,15 @@ router.post('/create', requireRole('teacher'), async (req, res) => {
 // GET /api/session/network-defaults — institutional default whitelist
 router.get('/network-defaults', requireRole('teacher'), async (_req, res) => {
   res.json(sessionService.getNetworkDefaults());
+});
+
+// GET /api/session/domain-presets — global domain presets (teachers read)
+router.get('/domain-presets', requireRole('teacher'), async (_req, res) => {
+  try {
+    res.json(await domainPresetsService.listPresets(db()));
+  } catch (err) {
+    res.status(err.statusCode ?? 500).json({ error: err.message });
+  }
 });
 
 // GET /api/session  — list sessions for authenticated teacher
