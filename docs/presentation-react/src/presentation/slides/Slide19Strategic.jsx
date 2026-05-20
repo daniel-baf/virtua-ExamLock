@@ -1,0 +1,35 @@
+import React from 'react'
+
+export default function Slide19Strategic() {
+  return (
+    <div className="slide-card">
+      <div className="slide-header">
+        <div>
+          <h2 className="slide-title">Valor Estratégico para la Universidad</h2>
+          <p className="slide-subtitle">Cuatro pilares de beneficio institucional con respaldo económico real</p>
+        </div>
+        <span className="badge badge-purple">VALOR</span>
+      </div>
+      <div className="slide-body">
+        <div className="grid-2" style={{width:'100%', gap:'1.2rem', alignItems:'start'}}>
+          <div className="card-item" style={{borderColor:'rgba(6,182,212,0.2)'}}>
+            <h3 className="card-title" style={{color:'var(--cyan)'}}>Protección del Prestigio</h3>
+            <p className="card-desc">Garantiza que los graduados posean las habilidades reales evaluadas. Elimina colusión e IA generativa ilegal durante pruebas críticas.</p>
+          </div>
+          <div className="card-item" style={{borderColor:'rgba(16,185,129,0.2)'}}>
+            <h3 className="card-title" style={{color:'var(--emerald)'}}>Arquitectura Costo-Eficiente</h3>
+            <p className="card-desc">Cloud Run con <span className="mono">minScale=0</span>: costo fijo <b>~$0/mes</b> fuera de examenes. Variable: <b>$0.058/alumno·examen</b>. Margen bruto a $0.30/h: <b>90%</b>.</p>
+          </div>
+          <div className="card-item" style={{borderColor:'rgba(139,92,246,0.2)'}}>
+            <h3 className="card-title" style={{color:'var(--purple)'}}>Despliegue Sin Fricción</h3>
+            <p className="card-desc">Docker + USB booteables. No requiere formatear ni alterar los laboratorios existentes. Técnico sin experiencia puede desplegar en &lt;10 minutos.</p>
+          </div>
+          <div className="card-item" style={{borderColor:'rgba(245,158,11,0.2)'}}>
+            <h3 className="card-title" style={{color:'var(--amber)'}}>Auditoría Irrefutable</h3>
+            <p className="card-desc">Registro detallado de logs, capturas de infracciones, actividad de teclado con IA y telemetría GCS inmutable por 90 días para justificar acciones disciplinarias.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
