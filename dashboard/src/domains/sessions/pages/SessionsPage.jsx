@@ -17,9 +17,6 @@ export default function SessionsPage() {
             <Button onClick={sessions.refresh} disabled={sessions.loading} variant="ghost">
               {sessions.loading ? 'Cargando...' : 'Actualizar'}
             </Button>
-            <Button onClick={sessions.resetData} disabled={sessions.resetting} variant="danger">
-              {sessions.resetting ? 'Borrando...' : 'Reset DB'}
-            </Button>
             <Button onClick={sessions.signOut} variant="link">
               Cerrar sesion
             </Button>

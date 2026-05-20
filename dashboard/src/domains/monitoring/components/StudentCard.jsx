@@ -25,7 +25,7 @@ export default function StudentCard({
     <article className={`${styles.card} ${requiresAttention ? styles.attentionCard : ''} ${status === 'offline' ? styles.offlineCard : ''}`}>
       <div className={styles.preview}>
         <div className={styles.imageFrame}>
-          <button type="button" onClick={onHistory} className={styles.previewButton} aria-label={`Abrir historial de ${label}`}>
+          <button type="button" onClick={tab === 'admitted' ? onLive : onHistory} className={styles.previewButton} aria-label={tab === 'admitted' ? `Ver en vivo ${label}` : `Abrir historial de ${label}`}>
           {liveFrame ? (
             <img
               src={liveFrame}
@@ -68,7 +68,6 @@ export default function StudentCard({
           <button type="button" onClick={onHistory} className={styles.actionButton} title="Ver historial">Historial</button>
           {tab === 'admitted' && (
             <>
-              <button type="button" onClick={onLive} className={`${styles.actionButton} ${styles.liveButton}`} title="Ver en vivo">Enfocar</button>
               <button type="button" onClick={onScreenshot} className={`${styles.actionButton} ${styles.infoButton}`} title="Capturar pantalla">Captura</button>
               <button type="button" onClick={onMessage} className={styles.actionButton} title="Enviar mensaje">Msg</button>
               <button type="button" onClick={onKick} className={`${styles.actionButton} ${styles.dangerButton}`} title="Expulsar alumno">✕</button>

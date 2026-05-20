@@ -1,11 +1,25 @@
+import { useState } from 'react';
 import { AdminHeader } from '@admin';
 import useMonitoringSettings from '@admin/hooks/useMonitoringSettings';
-import { formatStreamConfig } from '@sessions';
+import { formatStreamConfig, resetSessionsData } from '@sessions';
 import { AlertBanner, Button, CardPanel, PageSection } from '@shared/ui';
 import styles from './MonitoringSettingsPage.module.css';
 
 export default function MonitoringSettingsPage() {
   const settings = useMonitoringSettings();
+  const [resetting, setResetting] = useState(false);
+
+  async function handleResetDb() {
+    if (!confirm('Borrar TODOS los datos (sesiones, estudiantes, respuestas, preguntas)?')) return;
+    setResetting(true);
+    try {
+      await resetSessionsData();
+    } catch (e) {
+      alert('Error al resetear: ' + e.message);
+    } finally {
+      setResetting(false);
+    }
+  }
 
   return (
     <div className={styles.pageShell}>
@@ -62,6 +76,18 @@ export default function MonitoringSettingsPage() {
           <div className={styles.actions}>
             <Button onClick={settings.save} disabled={settings.loading || settings.saving} variant="primary">
               {settings.saving ? 'Guardando...' : 'Guardar defaults'}
+            </Button>
+          </div>
+        </CardPanel>
+        <PageSection title="Zona peligrosa" />
+
+        <CardPanel className={styles.card}>
+          <p className={styles.summaryHelp}>
+            Elimina todas las sesiones, estudiantes, respuestas y preguntas. Acción irreversible.
+          </p>
+          <div className={styles.actions}>
+            <Button onClick={handleResetDb} disabled={resetting} variant="danger">
+              {resetting ? 'Borrando...' : 'Reset DB'}
             </Button>
           </div>
         </CardPanel>

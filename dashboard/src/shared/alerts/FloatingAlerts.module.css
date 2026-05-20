@@ -1,0 +1,297 @@
+.root {
+  bottom: 24px;
+  position: fixed;
+  right: 24px;
+  width: 340px;
+  z-index: 9000;
+}
+
+/* ── Pill (fully collapsed) ───────────────────────────────────── */
+
+.pill {
+  align-items: center;
+  backdrop-filter: blur(20px);
+  background: var(--bg-card);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  border-radius: 999px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(245, 158, 11, 0.1);
+  cursor: pointer;
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-left: auto;
+  padding: 10px 16px;
+  transition: transform 0.15s, box-shadow 0.15s;
+  width: fit-content;
+}
+
+.pill:hover {
+  box-shadow: 0 6px 32px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(245, 158, 11, 0.2);
+  transform: translateY(-2px);
+}
+
+.pillBadge {
+  align-items: center;
+  border-radius: 999px;
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 800;
+  gap: 5px;
+  padding: 2px 10px 2px 6px;
+}
+
+.pillBadge.warning {
+  background: rgba(245, 158, 11, 0.18);
+  color: var(--warning);
+}
+
+.pillBadge.danger {
+  background: rgba(239, 68, 68, 0.18);
+  color: var(--danger);
+}
+
+.pillDot {
+  border-radius: 50%;
+  display: inline-block;
+  height: 8px;
+  width: 8px;
+}
+
+.pillDot.warning { background: var(--warning); }
+.pillDot.danger  { background: var(--danger); }
+
+/* ── Panel (expanded) ─────────────────────────────────────────── */
+
+.panel {
+  backdrop-filter: blur(24px);
+  background: var(--bg-card);
+  border: 1px solid var(--border-soft);
+  border-radius: 20px;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.04);
+  display: flex;
+  flex-direction: column;
+  max-height: 70vh;
+  overflow: hidden;
+}
+
+.panelHeader {
+  align-items: center;
+  border-bottom: 1px solid var(--border-soft);
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+  padding: 14px 16px 12px;
+}
+
+.panelTitle {
+  align-items: center;
+  display: flex;
+  flex: 1;
+  font-size: 13px;
+  font-weight: 800;
+  gap: 8px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.warningDot {
+  background: var(--warning);
+  border-radius: 50%;
+  display: inline-block;
+  height: 8px;
+  width: 8px;
+}
+
+.panelHeaderActions {
+  display: flex;
+  gap: 4px;
+}
+
+.iconButton {
+  align-items: center;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  color: var(--text-soft);
+  cursor: pointer;
+  display: flex;
+  font-size: 13px;
+  height: 28px;
+  justify-content: center;
+  padding: 0 8px;
+  transition: background 0.12s, color 0.12s;
+  white-space: nowrap;
+}
+
+.iconButton:hover {
+  background: var(--bg-strong);
+  color: var(--text-main);
+}
+
+.iconButton.danger:hover {
+  background: rgba(239, 68, 68, 0.12);
+  color: var(--danger);
+}
+
+.groupList {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  overflow-y: auto;
+}
+
+/* ── Group ────────────────────────────────────────────────────── */
+
+.group {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.group:last-child {
+  border-bottom: none;
+}
+
+.groupHeader {
+  align-items: center;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  gap: 10px;
+  padding: 12px 14px;
+  text-align: left;
+  transition: background 0.12s;
+  width: 100%;
+}
+
+.groupHeader:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.groupLevel {
+  border-radius: 50%;
+  flex-shrink: 0;
+  height: 8px;
+  width: 8px;
+}
+
+.groupLevel.warning { background: var(--warning); }
+.groupLevel.danger  { background: var(--danger); }
+
+.groupStudent {
+  color: var(--text-main);
+  flex: 1;
+  font-size: 13px;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.groupCount {
+  background: var(--bg-strong);
+  border-radius: 999px;
+  color: var(--text-soft);
+  font-size: 11px;
+  font-weight: 800;
+  padding: 2px 8px;
+}
+
+.chevron {
+  color: var(--text-muted);
+  font-size: 10px;
+  transition: transform 0.2s;
+}
+
+.chevron.open {
+  transform: rotate(180deg);
+}
+
+.groupAckBtn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 11px;
+  padding: 2px 6px;
+  transition: color 0.12s;
+}
+
+.groupAckBtn:hover { color: var(--text-soft); }
+
+/* ── Alert items inside group ─────────────────────────────────── */
+
+.alertList {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 0 12px 10px;
+}
+
+.alertItem {
+  border-left: 3px solid;
+  border-radius: 10px;
+  margin-bottom: 6px;
+  padding: 10px 12px;
+}
+
+.alertItem.warning {
+  background: rgba(245, 158, 11, 0.06);
+  border-left-color: var(--warning);
+}
+
+.alertItem.danger {
+  background: rgba(239, 68, 68, 0.06);
+  border-left-color: var(--danger);
+}
+
+.alertMessage {
+  color: var(--text-main);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.alertMeta {
+  color: var(--text-soft);
+  font-size: 11px;
+  margin-top: 3px;
+}
+
+.alertActions {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.alertBtn {
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 700;
+  min-height: 28px;
+  padding: 0 10px;
+  transition: background 0.12s;
+}
+
+.alertBtnGhost {
+  background: var(--bg-strong);
+  border: 1px solid var(--border-soft);
+  color: var(--text-main);
+}
+
+.alertBtnGhost:hover { background: var(--bg-elevated); }
+
+.alertBtnAck {
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.2);
+  color: var(--warning);
+}
+
+.alertBtnAck:hover { background: rgba(245, 158, 11, 0.2); }
+
+@media (max-width: 480px) {
+  .root {
+    bottom: 16px;
+    right: 12px;
+    width: calc(100vw - 24px);
+  }
+}

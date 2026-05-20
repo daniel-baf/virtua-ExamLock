@@ -2,7 +2,6 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '@auth';
 import { AlertBanner, EmptyState } from '@shared/ui';
 import {
-  AttentionAlerts,
   ClosedStudentRow,
   hasStudentAttention,
   HistoryPanel,
@@ -53,21 +52,6 @@ export default function MonitorPage() {
       />
 
       {monitor.sessionError && <AlertBanner className={styles.alert}>{monitor.sessionError}</AlertBanner>}
-
-      <AttentionAlerts
-        alerts={monitor.alerts}
-        onAcknowledge={monitor.acknowledgeAlert}
-        onFocusStudent={uid => {
-          preferences.setTab('admitted');
-          preferences.setFilter('attention');
-          preferences.setSearch('');
-          const student = monitor.studentsByTab.admitted?.find(item => item.uid === uid)
-            ?? monitor.studentsByTab.kicked?.find(item => item.uid === uid);
-          if (student) {
-            monitor.openHistory(student);
-          }
-        }}
-      />
 
       {monitor.showWhitelist && (
         <NetworkPanel

@@ -6,6 +6,7 @@ const { applyWhitelist, initFirewall, getDebugState } = require('./firewall');
 const { capture } = require('./screenshot');
 const { execFileSync } = require('child_process');
 const { log, setLogForwarder } = require('./logger');
+const { showSystemNotification } = require('./systemNotify');
 const keylogger = require('./keylogger');
 const {
   config,
@@ -287,6 +288,7 @@ function connectSocket(sessionCode) {
 
   // Message from teacher
   socket.on('server:message', ({ text }) => {
+    showSystemNotification('Mensaje del docente', text);
     broadcast('message', { text });
   });
 

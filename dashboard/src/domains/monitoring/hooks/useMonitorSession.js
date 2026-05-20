@@ -14,13 +14,14 @@ import {
   setWhitelist,
 } from '@monitoring/services/monitoringService';
 import { activeDomainCount, mergeDomainLists, normalizeDomainList } from '@sessions';
+import { useAlerts } from '@shared/alerts/AlertsContext';
 import { auth } from '@shared/lib/firebase';
 
 const SERVER_URL = import.meta.env.VITE_SERVER_URL ?? '';
 
 export default function useMonitorSession(sessionId) {
   const [students, setStudents] = useState({});
-  const [alerts, setAlerts] = useState([]);
+  const alertsCtx = useAlerts();
   const [session, setSession] = useState(null);
   const [sessionLoading, setSessionLoading] = useState(true);
   const [sessionError, setSessionError] = useState('');
@@ -53,12 +54,7 @@ export default function useMonitorSession(sessionId) {
     });
   }, []);
 
-  const pushAlert = useCallback((alert) => {
-    setAlerts(prev => {
-      if (prev.some(item => item.dedupeKey === alert.dedupeKey)) return prev;
-      return [{ ...alert, createdAt: Date.now() }, ...prev];
-    });
-  }, []);
+  const pushAlert = alertsCtx.pushAlert;
 
   useEffect(() => {
     let cancelled = false;
@@ -207,6 +203,16 @@ export default function useMonitorSession(sessionId) {
     };
   }, [sessionId, patch, pushAlert]);
 
+  const { registerSession, unregisterSession } = alertsCtx;
+  useEffect(() => {
+    registerSession(sessionId, (uid) => {
+      const student = studentsRef.current[uid];
+      if (student) openHistory(student);
+    });
+    return () => unregisterSession();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionId, registerSession, unregisterSession]);
+
   const studentList = useMemo(() => Object.values(students), [students]);
   const totals = useMemo(() => ({
     all: studentList.length,
@@ -336,12 +342,7 @@ export default function useMonitorSession(sessionId) {
 
   const liveTarget = liveTargetUid ? students[liveTargetUid] ?? null : null;
 
-  function acknowledgeAlert(alertId) {
-    setAlerts(prev => prev.filter(alert => alert.id !== alertId));
-  }
-
   return {
-    alerts,
     session,
     sessionLoading,
     sessionError,
@@ -378,7 +379,6 @@ export default function useMonitorSession(sessionId) {
     openLive,
     closeLive,
     downloadAudit,
-    acknowledgeAlert,
     sendMessage,
     applyWhitelist,
     loadDefaultDomains,
