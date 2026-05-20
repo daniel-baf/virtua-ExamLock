@@ -47,6 +47,21 @@ export default function useMonitorSession(sessionId) {
   const historyTargetRef = useRef(null);
   const studentsRef = useRef({});
   const liveFrameUrlsRef = useRef({});
+  const joinOrderRef = useRef(0);
+
+  const withJoinOrder = useCallback((student = {}) => {
+    if (!student?.uid) return student;
+    const existing = studentsRef.current[student.uid];
+    if (Number.isFinite(existing?.joinOrder)) {
+      return { ...student, joinOrder: existing.joinOrder };
+    }
+    if (Number.isFinite(student.joinOrder)) {
+      return student;
+    }
+    const nextJoinOrder = joinOrderRef.current;
+    joinOrderRef.current += 1;
+    return { ...student, joinOrder: nextJoinOrder };
+  }, []);
 
   const patch = useCallback((uid, data) => {
     setStudents(prev => {
@@ -87,7 +102,7 @@ export default function useMonitorSession(sessionId) {
 
     listStudents(sessionId)
       .then(({ students }) => {
-        if (!cancelled) students.forEach(student => patch(student.uid, student));
+        if (!cancelled) students.forEach(student => patch(student.uid, withJoinOrder(student)));
       })
       .catch(console.error);
 
@@ -99,7 +114,7 @@ export default function useMonitorSession(sessionId) {
       socket.on('connect', () => setConnected(true));
       socket.on('disconnect', () => setConnected(false));
       socket.on('monitor:student-joined', ({ uid, name, status, lastHeartbeat, offlineAt }) => {
-        patch(uid, { name, status: status ?? 'waiting', lastHeartbeat, offlineAt });
+        patch(uid, withJoinOrder({ uid, name, status: status ?? 'waiting', lastHeartbeat, offlineAt }));
       });
       socket.on('monitor:screenshot-update', ({ uid, url }) => {
         const takenAt = Date.now();
@@ -210,7 +225,7 @@ export default function useMonitorSession(sessionId) {
       Object.values(liveFrameUrlsRef.current).forEach(url => URL.revokeObjectURL(url));
       liveFrameUrlsRef.current = {};
     };
-  }, [sessionId, patch, pushAlert]);
+  }, [sessionId, patch, pushAlert, withJoinOrder]);
 
   useEffect(() => {
     if (!session?.localEndsAt || examEnded) return undefined;

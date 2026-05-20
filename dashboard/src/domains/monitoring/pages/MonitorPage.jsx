@@ -175,11 +175,9 @@ function compareStudents(left, right, pinnedIds) {
   const rightPinned = pinnedIds.has(right.uid);
   if (leftPinned !== rightPinned) return leftPinned ? -1 : 1;
 
-  const leftAttention = hasStudentAttention(left);
-  const rightAttention = hasStudentAttention(right);
-  if (leftAttention !== rightAttention) return leftAttention ? -1 : 1;
+  const leftOrder = Number.isFinite(left.joinOrder) ? left.joinOrder : Number.MAX_SAFE_INTEGER;
+  const rightOrder = Number.isFinite(right.joinOrder) ? right.joinOrder : Number.MAX_SAFE_INTEGER;
+  if (leftOrder !== rightOrder) return leftOrder - rightOrder;
 
-  const rightTimestamp = Math.max(right.lastHeartbeat ?? 0, right.lastScreenshotAt ?? 0, right.liveTakenAt ?? 0);
-  const leftTimestamp = Math.max(left.lastHeartbeat ?? 0, left.lastScreenshotAt ?? 0, left.liveTakenAt ?? 0);
-  return rightTimestamp - leftTimestamp;
+  return String(left.uid ?? '').localeCompare(String(right.uid ?? ''));
 }
